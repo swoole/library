@@ -1,0 +1,34 @@
+{
+    "name": "swoole/library",
+    "description": "Library of Swoole",
+    "keywords": [
+        "swoole",
+        "library"
+    ],
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Swoole Team",
+            "email": "team@swoole.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/swoole/library"
+    },
+    "require": {
+        "php": "^7.1"
+    },
+    "autoload": {
+        "files": [
+            "src/constants.php",
+            "src/std/exec.php",
+            "src/ext/curl.php",
+            "src/functions.php",
+            "src/alias.php",
+            "src/alias_ns.php"
+        ],
+        "psr-4": {
+            "Swoole\\": "src/core"
+        }
+    }
+}
