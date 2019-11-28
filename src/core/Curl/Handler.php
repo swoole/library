@@ -315,7 +315,7 @@ class Handler
             $this->info['request_header'] = $headerOutContent ? $headerOutContent . "\r\n\r\n" : '';
         }
         if ($this->withFileTime) {
-            if (!empty($client->headers['last-modified'])) {
+            if (isset($client->headers['last-modified'])) {
                 $this->info['filetime'] = strtotime($client->headers['last-modified']);
             } else {
                 $this->info['filetime'] = -1;
