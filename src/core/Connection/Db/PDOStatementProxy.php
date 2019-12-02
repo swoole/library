@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace Swoole\Connection;
+namespace Swoole\Connection\Db;
 
 use PDO;
 use PDOException;
 use PDOStatement;
-use Swoole\Object\Proxy;
+use Swoole\ObjectProxy;
 
-class PDOStatementProxy extends Proxy
+class PDOStatementProxy extends ObjectProxy
 {
     /** @var PDOStatement */
     protected $object;

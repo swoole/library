@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Swoole\Object;
+namespace Swoole;
 
 use TypeError;
 
-class Proxy
+class ObjectProxy
 {
     /** @var object */
     protected $object;

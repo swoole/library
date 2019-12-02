@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace Swoole\Connection;
+namespace Swoole\Connection\Db;
 
 use PDO;
 use PDOException;
-use Swoole\Object\Proxy;
+use Swoole\ObjectProxy;
 
-class PDOProxy extends Proxy
+class PDOProxy extends ObjectProxy
 {
     public const IO_ERRORS = [
         2002, // MYSQLND_CR_CONNECTION_ERROR
@@ -57,7 +57,10 @@ class PDOProxy extends Proxy
                 $this->reconnect();
                 continue;
             }
-            if (strcasecmp($name, 'prepare') === 0) {
+            if (
+                strcasecmp($name, 'prepare') === 0 ||
+                strcasecmp($name, 'query') === 0
+            ) {
                 $ret = new PDOStatementProxy($ret, $this);
             }
             break;
