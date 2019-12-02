@@ -6,17 +6,19 @@ namespace Swoole\Database;
 class PDOConfig
 {
     /** @var string */
-    protected $host;
+    protected $host = '127.0.0.1';
     /** @var int */
-    protected $port;
+    protected $port = 3306;
+    /** @var string|null */
+    protected $unixSocket;
     /** @var string */
-    protected $dbname;
+    protected $dbname = 'test';
     /** @var string */
-    protected $charset;
+    protected $charset = 'utf8mb4';
     /** @var string */
-    protected $username;
+    protected $username = 'root';
     /** @var string */
-    protected $password;
+    protected $password = 'root';
 
     public function getHost(): string
     {
@@ -32,6 +34,22 @@ class PDOConfig
     public function getPort(): int
     {
         return $this->port;
+    }
+
+    public function hasUnixSocket(): bool
+    {
+        return isset($this->unixSocket);
+    }
+
+    public function getUnixSocket(): string
+    {
+        return $this->unixSocket;
+    }
+
+    public function withUnixSocket(?string $unixSocket): self
+    {
+        $this->unixSocket = $unixSocket;
+        return $this;
     }
 
     public function withPort(int $port): self

@@ -28,6 +28,7 @@ class ConnectionPool
 
     protected function make(): void
     {
+        $this->num++;
         if ($this->proxy) {
             $connection = new $this->proxy($this->constructor);
         } else {
@@ -35,7 +36,6 @@ class ConnectionPool
             $connection = $constructor();
         }
         $this->put($connection);
-        $this->num++;
     }
 
     public function fill(): void

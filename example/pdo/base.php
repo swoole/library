@@ -4,18 +4,21 @@ declare(strict_types=1);
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
 use Swoole\Coroutine;
+use Swoole\Runtime;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
 const N = 10000;
 
+Runtime::enableCoroutine();
 $s = microtime(true);
 Coroutine\run(function () {
     $pool = new PDOPool((new PDOConfig)
         ->withHost('127.0.0.1')
         ->withPort(3306)
+        // ->withUnixSocket('/tmp/mysql.sock')
         ->withDbName('test')
-        ->withCharset('utf8')
+        ->withCharset('utf8mb4')
         ->withUsername('root')
         ->withPassword('root')
     );
