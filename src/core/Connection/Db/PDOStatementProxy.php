@@ -11,7 +11,7 @@ use Swoole\ObjectProxy;
 class PDOStatementProxy extends ObjectProxy
 {
     /** @var PDOStatement */
-    protected $object;
+    protected $__object;
     /** @var PDOProxy|PDO */
     protected $parent;
     /** @var int */
@@ -28,11 +28,11 @@ class PDOStatementProxy extends ObjectProxy
     public function __call(string $name, array $arguments)
     {
         for ($n = 3; $n--;) {
-            $ret = @$this->object->$name(...$arguments);
+            $ret = @$this->__object->$name(...$arguments);
             if ($ret === false) {
                 /* no more chances or non-IO failures */
-                if ($n === 0 || !in_array($this->object->errorInfo()[1], $this->parent::IO_ERRORS, true)) {
-                    $errorInfo = $this->object->errorInfo();
+                if ($n === 0 || !in_array($this->__object->errorInfo()[1], $this->parent::IO_ERRORS, true)) {
+                    $errorInfo = $this->__object->errorInfo();
                     $exception = new PDOException($errorInfo[2], $errorInfo[1]);
                     $exception->errorInfo = $errorInfo;
                     throw $exception;
@@ -41,7 +41,7 @@ class PDOStatementProxy extends ObjectProxy
                     /* if not equal, parent has been reconnected */
                     $this->parent->reconnect();
                 }
-                $this->object = $this->parent->prepare($this->object->queryString);
+                $this->__object = $this->parent->prepare($this->__object->queryString);
                 continue;
             }
             break;

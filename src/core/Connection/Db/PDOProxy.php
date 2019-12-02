@@ -15,17 +15,17 @@ class PDOProxy extends ObjectProxy
         2013, // MYSQLND_CR_SERVER_LOST
     ];
 
+    /** @var PDO */
+    protected $__object;
     /** @var callable */
     protected $constructor;
-    /** @var PDO */
-    protected $object;
     /** @var int */
     protected $round = 0;
 
     public function __construct(callable $constructor)
     {
         parent::__construct($constructor());
-        $this->object->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
+        $this->__object->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
         $this->constructor = $constructor;
     }
 
@@ -45,11 +45,11 @@ class PDOProxy extends ObjectProxy
     public function __call(string $name, array $arguments)
     {
         for ($n = 3; $n--;) {
-            $ret = @$this->object->$name(...$arguments);
+            $ret = @$this->__object->$name(...$arguments);
             if ($ret === false) {
                 /* no more chances or non-IO failures */
-                if ($n === 0 || !in_array($this->object->errorInfo()[1], static::IO_ERRORS, true)) {
-                    $errorInfo = $this->object->errorInfo();
+                if ($n === 0 || !in_array($this->__object->errorInfo()[1], static::IO_ERRORS, true)) {
+                    $errorInfo = $this->__object->errorInfo();
                     $exception = new PDOException($errorInfo[2], $errorInfo[1]);
                     $exception->errorInfo = $errorInfo;
                     throw $exception;
