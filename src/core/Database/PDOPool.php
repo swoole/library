@@ -31,7 +31,8 @@ class PDOPool extends ConnectionPool
                 "dbname={$this->config->getDbname()};" .
                 "charset={$this->config->getCharset()}",
                 $this->config->getUsername(),
-                $this->config->getPassword()
+                $this->config->getPassword(),
+                $this->config->getOptions()
             );
         }, $size, PDOProxy::class);
     }

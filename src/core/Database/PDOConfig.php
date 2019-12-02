@@ -19,6 +19,8 @@ class PDOConfig
     protected $username = 'root';
     /** @var string */
     protected $password = 'root';
+    /** @var array|null */
+    protected $options;
 
     public function getHost(): string
     {
@@ -99,6 +101,17 @@ class PDOConfig
     public function withPassword(string $password): self
     {
         $this->password = $password;
+        return $this;
+    }
+
+    public function getOptions(): ?array
+    {
+        return $this->options;
+    }
+
+    public function withOptions(?array $options): self
+    {
+        $this->options = $options;
         return $this;
     }
 }
