@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-use Swoole\Connection\PDOProxy;
-use Swoole\Connection\Pool as Pool;
+use Swoole\Connection\Db\PDOProxy;
+use Swoole\Connection\Pool;
 use Swoole\Coroutine;
 use Swoole\Runtime;
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 Runtime::enableCoroutine();
 
@@ -14,7 +14,7 @@ Coroutine\run(function () {
     /* PDO instance constructor */
     $constructor = function () {
         return new PDO(
-            'mysql:host=127.0.0.1;dbname=test;charset=utf8',
+            'mysql:host=127.0.0.1; dbname=test; charset=utf8',
             'root',
             'root'
         );
