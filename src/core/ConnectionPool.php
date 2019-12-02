@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Swoole\Connection;
+namespace Swoole;
 
 use Swoole\Coroutine\Channel;
 
-class Pool
+class ConnectionPool
 {
     /** @var Channel */
     protected $pool;

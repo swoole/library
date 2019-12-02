@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-use Swoole\Connection\Db\PDOProxy;
-use Swoole\Connection\Pool;
+use Swoole\Database\PDOProxy;
+use Swoole\ConnectionPool;
 use Swoole\Coroutine;
 use Swoole\Runtime;
 
@@ -36,7 +36,7 @@ Coroutine\run(function () {
         }
     });
     /* connection pool */
-    $pool = new Pool($constructor, 8, PDOProxy::class);
+    $pool = new ConnectionPool($constructor, 8, PDOProxy::class);
     /* record and show success count */
     $success = 0;
     Coroutine::create(function () use (&$success) {

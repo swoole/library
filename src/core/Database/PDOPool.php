@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace Swoole\Connection\Db;
+namespace Swoole\Database;
 
 use PDO;
-use Swoole\Connection\Pool;
+use Swoole\ConnectionPool;
 
 /**
  * @method PDO|PDOProxy get()
  * @method void put(PDO|PDOProxy $connection)
  */
-class PDOPool extends Pool
+class PDOPool extends ConnectionPool
 {
     /** @var int */
     protected $size = 64;

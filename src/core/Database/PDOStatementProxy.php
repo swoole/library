@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Swoole\Connection\Db;
+namespace Swoole\Database;
 
 use PDO;
 use PDOException;
