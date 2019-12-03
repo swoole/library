@@ -8,7 +8,7 @@ use Swoole\Runtime;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-const N = 1;
+const N = 10000;
 
 Runtime::enableCoroutine();
 $s = microtime(true);
@@ -45,6 +45,9 @@ Coroutine\run(function () {
             }
             if ($a + $b !== (int)$result) {
                 throw new RuntimeException('Bad result');
+            }
+            while ($statement->fetch()) {
+                continue;
             }
             $pool->put($mysqli);
         });

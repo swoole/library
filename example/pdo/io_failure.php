@@ -8,6 +8,8 @@ use Swoole\Runtime;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
+const C = 64;
+
 Runtime::enableCoroutine();
 
 Coroutine\run(function () {
@@ -46,7 +48,7 @@ Coroutine\run(function () {
         }
     });
     /* clients */
-    for ($n = 64; $n--;) {
+    for ($c = C; $c--;) {
         Coroutine::create(function () use ($pool, &$success) {
             /** @var $pdo PDO */
             while (true) {
