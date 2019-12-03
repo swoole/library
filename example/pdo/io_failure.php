@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use Swoole\Database\PDOProxy;
 use Swoole\ConnectionPool;
 use Swoole\Coroutine;
+use Swoole\Database\PDOProxy;
 use Swoole\Runtime;
 
 require __DIR__ . '/../../vendor/autoload.php';

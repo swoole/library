@@ -17,6 +17,10 @@ class PDOProxy extends ObjectProxy
 
     /** @var PDO */
     protected $__object;
+
+    /** @var null|array */
+    protected $setAttributeContext;
+
     /** @var callable */
     protected $constructor;
     /** @var int */
@@ -39,17 +43,37 @@ class PDOProxy extends ObjectProxy
         $constructor = $this->constructor;
         parent::__construct($constructor());
         $this->round++;
+        /* restore context */
+        if ($this->setAttributeContext) {
+            foreach ($this->setAttributeContext as $attribute => $value) {
+                $this->__object->setAttribute($attribute, $value);
+            }
+        }
     }
 
-    /** @noinspection PhpUnused */
+    public function setAttribute(int $attribute, $value): bool
+    {
+        $this->setAttributeContext[$attribute] = $value;
+        return $this->__object->setAttribute($attribute, $value);
+    }
+
+    public function inTransaction(): bool
+    {
+        return $this->__object->inTransaction();
+    }
+
     public function __call(string $name, array $arguments)
     {
         for ($n = 3; $n--;) {
             $ret = @$this->__object->$name(...$arguments);
             if ($ret === false) {
                 /* no more chances or non-IO failures */
-                if ($n === 0 || !in_array($this->__object->errorInfo()[1], static::IO_ERRORS, true)) {
-                    $errorInfo = $this->__object->errorInfo();
+                $errorInfo = $this->__object->errorInfo();
+                if (
+                    !in_array($errorInfo[1], static::IO_ERRORS, true) ||
+                    $n === 0 ||
+                    $this->__object->inTransaction()
+                ) {
                     $exception = new PDOException($errorInfo[2], $errorInfo[1]);
                     $exception->errorInfo = $errorInfo;
                     throw $exception;
@@ -68,5 +92,4 @@ class PDOProxy extends ObjectProxy
         /** @noinspection PhpUndefinedVariableInspection */
         return $ret;
     }
-
 }

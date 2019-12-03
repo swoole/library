@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
+use Swoole\Coroutine;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
-use Swoole\Coroutine;
 use Swoole\Runtime;
 
 require __DIR__ . '/../../vendor/autoload.php';

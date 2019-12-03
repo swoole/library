@@ -4,9 +4,12 @@ declare(strict_types=1);
 namespace Swoole;
 
 use Swoole\Coroutine\Channel;
+use Throwable;
 
 class ConnectionPool
 {
+    public const DEFAULT_SIZE = 64;
+
     /** @var Channel */
     protected $pool;
     /** @var callable */
@@ -18,7 +21,7 @@ class ConnectionPool
     /** @var string|null */
     protected $proxy;
 
-    public function __construct(callable $constructor, int $size = 64, ?string $proxy = null)
+    public function __construct(callable $constructor, int $size = self::DEFAULT_SIZE, ?string $proxy = null)
     {
         $this->pool = new Channel($this->size = $size);
         $this->constructor = $constructor;
@@ -29,20 +32,34 @@ class ConnectionPool
     protected function make(): void
     {
         $this->num++;
-        if ($this->proxy) {
-            $connection = new $this->proxy($this->constructor);
-        } else {
-            $constructor = $this->constructor;
-            $connection = $constructor();
+        try {
+            if ($this->proxy) {
+                $connection = new $this->proxy($this->constructor);
+            } else {
+                $constructor = $this->constructor;
+                $connection = $constructor();
+            }
+        } catch (Throwable $throwable) {
+            $this->num--;
+            throw $throwable;
         }
         $this->put($connection);
     }
 
     public function fill(): void
     {
-        for ($n = $this->size - $this->num; $n--;) {
+        while ($this->size < $this->num) {
             $this->make();
         }
+    }
+
+    /**
+     * Call me if any connection broken
+     * @param int $num
+     */
+    public function scrap(int $num = 1): void
+    {
+        $this->num -= $num;
     }
 
     public function get()

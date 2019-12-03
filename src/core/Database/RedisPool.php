@@ -12,12 +12,10 @@ use Swoole\ConnectionPool;
  */
 class RedisPool extends ConnectionPool
 {
-    /** @var int */
-    protected $size = 64;
     /** @var RedisConfig */
     protected $config;
 
-    public function __construct(RedisConfig $config, int $size = 64)
+    public function __construct(RedisConfig $config, int $size = self::DEFAULT_SIZE)
     {
         $this->config = $config;
         parent::__construct(function () {

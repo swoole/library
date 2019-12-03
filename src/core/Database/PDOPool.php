@@ -17,7 +17,7 @@ class PDOPool extends ConnectionPool
     /** @var PDOConfig */
     protected $config;
 
-    public function __construct(PDOConfig $config, int $size = 64)
+    public function __construct(PDOConfig $config, int $size = self::DEFAULT_SIZE)
     {
         $this->config = $config;
         parent::__construct(function () {

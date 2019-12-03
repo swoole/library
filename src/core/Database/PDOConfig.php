@@ -19,8 +19,8 @@ class PDOConfig
     protected $username = 'root';
     /** @var string */
     protected $password = 'root';
-    /** @var array|null */
-    protected $options;
+    /** @var array */
+    protected $options = [];
 
     public function getHost(): string
     {
@@ -104,12 +104,12 @@ class PDOConfig
         return $this;
     }
 
-    public function getOptions(): ?array
+    public function getOptions(): array
     {
         return $this->options;
     }
 
-    public function withOptions(?array $options): self
+    public function withOptions(array $options): self
     {
         $this->options = $options;
         return $this;
