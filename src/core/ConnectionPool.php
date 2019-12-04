@@ -53,15 +53,6 @@ class ConnectionPool
         }
     }
 
-    /**
-     * Call me if any connection broken
-     * @param int $num
-     */
-    public function scrap(int $num = 1): void
-    {
-        $this->num -= $num;
-    }
-
     public function get()
     {
         if ($this->pool->isEmpty() && $this->num < $this->size) {
@@ -72,7 +63,12 @@ class ConnectionPool
 
     public function put($connection): void
     {
-        $this->pool->push($connection);
+        if ($connection !== null) {
+            $this->pool->push($connection);
+        } else {
+            /* connection broken */
+            $this->num -= 1;
+        }
     }
 
     public function close(): void
