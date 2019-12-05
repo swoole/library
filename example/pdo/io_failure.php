@@ -6,7 +6,7 @@ use Swoole\Coroutine;
 use Swoole\Database\PDOProxy;
 use Swoole\Runtime;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../bootstrap.php';
 
 const C = 64;
 
@@ -16,9 +16,13 @@ Coroutine\run(function () {
     /* PDO instance constructor */
     $constructor = function () {
         return new PDO(
-            'mysql:host=127.0.0.1; dbname=test; charset=utf8',
-            'root',
-            'root'
+            'mysql:' .
+            'host=' . MYSQL_SERVER_HOST . ';' .
+            'port=' . MYSQL_SERVER_PWD . ';' .
+            'dbname=' . MYSQL_SERVER_DB . ';' .
+            'charset=utf8mb4',
+            MYSQL_SERVER_USER,
+            MYSQL_SERVER_PWD
         );
     };
     /* connection killer */

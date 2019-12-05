@@ -6,21 +6,21 @@ use Swoole\Database\MysqliConfig;
 use Swoole\Database\MysqliPool;
 use Swoole\Runtime;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../bootstrap.php';
 
-const N = 10000;
+const N = 1024;
 
 Runtime::enableCoroutine();
 $s = microtime(true);
 Coroutine\run(function () {
     $pool = new MysqliPool((new MysqliConfig)
-        ->withHost('127.0.0.1')
-        ->withPort(3306)
+        ->withHost(MYSQL_SERVER_HOST)
+        ->withPort(MYSQL_SERVER_PORT)
         // ->withUnixSocket('/tmp/mysql.sock')
-        ->withDbName('test')
+        ->withDbName(MYSQL_SERVER_DB)
         ->withCharset('utf8mb4')
-        ->withUsername('root')
-        ->withPassword('root')
+        ->withUsername(MYSQL_SERVER_USER)
+        ->withPassword(MYSQL_SERVER_PWD)
     );
     for ($n = N; $n--;) {
         Coroutine::create(function () use ($pool) {

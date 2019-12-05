@@ -6,16 +6,18 @@ use Swoole\Database\RedisConfig;
 use Swoole\Database\RedisPool;
 use Swoole\Runtime;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../bootstrap.php';
 
-const N = 10000;
+const N = 1024;
 
 Runtime::enableCoroutine();
 $s = microtime(true);
 Coroutine\run(function () {
     $pool = new RedisPool((new RedisConfig)
-        ->withHost('127.0.0.1')
-        ->withPort(6379)
+        ->withHost(REDIS_SERVER_HOST)
+        ->withPort(REDIS_SERVER_PORT)
+        ->withAuth('')
+        ->withDbIndex(0)
         ->withTimeout(1)
     );
     for ($n = N; $n--;) {
