@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 namespace Swoole;
 
@@ -259,7 +258,7 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
      */
     public function unserialize($string): self
     {
-        $this->array = (array)unserialize($string);
+        $this->array = (array)unserialize((string)$string);
         return $this;
     }
 
