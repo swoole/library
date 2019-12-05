@@ -28,6 +28,12 @@ class RedisPool extends ConnectionPool
                 $this->config->getRetryInterval(),
                 $this->config->getReadTimeout()
             );
+            if ($this->config->getAuth()) {
+                $redis->auth($this->config->getAuth());
+            }
+            if ($this->config->getDbIndex() !== 0) {
+                $redis->select($this->config->getDbIndex());
+            }
             return $redis;
         }, $size);
     }

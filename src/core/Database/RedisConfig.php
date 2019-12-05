@@ -17,6 +17,10 @@ class RedisConfig
     protected $retry_interval = 0;
     /** @var float */
     protected $read_timeout = 0.0;
+    /** @var string */
+    protected $auth = '';
+    /** @var int */
+    protected $dbIndex = 0;
 
     public function getHost()
     {
@@ -81,6 +85,28 @@ class RedisConfig
     public function withReadTimeout(float $read_timeout): self
     {
         $this->read_timeout = $read_timeout;
+        return $this;
+    }
+
+    public function getAuth(): string
+    {
+        return $this->auth;
+    }
+
+    public function withAuth(string $auth): self
+    {
+        $this->auth = $auth;
+        return $this;
+    }
+
+    public function getDbIndex(): int
+    {
+        return $this->dbIndex;
+    }
+
+    public function withDbIndex(int $dbIndex): self
+    {
+        $this->dbIndex = $dbIndex;
         return $this;
     }
 }
