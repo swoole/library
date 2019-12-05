@@ -1,28 +1,15 @@
 <?php
 
-function swoole_curl_init($url = null): Swoole\Curl\Handler
+function swoole_curl_init(string $url = ''): Swoole\Curl\Handler
 {
     return new Swoole\Curl\Handler($url);
 }
 
-/**
- * @param Swoole\Curl\Handler $obj
- * @param $opt
- * @param $value
- * @return bool
- * @throws Swoole\Curl\Exception
- */
-function swoole_curl_setopt(Swoole\Curl\Handler $obj, $opt, $value): bool
+function swoole_curl_setopt(Swoole\Curl\Handler $obj, int $opt, $value): bool
 {
     return $obj->setOption($opt, $value);
 }
 
-/**
- * @param Swoole\Curl\Handler $obj
- * @param $array
- * @return bool
- * @throws Swoole\Curl\Exception
- */
 function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, $array): bool
 {
     foreach ($array as $k => $v) {

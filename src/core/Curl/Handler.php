@@ -3,7 +3,6 @@
 
 namespace Swoole\Curl;
 
-
 use Swoole;
 use Swoole\Coroutine\Http\Client;
 use CURLFile;
@@ -85,7 +84,7 @@ class Handler
     public $errCode = 0;
     public $errMsg = '';
 
-    public function __construct($url = null)
+    public function __construct(string $url = '')
     {
         if ($url) {
             $this->create($url);
