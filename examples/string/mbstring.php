@@ -1,6 +1,5 @@
 <?php
-require __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__.'/../../src/functions.php';
+require __DIR__ . '/../bootstrap.php';
 
 $str = _mbstring("我是中国人");
 var_dump($str->substr(1, 2));

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 if (!defined('SWOOLE_LIBRARY')) {
-    require __DIR__ . '/../../vendor/autoload.php';
+    require __DIR__ . '/../vendor/autoload.php';
 }
 
 if (!defined('MYSQL_SERVER_HOST')) {
