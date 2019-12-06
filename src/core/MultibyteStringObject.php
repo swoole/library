@@ -2,7 +2,6 @@
 
 namespace Swoole;
 
-
 class MultibyteStringObject extends StringObject
 {
     /**
@@ -71,44 +70,7 @@ class MultibyteStringObject extends StringObject
     {
         return new static(mb_substr($this->string, $offset, ...$length));
     }
-
-    /**
-     * @param string $needle
-     * @return bool
-     */
-    public function startsWith(string $needle): bool
-    {
-        return mb_strpos($this->string, $needle) === 0;
-    }
-
-    /**
-     * @param string $subString
-     * @return bool
-     */
-    public function contains(string $subString): bool
-    {
-        return mb_strpos($this->string, $subString) !== false;
-    }
-
-    /**
-     * @param string $needle
-     * @return bool
-     */
-    public function endsWith(string $needle): bool
-    {
-        return mb_strrpos($this->string, $needle) === (strlen($needle) - 1);
-    }
-
-    /**
-     * @param string $delimiter
-     * @param int $limit
-     * @return ArrayObject
-     */
-    public function split(string $delimiter, int $limit = PHP_INT_MAX): ArrayObject
-    {
-        return static::detectArrayType(explode($delimiter, $this->string, $limit));
-    }
-
+   
     /**
      * @param int $splitLength
      * @return ArrayObject
@@ -116,30 +78,5 @@ class MultibyteStringObject extends StringObject
     public function chunk($splitLength = 1): ArrayObject
     {
         return static::detectArrayType(mb_split($this->string, $splitLength));
-    }
-
-    /**
-     * @return string
-     */
-    public function toString()
-    {
-        return $this->string;
-    }
-
-    /**
-     * @return string
-     */
-    public function __toString(): string
-    {
-        return $this->string;
-    }
-
-    /**
-     * @param array $value
-     * @return ArrayObject
-     */
-    protected static function detectArrayType(array $value): ArrayObject
-    {
-        return new ArrayObject($value);
     }
 }
