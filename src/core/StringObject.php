@@ -120,7 +120,7 @@ class StringObject
      * @param mixed ...$length
      * @return static
      */
-    public function substr(int $offset, ...$length): self
+    public function substr(int $offset, ...$length)
     {
         return new static(substr($this->string, $offset, ...$length));
     }
@@ -140,7 +140,7 @@ class StringObject
      * @param null $count
      * @return static
      */
-    public function replace(string $search, string $replace, &$count = null): self
+    public function replace(string $search, string $replace, &$count = null)
     {
         return new static(str_replace($search, $replace, $this->string, $count));
     }
@@ -196,7 +196,7 @@ class StringObject
      * @param string $chunkEnd
      * @return static
      */
-    public function chunkSplit(int $chunkLength = 1, string $chunkEnd = ''): self
+    public function chunkSplit(int $chunkLength = 1, string $chunkEnd = '')
     {
         return new static(chunk_split($this->string, $chunkLength, $chunkEnd));
     }

@@ -10,6 +10,15 @@ if (SWOOLE_USE_SHORTNAME) {
     }
 
     /**
+     * @param string $string
+     * @return Swoole\MultibyteStringObject
+     */
+    function _mbstring(string $string = ''): Swoole\MultibyteStringObject
+    {
+        return new Swoole\MultibyteStringObject($string);
+    }
+
+    /**
      * @param array $array
      * @return Swoole\ArrayObject
      */
@@ -26,6 +35,15 @@ if (SWOOLE_USE_SHORTNAME) {
 function swoole_string(string $string = ''): Swoole\StringObject
 {
     return new Swoole\StringObject($string);
+}
+
+/**
+ * @param string $string
+ * @return Swoole\MultibyteStringObject
+ */
+function swoole_mbstring(string $string = ''): Swoole\MultibyteStringObject
+{
+    return new Swoole\MultibyteStringObject($string);
 }
 
 /**
