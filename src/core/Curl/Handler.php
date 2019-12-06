@@ -425,7 +425,19 @@ class Handler
                 break;
             case CURLOPT_ENCODING:
                 if (empty($value)) {
-                    $value = 'gzip';
+                    if (defined('SWOOLE_HAVE_ZLIB')) {
+                        $value = 'gzip, deflate';
+                    }
+                    if (defined('SWOOLE_HAVE_BROTLI')) {
+                        if (!empty($value)) {
+                            $value = 'br, ' . $value;
+                        } else {
+                            $value = 'br';
+                        }
+                    }
+                    if (empty($value)) {
+                        break;
+                    }
                 }
                 $this->headers['Accept-Encoding'] = $value;
                 break;
@@ -434,6 +446,9 @@ class Handler
                 break;
             case CURLOPT_PROXYPORT:
                 $this->proxy_port = $value;
+                break;
+            case CURLOPT_PROXYAUTH:
+                /* ignored temporarily */
                 break;
             case CURLOPT_NOBODY:
                 $this->nobody = boolval($value);
@@ -460,6 +475,7 @@ class Handler
             case CURLOPT_DNS_CACHE_TIMEOUT:
             case CURLOPT_STDERR:
             case CURLOPT_WRITEHEADER:
+            case CURLOPT_BUFFERSIZE:
                 break;
             /**
              * SSL
