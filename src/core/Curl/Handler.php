@@ -404,6 +404,11 @@ class Handler
                 $this->nobody = boolval($value);
                 $this->method = 'HEAD';
                 break;
+            case CURLOPT_IPRESOLVE:
+                if ($value !== CURL_IPRESOLVE_WHATEVER && $value !== CURL_IPRESOLVE_V6) {
+                    throw new Swoole\Curl\Exception("swoole_curl_setopt(): IPV6 only is not supported");
+                }
+                break;
             /**
              * Ignore options
              */
