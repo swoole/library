@@ -7,13 +7,10 @@ use Swoole;
 use Swoole\Coroutine\Http\Client;
 use CURLFile;
 use Iterator;
+use Swoole\Http\Status;
 
 class Handler
 {
-    private const ERRORS = [
-        CURLE_URL_MALFORMAT => 'No URL set!',
-    ];
-
     /**
      * @var Client
      */
@@ -59,6 +56,7 @@ class Handler
     private $infileSize = PHP_INT_MAX;
     private $outputStream;
     private $proxy;
+    private $proxy_port;
     private $clientOptions = [];
     private $followLocation = false;
     private $autoReferer = false;
@@ -87,38 +85,86 @@ class Handler
     public function __construct(string $url = '')
     {
         if ($url) {
-            $this->create($url);
+            $this->setUrl($url);
         }
     }
 
-    private function create(string $url): void
+    private function create(?array $urlInfo = null): void
+    {
+        if ($urlInfo === null) {
+            $urlInfo = $this->urlInfo;
+        }
+        $this->client = new Client($urlInfo['host'], $urlInfo['port'], $urlInfo['scheme'] === 'https');
+    }
+
+    private function setUrl(string $url, bool $setInfo = true): bool
     {
         if (strlen($url) === 0) {
-            $this->setError(CURLE_URL_MALFORMAT);
-            return;
+            $this->setError(CURLE_URL_MALFORMAT, 'No URL set!');
+            return false;
         }
         if (strpos($url, '://') === false) {
             $url = 'http://' . $url;
         }
+        if ($setInfo) {
+            $urlInfo = parse_url($url);
+            if (!is_array($urlInfo)) {
+                $this->setError(CURLE_URL_MALFORMAT, "URL[{$url}] using bad/illegal format");
+                return false;
+            }
+            if (!$this->setUrlInfo($urlInfo)) {
+                return false;
+            }
+        }
         $this->info['url'] = $url;
-        $info = parse_url($url);
-        if (!is_array($info)) {
-            $this->setError(CURLE_URL_MALFORMAT, "URL[{$url}] using bad/illegal format");
-            return;
+        return true;
+    }
+
+    private function setUrlInfo(array $urlInfo): bool
+    {
+        if (empty($urlInfo['scheme'])) {
+            $urlInfo['scheme'] = 'http';
         }
-        $proto = swoole_array_default_value($info, 'scheme');
-        if ($proto !== 'http' and $proto !== 'https') {
-            $this->setError(CURLE_UNSUPPORTED_PROTOCOL, "Protocol \"{$proto}\" not supported or disabled in libcurl");
-            return;
+        $scheme = $urlInfo['scheme'];
+        if ($scheme !== 'http' and $scheme !== 'https') {
+            $this->setError(CURLE_UNSUPPORTED_PROTOCOL, "Protocol \"{$scheme}\" not supported or disabled in libcurl");
+            return false;
         }
-        $ssl = $proto === 'https';
-        if (empty($info['port'])) {
-            $port = $ssl ? 443 : 80;
+        $host = $urlInfo['host'];
+        if ($this->info['primary_port'] !== 0) {
+            /* keep same with cURL, primary_port has the highest priority */
+            $urlInfo['port'] = $this->info['primary_port'];
+        } elseif (empty($urlInfo['port'])) {
+            $urlInfo['port'] = $scheme === 'https' ? 443 : 80;
         } else {
-            $port = intval($info['port']);
+            $urlInfo['port'] = intval($urlInfo['port']);
         }
-        $this->urlInfo = $info;
-        $this->client = new Client($info['host'], $port, $ssl);
+        $port = $urlInfo['port'];
+        if ($this->client) {
+            $oldUrlInfo = $this->urlInfo;
+            if (
+                $host !== $oldUrlInfo['host'] or
+                $port !== $oldUrlInfo['port'] or
+                $scheme !== $oldUrlInfo['scheme']
+            ) {
+                /* target changed */
+                $this->create($urlInfo);
+            }
+        }
+        $this->urlInfo = $urlInfo;
+        return true;
+    }
+
+    private function setPort(int $port): void
+    {
+        $this->info['primary_port'] = $port;
+        if ($this->urlInfo['port'] !== $port) {
+            $this->urlInfo['port'] = $port;
+            if ($this->client) {
+                /* target changed */
+                $this->create();
+            }
+        }
     }
 
     public function execute()
@@ -129,44 +175,33 @@ class Handler
         /**
          * Socket
          */
-        $client = $this->client;
-        if (!$client || !$this->urlInfo) {
-            if (!$this->errCode) {
-                $this->setError(CURLE_URL_MALFORMAT);
-            }
+        if (!$this->urlInfo) {
+            $this->setError(CURLE_URL_MALFORMAT, 'No URL set or URL using bad/illegal format');
             return false;
         }
-        $isRedirect = false;
+        if (!$this->client) {
+            $this->create();
+        }
+        $client = $this->client;
         do {
-            if ($isRedirect and !$client) {
-                $proto = swoole_array_default_value($this->urlInfo, 'scheme');
-                if ($proto != 'http' and $proto != 'https') {
-                    $this->setError(CURLE_UNSUPPORTED_PROTOCOL, "Protocol \"{$proto}\" not supported or disabled in libcurl");
-                    return false;
-                }
-                $ssl = $proto === 'https';
-                if (empty($this->urlInfo['port'])) {
-                    $port = $ssl ? 443 : 80;
-                } else {
-                    $port = intval($this->urlInfo['port']);
-                }
-                $client = new Client($this->urlInfo['host'], $port, $ssl);
-            }
             /**
              * Http Proxy
              */
             if ($this->proxy) {
-                list($proxy_host, $proxy_port) = explode(':', $this->proxy);
-                if (!filter_var($proxy_host, FILTER_VALIDATE_IP)) {
-                    $ip = Swoole\Coroutine::gethostbyname($proxy_host);
+                list($proxy, $proxy_port) = explode(':', $this->proxy);
+                if ($this->proxy_port) {
+                    $proxy_port = $this->proxy_port;
+                }
+                if (!filter_var($proxy, FILTER_VALIDATE_IP)) {
+                    $ip = Swoole\Coroutine::gethostbyname($proxy, AF_INET, $this->clientOptions['connect_timeout'] ?? -1);
                     if (!$ip) {
-                        $this->setError(CURLE_COULDNT_RESOLVE_PROXY, 'Could not resolve proxy: ' . $proxy_host);
+                        $this->setError(CURLE_COULDNT_RESOLVE_PROXY, 'Could not resolve proxy: ' . $proxy);
                         return false;
                     } else {
-                        $proxy_host = $ip;
+                        $this->proxy = $proxy = $ip;
                     }
                 }
-                $client->set(['http_proxy_host' => $proxy_host, 'http_proxy_port' => $proxy_port]);
+                $client->set(['http_proxy_host' => $proxy, 'http_proxy_port' => $proxy_port]);
             }
             /**
              * Client Options
@@ -218,7 +253,7 @@ class Handler
             /**
              * Http Header
              */
-            $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : '');
+            $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
             $client->setHeaders($this->headers);
             /**
              * Execute
@@ -234,26 +269,21 @@ class Handler
             }
             if ($client->statusCode >= 300 and $client->statusCode < 400 and isset($client->headers['location'])) {
                 $redirectParsedUrl = $this->getRedirectUrl($client->headers['location']);
-                $redirectUrl = $this->unparseUrl($redirectParsedUrl);
+                $redirectUrl = static::unparseUrl($redirectParsedUrl);
                 if ($this->followLocation and (null === $this->maxRedirs or $this->info['redirect_count'] < $this->maxRedirs)) {
-                    $isRedirect = true;
-                    if (0 === $this->info['redirect_count']) {
+                    if ($this->info['redirect_count'] === 0) {
                         $this->info['starttransfer_time'] = microtime(true) - $timeBegin;
                         $redirectBeginTime = microtime(true);
                     }
                     // force GET
-                    if (in_array($client->statusCode, [301, 302, 303])) {
+                    if (in_array($client->statusCode, [Status::MOVED_PERMANENTLY, Status::FOUND, Status::SEE_OTHER])) {
                         $this->method = 'GET';
-                    }
-                    if ($this->urlInfo['host'] !== $redirectParsedUrl['host'] or ($this->urlInfo['port'] ?? null) !== ($redirectParsedUrl['port'] ?? null) or $this->urlInfo['scheme'] !== $redirectParsedUrl['scheme']) {
-                        // If host, port, and scheme are the same, reuse $client. Otherwise, release the old $client
-                        $client = null;
                     }
                     if ($this->autoReferer) {
                         $this->headers['Referer'] = $this->info['url'];
                     }
-                    $this->urlInfo = $redirectParsedUrl;
-                    $this->info['url'] = $redirectUrl;
+                    $this->setUrl($redirectUrl, false);
+                    $this->setUrlInfo($redirectParsedUrl);
                     $this->info['redirect_count']++;
                 } else {
                     $this->info['redirect_url'] = $redirectUrl;
@@ -276,7 +306,7 @@ class Handler
         if ($client->headers) {
             $cb = $this->headerFunction;
             if ($client->statusCode > 0) {
-                $row = "HTTP/1.1 {$client->statusCode} " . Swoole\Http\Status::getReasonPhrase($client->statusCode) . "\r\n";
+                $row = "HTTP/1.1 {$client->statusCode} " . Status::getReasonPhrase($client->statusCode) . "\r\n";
                 if ($cb) {
                     $cb($this, $row);
                 }
@@ -341,7 +371,7 @@ class Handler
     private function setError($code, $msg = ''): void
     {
         $this->errCode = $code;
-        $this->errMsg = $msg ? $msg : self::ERRORS[$code];
+        $this->errMsg = $msg ? $msg : curl_strerror($code);
     }
 
     private function getUrl(): string
@@ -362,7 +392,7 @@ class Handler
 
     /**
      * @param int $opt
-     * @param $value
+     * @param mixed $value
      * @return bool
      * @throws Swoole\Curl\Exception
      */
@@ -385,7 +415,9 @@ class Handler
              * Basic
              */
             case CURLOPT_URL:
-                $this->create($value);
+                return $this->setUrl($value);
+            case CURLOPT_PORT:
+                $this->setPort($value);
                 break;
             case CURLOPT_RETURNTRANSFER:
                 $this->returnTransfer = $value;
@@ -400,12 +432,15 @@ class Handler
             case CURLOPT_PROXY:
                 $this->proxy = $value;
                 break;
+            case CURLOPT_PROXYPORT:
+                $this->proxy_port = $value;
+                break;
             case CURLOPT_NOBODY:
                 $this->nobody = boolval($value);
                 $this->method = 'HEAD';
                 break;
             case CURLOPT_IPRESOLVE:
-                if ($value !== CURL_IPRESOLVE_WHATEVER && $value !== CURL_IPRESOLVE_V6) {
+                if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V6) {
                     throw new Swoole\Curl\Exception("swoole_curl_setopt(): IPV6 only is not supported");
                 }
                 break;
@@ -421,6 +456,7 @@ class Handler
                  * From PHP 5.1.3, this option has no effect: the raw output will always be returned when CURLOPT_RETURNTRANSFER is used.
                  */
             case CURLOPT_BINARYTRANSFER: /* TODO */
+            case CURLOPT_DNS_USE_GLOBAL_CACHE:
             case CURLOPT_DNS_CACHE_TIMEOUT:
             case CURLOPT_STDERR:
             case CURLOPT_WRITEHEADER:
@@ -470,19 +506,15 @@ class Handler
             case CURLOPT_REFERER:
                 $this->headers['Referer'] = $value;
                 break;
-
             case CURLINFO_HEADER_OUT:
                 $this->withHeaderOut = boolval($value);
                 break;
-
             case CURLOPT_FILETIME:
                 $this->withFileTime = boolval($value);
                 break;
-
             case CURLOPT_USERAGENT:
                 $this->headers['User-Agent'] = $value;
                 break;
-
             case CURLOPT_CUSTOMREQUEST:
                 $this->method = (string)$value;
                 break;
@@ -559,16 +591,12 @@ class Handler
         return true;
     }
 
-    public function reset(): void
-    {
-    }
-
     public function getInfo()
     {
         return $this->info;
     }
 
-    private function unparseUrl(array $parsedUrl): string
+    private static function unparseUrl(array $parsedUrl): string
     {
         $scheme = ($parsedUrl['scheme'] ?? 'http') . '://';
         $host = $parsedUrl['host'] ?? '';
