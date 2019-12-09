@@ -3,10 +3,12 @@
 
 namespace Swoole\Curl;
 
+use ReflectionClass;
 use Swoole;
 use Swoole\Coroutine\Http\Client;
 use CURLFile;
 use Iterator;
+use Swoole\Curl\Exception as CurlException;
 use Swoole\Http\Status;
 
 class Handler
@@ -55,8 +57,11 @@ class Handler
     private $infile;
     private $infileSize = PHP_INT_MAX;
     private $outputStream;
+    private $proxy_type;
     private $proxy;
-    private $proxy_port;
+    private $proxy_port = 1080;
+    private $proxy_username;
+    private $proxy_password;
     private $clientOptions = [];
     private $followLocation = false;
     private $autoReferer = false;
@@ -188,10 +193,9 @@ class Handler
              * Http Proxy
              */
             if ($this->proxy) {
-                list($proxy, $proxy_port) = explode(':', $this->proxy);
-                if ($this->proxy_port) {
-                    $proxy_port = $this->proxy_port;
-                }
+                $proxy = explode(':', $this->proxy);
+                $proxy_port = $proxy[1] ?? $this->proxy_port;
+                $proxy = $proxy[0];
                 if (!filter_var($proxy, FILTER_VALIDATE_IP)) {
                     $ip = Swoole\Coroutine::gethostbyname($proxy, AF_INET, $this->clientOptions['connect_timeout'] ?? -1);
                     if (!$ip) {
@@ -201,14 +205,37 @@ class Handler
                         $this->proxy = $proxy = $ip;
                     }
                 }
-                $client->set(['http_proxy_host' => $proxy, 'http_proxy_port' => $proxy_port]);
+                switch ($this->proxy_type) {
+                    case CURLPROXY_HTTP:
+                        $proxy_options = [
+                            'http_proxy_host' => $proxy,
+                            'http_proxy_port' => $proxy_port,
+                            'http_proxy_username' => $this->proxy_username,
+                            'http_proxy_password' => $this->proxy_password
+                        ];
+                        break;
+                    case CURLPROXY_SOCKS5:
+                        $proxy_options = [
+                            'socks5_host' => $proxy,
+                            'socks5_port' => $proxy_port,
+                            'socks5_username' => $this->proxy_username,
+                            'socks5_password' => $this->proxy_password
+                        ];
+                        break;
+                    default:
+                        throw new CurlException("Unexpected proxy type [{$this->proxy_type}]");
+                }
             }
             /**
              * Client Options
              */
-            if ($this->clientOptions) {
-                $client->set($this->clientOptions);
-            }
+            $client->set(
+                $this->clientOptions +
+                ($proxy_options ?? [])
+            );
+            /**
+             * Method
+             */
             $client->setMethod($this->method);
             /**
              * Infile
@@ -251,7 +278,7 @@ class Handler
                 $this->postData = [];
             }
             /**
-             * Http Header
+             * Http Headers
              */
             $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
             $client->setHeaders($this->headers);
@@ -441,11 +468,28 @@ class Handler
                 }
                 $this->headers['Accept-Encoding'] = $value;
                 break;
+            case CURLOPT_PROXYTYPE:
+                if ($value !== CURLPROXY_HTTP || $value !== CURLPROXY_SOCKS5) {
+                    throw new Swoole\Curl\Exception('swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE: CURLPROXY_HTTP, CURLPROXY_SOCKS5');
+                }
+                $this->proxy_type = $value;
+                break;
             case CURLOPT_PROXY:
                 $this->proxy = $value;
                 break;
             case CURLOPT_PROXYPORT:
                 $this->proxy_port = $value;
+                break;
+            case CURLOPT_PROXYUSERNAME:
+                $this->proxy_username = $value;
+                break;
+            case CURLOPT_PROXYPASSWORD:
+                $this->proxy_password = $value;
+                break;
+            case CURLOPT_PROXYUSERPWD:
+                $user_pwd = explode(':', $value);
+                $this->proxy_username = urldecode($user_pwd[0]);
+                $this->proxy_password = urldecode($user_pwd[1] ?? null);
                 break;
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
@@ -456,7 +500,7 @@ class Handler
                 break;
             case CURLOPT_IPRESOLVE:
                 if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V6) {
-                    throw new Swoole\Curl\Exception("swoole_curl_setopt(): IPV6 only is not supported");
+                    throw new Swoole\Curl\Exception('swoole_curl_setopt(): IPV6 only is not supported');
                 }
                 break;
             /**
@@ -501,6 +545,7 @@ class Handler
             case CURLOPT_SAFE_UPLOAD:
                 if (!$value) {
                     trigger_error('swoole_curl_setopt(): Disabling safe uploads is no longer supported', E_USER_WARNING);
+                    return false;
                 }
                 break;
             /**
@@ -536,12 +581,13 @@ class Handler
                 break;
             case CURLOPT_PROTOCOLS:
                 if ($value > 3) {
-                    throw new Swoole\Curl\Exception("swoole_curl_setopt(): CURLOPT_PROTOCOLS[{$value}] is not supported");
+                    throw new CurlException("swoole_curl_setopt(): CURLOPT_PROTOCOLS[{$value}] is not supported");
                 }
                 break;
             case CURLOPT_HTTP_VERSION:
                 if ($value != CURL_HTTP_VERSION_1_1) {
                     trigger_error("swoole_curl_setopt(): CURLOPT_HTTP_VERSION[{$value}] is not supported", E_USER_WARNING);
+                    return false;
                 }
                 break;
             /**
@@ -607,9 +653,16 @@ class Handler
         return true;
     }
 
-    public function getInfo()
+    public function getInfo(): array
     {
         return $this->info;
+    }
+
+    public function reset(): void
+    {
+        foreach ((new ReflectionClass(static::class))->getDefaultProperties() as $name => $value) {
+            $this->$name = $value;
+        }
     }
 
     private static function unparseUrl(array $parsedUrl): string

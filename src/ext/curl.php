@@ -13,7 +13,7 @@ function swoole_curl_setopt(Swoole\Curl\Handler $obj, int $opt, $value): bool
 function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, $array): bool
 {
     foreach ($array as $k => $v) {
-        if ($obj->setOption($k, $v) === false) {
+        if ($obj->setOption($k, $v) !== true) {
             return false;
         }
     }
