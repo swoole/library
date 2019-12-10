@@ -16,7 +16,8 @@
         "issues": "https://github.com/swoole/library"
     },
     "require": {
-        "php": "^7.1"
+        "php": ">=7.1",
+        "ext-swoole": ">=4.4"
     },
     "autoload": {
         "files": [
