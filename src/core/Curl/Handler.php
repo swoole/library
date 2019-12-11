@@ -1,5 +1,5 @@
 <?php
-/** @noinspection PhpDuplicateSwitchCaseBodyInspection */
+/** @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection */
 
 namespace Swoole\Curl;
 
@@ -469,8 +469,10 @@ class Handler
                 $this->headers['Accept-Encoding'] = $value;
                 break;
             case CURLOPT_PROXYTYPE:
-                if ($value !== CURLPROXY_HTTP || $value !== CURLPROXY_SOCKS5) {
-                    throw new Swoole\Curl\Exception('swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE: CURLPROXY_HTTP, CURLPROXY_SOCKS5');
+                if ($value !== CURLPROXY_HTTP and $value !== CURLPROXY_SOCKS5) {
+                    throw new Swoole\Curl\Exception(
+                        'swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE values: CURLPROXY_HTTP, CURLPROXY_SOCKS5'
+                    );
                 }
                 $this->proxy_type = $value;
                 break;
@@ -499,8 +501,10 @@ class Handler
                 $this->method = 'HEAD';
                 break;
             case CURLOPT_IPRESOLVE:
-                if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V6) {
-                    throw new Swoole\Curl\Exception('swoole_curl_setopt(): IPV6 only is not supported');
+                if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V4) {
+                    throw new Swoole\Curl\Exception(
+                        'swoole_curl_setopt(): Only support following CURLOPT_IPRESOLVE values: CURL_IPRESOLVE_WHATEVER, CURL_IPRESOLVE_V4'
+                    );
                 }
                 break;
             /**

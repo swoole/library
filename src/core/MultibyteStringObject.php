@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpComposerExtensionStubsInspection */
 
 namespace Swoole;
 
@@ -70,7 +71,7 @@ class MultibyteStringObject extends StringObject
     {
         return new static(mb_substr($this->string, $offset, ...$length));
     }
-   
+
     /**
      * @param int $splitLength
      * @return ArrayObject
