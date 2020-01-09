@@ -1,5 +1,5 @@
 <?php
-/** @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection */
+/** @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection, PhpInconsistentReturnPointsInspection */
 
 namespace Swoole\Curl;
 
@@ -81,10 +81,12 @@ final class Handler
     private $method = '';
     private $headers = [];
 
-    private $transfer = '';
+    private $transfer = null;
 
     private $errCode = 0;
     private $errMsg = '';
+
+    private $closed = false;
 
     public function __construct(string $url = '')
     {
@@ -99,6 +101,22 @@ final class Handler
             $urlInfo = $this->urlInfo;
         }
         $this->client = new Client($urlInfo['host'], $urlInfo['port'], $urlInfo['scheme'] === 'https');
+    }
+
+    private function getUrl(): string
+    {
+        if (empty($this->urlInfo['path'])) {
+            $url = '/';
+        } else {
+            $url = $this->urlInfo['path'];
+        }
+        if (!empty($this->urlInfo['query'])) {
+            $url .= '?' . $this->urlInfo['query'];
+        }
+        if (!empty($this->urlInfo['fragment'])) {
+            $url .= '#' . $this->urlInfo['fragment'];
+        }
+        return $url;
     }
 
     private function setUrl(string $url, bool $setInfo = true): bool
@@ -171,257 +189,10 @@ final class Handler
         }
     }
 
-    public function execute()
-    {
-        $this->info['redirect_count'] = $this->info['starttransfer_time'] = 0;
-        $this->info['redirect_url'] = '';
-        $timeBegin = microtime(true);
-        /**
-         * Socket
-         */
-        if (!$this->urlInfo) {
-            $this->setError(CURLE_URL_MALFORMAT, 'No URL set or URL using bad/illegal format');
-            return false;
-        }
-        if (!$this->client) {
-            $this->create();
-        }
-        $client = $this->client;
-        do {
-            /**
-             * Http Proxy
-             */
-            if ($this->proxy) {
-                $proxy = explode(':', $this->proxy);
-                $proxyPort = $proxy[1] ?? $this->proxyPort;
-                $proxy = $proxy[0];
-                if (!filter_var($proxy, FILTER_VALIDATE_IP)) {
-                    $ip = Swoole\Coroutine::gethostbyname($proxy, AF_INET, $this->clientOptions['connect_timeout'] ?? -1);
-                    if (!$ip) {
-                        $this->setError(CURLE_COULDNT_RESOLVE_PROXY, 'Could not resolve proxy: ' . $proxy);
-                        return false;
-                    } else {
-                        $this->proxy = $proxy = $ip;
-                    }
-                }
-                switch ($this->proxyType) {
-                    case CURLPROXY_HTTP:
-                        $proxyOptions = [
-                            'http_proxy_host' => $proxy,
-                            'http_proxy_port' => $proxyPort,
-                            'http_proxy_username' => $this->proxyUsername,
-                            'http_proxy_password' => $this->proxyPassword
-                        ];
-                        break;
-                    case CURLPROXY_SOCKS5:
-                        $proxyOptions = [
-                            'socks5_host' => $proxy,
-                            'socks5_port' => $proxyPort,
-                            'socks5_username' => $this->proxyUsername,
-                            'socks5_password' => $this->proxyPassword
-                        ];
-                        break;
-                    default:
-                        throw new CurlException("Unexpected proxy type [{$this->proxyType}]");
-                }
-            }
-            /**
-             * Client Options
-             */
-            $client->set(
-                $this->clientOptions +
-                ($proxyOptions ?? [])
-            );
-            /**
-             * Method
-             */
-            if ($this->method) {
-                $client->setMethod($this->method);
-            }
-            /**
-             * Infile
-             */
-            if ($this->infile) {
-                $data = '';
-                while (true) {
-                    $nLength = $this->infileSize - strlen($data);
-                    if ($nLength === 0) {
-                        break;
-                    }
-                    if (feof($this->infile)) {
-                        break;
-                    }
-                    $data .= fread($this->infile, $nLength);
-                }
-                $client->setData($data);
-                $this->infile = null;
-                $this->infileSize = PHP_INT_MAX;
-            }
-            /**
-             * Upload File
-             */
-            if ($this->postData and is_array($this->postData)) {
-                foreach ($this->postData as $k => $v) {
-                    if ($v instanceof CURLFile) {
-                        $client->addFile($v->getFilename(), $k, $v->getMimeType() ?: 'application/octet-stream', $v->getPostFilename());
-                        unset($this->postData[$k]);
-                    }
-                }
-            }
-            /**
-             * Post Data
-             */
-            if ($this->postData) {
-                if (is_string($this->postData) and empty($this->headers['Content-Type'])) {
-                    $this->headers['Content-Type'] = 'application/x-www-form-urlencoded';
-                }
-                $client->setData($this->postData);
-                $this->postData = [];
-            }
-            /**
-             * Http Headers
-             */
-            $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
-            // remove empty headers (keep same with raw cURL)
-            foreach ($this->headers as $headerName => $headerValue) {
-                if ($headerValue === '') {
-                    unset($this->headers[$headerName]);
-                }
-            }
-            $client->setHeaders($this->headers);
-            /**
-             * Execute
-             */
-            $executeResult = $client->execute($this->getUrl());
-            if (!$executeResult) {
-                $errCode = $client->errCode;
-                if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED or $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
-                    $this->setError(CURLE_COULDNT_RESOLVE_HOST, 'Could not resolve host: ' . $client->host);
-                }
-                $this->info['total_time'] = microtime(true) - $timeBegin;
-                return false;
-            }
-            if ($client->statusCode >= 300 and $client->statusCode < 400 and isset($client->headers['location'])) {
-                $redirectParsedUrl = $this->getRedirectUrl($client->headers['location']);
-                $redirectUrl = static::unparseUrl($redirectParsedUrl);
-                if ($this->followLocation and (null === $this->maxRedirects or $this->info['redirect_count'] < $this->maxRedirects)) {
-                    if ($this->info['redirect_count'] === 0) {
-                        $this->info['starttransfer_time'] = microtime(true) - $timeBegin;
-                        $redirectBeginTime = microtime(true);
-                    }
-                    // force GET
-                    if (in_array($client->statusCode, [Status::MOVED_PERMANENTLY, Status::FOUND, Status::SEE_OTHER])) {
-                        $this->method = 'GET';
-                    }
-                    if ($this->autoReferer) {
-                        $this->headers['Referer'] = $this->info['url'];
-                    }
-                    $this->setUrl($redirectUrl, false);
-                    $this->setUrlInfo($redirectParsedUrl);
-                    $this->info['redirect_count']++;
-                } else {
-                    $this->info['redirect_url'] = $redirectUrl;
-                    break;
-                }
-            } else {
-                break;
-            }
-        } while (true);
-        $this->info['total_time'] = microtime(true) - $timeBegin;
-        $this->info['http_code'] = $client->statusCode;
-        $this->info['content_type'] = $client->headers['content-type'] ?? '';
-        $this->info['size_download'] = $this->info['download_content_length'] = strlen($client->body);;
-        $this->info['speed_download'] = 1 / $this->info['total_time'] * $this->info['size_download'];
-        if (isset($redirectBeginTime)) {
-            $this->info['redirect_time'] = microtime(true) - $redirectBeginTime;
-        }
-
-        $headerContent = '';
-        if ($client->headers) {
-            $cb = $this->headerFunction;
-            if ($client->statusCode > 0) {
-                $row = "HTTP/1.1 {$client->statusCode} " . Status::getReasonPhrase($client->statusCode) . "\r\n";
-                if ($cb) {
-                    $cb($this, $row);
-                }
-                $headerContent .= $row;
-            }
-            foreach ($client->headers as $k => $v) {
-                $row = "{$k}: {$v}\r\n";
-                if ($cb) {
-                    $cb($this, $row);
-                }
-                $headerContent .= $row;
-            }
-            $headerContent .= "\r\n";
-            $this->info['header_size'] = strlen($headerContent);
-            if ($cb) {
-                $cb($this, '');
-            }
-        } else {
-            $this->info['header_size'] = 0;
-        }
-
-        if ($client->body and $this->readFunction) {
-            $cb = $this->readFunction;
-            $cb($this, $this->outputStream, strlen($client->body));
-        }
-
-        if ($this->withHeader) {
-            $transfer = $headerContent . $client->body;
-        } else {
-            $transfer = $client->body;
-        }
-
-        if ($this->withHeaderOut) {
-            $headerOutContent = $client->getHeaderOut();
-            $this->info['request_header'] = $headerOutContent ? $headerOutContent . "\r\n\r\n" : '';
-        }
-        if ($this->withFileTime) {
-            if (isset($client->headers['last-modified'])) {
-                $this->info['filetime'] = strtotime($client->headers['last-modified']);
-            } else {
-                $this->info['filetime'] = -1;
-            }
-        }
-
-        if ($this->returnTransfer) {
-            return $this->transfer = $transfer;
-        } else {
-            if ($this->outputStream) {
-                return fwrite($this->outputStream, $transfer) === strlen($transfer);
-            } else {
-                echo $transfer;
-            }
-            return true;
-        }
-    }
-
-    public function close(): void
-    {
-        $this->client = null;
-    }
-
     private function setError($code, $msg = ''): void
     {
         $this->errCode = $code;
         $this->errMsg = $msg ? $msg : curl_strerror($code);
-    }
-
-    private function getUrl(): string
-    {
-        if (empty($this->urlInfo['path'])) {
-            $url = '/';
-        } else {
-            $url = $this->urlInfo['path'];
-        }
-        if (!empty($this->urlInfo['query'])) {
-            $url .= '?' . $this->urlInfo['query'];
-        }
-        if (!empty($this->urlInfo['fragment'])) {
-            $url .= '#' . $this->urlInfo['fragment'];
-        }
-        return $url;
     }
 
     /**
@@ -430,7 +201,7 @@ final class Handler
      * @return bool
      * @throws Swoole\Curl\Exception
      */
-    public function setOption(int $opt, $value): bool
+    private function setOption(int $opt, $value): bool
     {
         switch ($opt) {
             // case CURLOPT_STDERR:
@@ -665,17 +436,233 @@ final class Handler
         return true;
     }
 
-    public function getInfo(): array
+    private function execute()
     {
-        return $this->info;
-    }
+        $this->info['redirect_count'] = $this->info['starttransfer_time'] = 0;
+        $this->info['redirect_url'] = '';
+        $timeBegin = microtime(true);
+        /**
+         * Socket
+         */
+        if (!$this->urlInfo) {
+            $this->setError(CURLE_URL_MALFORMAT, 'No URL set or URL using bad/illegal format');
+            return false;
+        }
+        if (!$this->client) {
+            $this->create();
+        }
+        $client = $this->client;
+        do {
+            /**
+             * Http Proxy
+             */
+            if ($this->proxy) {
+                $proxy = explode(':', $this->proxy);
+                $proxyPort = $proxy[1] ?? $this->proxyPort;
+                $proxy = $proxy[0];
+                if (!filter_var($proxy, FILTER_VALIDATE_IP)) {
+                    $ip = Swoole\Coroutine::gethostbyname($proxy, AF_INET, $this->clientOptions['connect_timeout'] ?? -1);
+                    if (!$ip) {
+                        $this->setError(CURLE_COULDNT_RESOLVE_PROXY, 'Could not resolve proxy: ' . $proxy);
+                        return false;
+                    } else {
+                        $this->proxy = $proxy = $ip;
+                    }
+                }
+                switch ($this->proxyType) {
+                    case CURLPROXY_HTTP:
+                        $proxyOptions = [
+                            'http_proxy_host' => $proxy,
+                            'http_proxy_port' => $proxyPort,
+                            'http_proxy_username' => $this->proxyUsername,
+                            'http_proxy_password' => $this->proxyPassword
+                        ];
+                        break;
+                    case CURLPROXY_SOCKS5:
+                        $proxyOptions = [
+                            'socks5_host' => $proxy,
+                            'socks5_port' => $proxyPort,
+                            'socks5_username' => $this->proxyUsername,
+                            'socks5_password' => $this->proxyPassword
+                        ];
+                        break;
+                    default:
+                        throw new CurlException("Unexpected proxy type [{$this->proxyType}]");
+                }
+            }
+            /**
+             * Client Options
+             */
+            $client->set(
+                $this->clientOptions +
+                ($proxyOptions ?? [])
+            );
+            /**
+             * Method
+             */
+            if ($this->method) {
+                $client->setMethod($this->method);
+            }
+            /**
+             * Infile
+             */
+            if ($this->infile) {
+                $data = '';
+                while (true) {
+                    $nLength = $this->infileSize - strlen($data);
+                    if ($nLength === 0) {
+                        break;
+                    }
+                    if (feof($this->infile)) {
+                        break;
+                    }
+                    $data .= fread($this->infile, $nLength);
+                }
+                $client->setData($data);
+                $this->infile = null;
+                $this->infileSize = PHP_INT_MAX;
+            }
+            /**
+             * Upload File
+             */
+            if ($this->postData and is_array($this->postData)) {
+                foreach ($this->postData as $k => $v) {
+                    if ($v instanceof CURLFile) {
+                        $client->addFile($v->getFilename(), $k, $v->getMimeType() ?: 'application/octet-stream', $v->getPostFilename());
+                        unset($this->postData[$k]);
+                    }
+                }
+            }
+            /**
+             * Post Data
+             */
+            if ($this->postData) {
+                if (is_string($this->postData) and empty($this->headers['Content-Type'])) {
+                    $this->headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                }
+                $client->setData($this->postData);
+                $this->postData = [];
+            }
+            /**
+             * Http Headers
+             */
+            $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
+            // remove empty headers (keep same with raw cURL)
+            foreach ($this->headers as $headerName => $headerValue) {
+                if ($headerValue === '') {
+                    unset($this->headers[$headerName]);
+                }
+            }
+            $client->setHeaders($this->headers);
+            /**
+             * Execute
+             */
+            $executeResult = $client->execute($this->getUrl());
+            if (!$executeResult) {
+                $errCode = $client->errCode;
+                if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED or $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
+                    $this->setError(CURLE_COULDNT_RESOLVE_HOST, 'Could not resolve host: ' . $client->host);
+                }
+                $this->info['total_time'] = microtime(true) - $timeBegin;
+                return false;
+            }
+            if ($client->statusCode >= 300 and $client->statusCode < 400 and isset($client->headers['location'])) {
+                $redirectParsedUrl = $this->getRedirectUrl($client->headers['location']);
+                $redirectUrl = static::unparseUrl($redirectParsedUrl);
+                if ($this->followLocation and (null === $this->maxRedirects or $this->info['redirect_count'] < $this->maxRedirects)) {
+                    if ($this->info['redirect_count'] === 0) {
+                        $this->info['starttransfer_time'] = microtime(true) - $timeBegin;
+                        $redirectBeginTime = microtime(true);
+                    }
+                    // force GET
+                    if (in_array($client->statusCode, [Status::MOVED_PERMANENTLY, Status::FOUND, Status::SEE_OTHER])) {
+                        $this->method = 'GET';
+                    }
+                    if ($this->autoReferer) {
+                        $this->headers['Referer'] = $this->info['url'];
+                    }
+                    $this->setUrl($redirectUrl, false);
+                    $this->setUrlInfo($redirectParsedUrl);
+                    $this->info['redirect_count']++;
+                } else {
+                    $this->info['redirect_url'] = $redirectUrl;
+                    break;
+                }
+            } else {
+                break;
+            }
+        } while (true);
+        $this->info['total_time'] = microtime(true) - $timeBegin;
+        $this->info['http_code'] = $client->statusCode;
+        $this->info['content_type'] = $client->headers['content-type'] ?? '';
+        $this->info['size_download'] = $this->info['download_content_length'] = strlen($client->body);;
+        $this->info['speed_download'] = 1 / $this->info['total_time'] * $this->info['size_download'];
+        if (isset($redirectBeginTime)) {
+            $this->info['redirect_time'] = microtime(true) - $redirectBeginTime;
+        }
 
-    public function reset(): void
-    {
-        foreach ((new ReflectionClass(static::class))->getDefaultProperties() as $name => $value) {
-            $this->$name = $value;
+        $headerContent = '';
+        if ($client->headers) {
+            $cb = $this->headerFunction;
+            if ($client->statusCode > 0) {
+                $row = "HTTP/1.1 {$client->statusCode} " . Status::getReasonPhrase($client->statusCode) . "\r\n";
+                if ($cb) {
+                    $cb($this, $row);
+                }
+                $headerContent .= $row;
+            }
+            foreach ($client->headers as $k => $v) {
+                $row = "{$k}: {$v}\r\n";
+                if ($cb) {
+                    $cb($this, $row);
+                }
+                $headerContent .= $row;
+            }
+            $headerContent .= "\r\n";
+            $this->info['header_size'] = strlen($headerContent);
+            if ($cb) {
+                $cb($this, '');
+            }
+        } else {
+            $this->info['header_size'] = 0;
+        }
+
+        if ($client->body and $this->readFunction) {
+            $cb = $this->readFunction;
+            $cb($this, $this->outputStream, strlen($client->body));
+        }
+
+        if ($this->withHeader) {
+            $transfer = $headerContent . $client->body;
+        } else {
+            $transfer = $client->body;
+        }
+
+        if ($this->withHeaderOut) {
+            $headerOutContent = $client->getHeaderOut();
+            $this->info['request_header'] = $headerOutContent ? $headerOutContent . "\r\n\r\n" : '';
+        }
+        if ($this->withFileTime) {
+            if (isset($client->headers['last-modified'])) {
+                $this->info['filetime'] = strtotime($client->headers['last-modified']);
+            } else {
+                $this->info['filetime'] = -1;
+            }
+        }
+
+        if ($this->returnTransfer) {
+            return $this->transfer = $transfer;
+        } else {
+            if ($this->outputStream) {
+                return fwrite($this->outputStream, $transfer) === strlen($transfer);
+            } else {
+                echo $transfer;
+            }
+            return true;
         }
     }
+
+    /* ====== Redirect helper ====== */
 
     private static function unparseUrl(array $parsedUrl): string
     {
@@ -723,18 +710,71 @@ final class Handler
         return $redirectUri;
     }
 
-    public function getContent(): string
+    /* ====== Public APIs ====== */
+
+    public function isAvailable(): bool
     {
+        if ($this->closed) {
+            trigger_error('supplied resource is not a valid cURL handle resource', E_USER_WARNING);
+            return false;
+        }
+        return true;
+    }
+
+    public function setOpt(int $opt, $value): bool
+    {
+        return $this->isAvailable() and $this->setOption($opt, $value);
+    }
+
+    public function exec()
+    {
+        if (!$this->isAvailable()) {
+            return false;
+        }
+        return $this->execute();
+    }
+
+    public function getInfo()
+    {
+        return $this->isAvailable() ? $this->info : false;
+    }
+
+    public function errno()
+    {
+        return $this->isAvailable() ? $this->errCode : false;
+    }
+
+    public function error()
+    {
+        return $this->isAvailable() ? $this->errMsg : false;
+    }
+
+    public function reset()
+    {
+        if (!$this->isAvailable()) {
+            return false;
+        }
+        foreach ((new ReflectionClass(static::class))->getDefaultProperties() as $name => $value) {
+            $this->$name = $value;
+        }
+    }
+
+    public function getContent()
+    {
+        if (!$this->isAvailable()) {
+            return false;
+        }
         return $this->transfer;
     }
 
-    public function errno(): int
+    public function close()
     {
-        return $this->errCode;
-    }
-
-    public function error(): string
-    {
-        return $this->errMsg;
+        if (!$this->isAvailable()) {
+            return false;
+        }
+        foreach ($this as &$property) {
+            $property = null;
+        }
+        $this->closed = true;
     }
 }

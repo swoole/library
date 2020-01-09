@@ -8,13 +8,13 @@ function swoole_curl_init(string $url = ''): Swoole\Curl\Handler
 
 function swoole_curl_setopt(Swoole\Curl\Handler $obj, int $opt, $value): bool
 {
-    return $obj->setOption($opt, $value);
+    return $obj->setOpt($opt, $value);
 }
 
 function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, $array): bool
 {
     foreach ($array as $k => $v) {
-        if ($obj->setOption($k, $v) !== true) {
+        if ($obj->setOpt($k, $v) !== true) {
             return false;
         }
     }
@@ -23,38 +23,13 @@ function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, $array): bool
 
 function swoole_curl_exec(Swoole\Curl\Handler $obj)
 {
-    return $obj->execute();
-}
-
-function swoole_curl_multi_getcontent(Swoole\Curl\Handler $obj): string
-{
-    return $obj->getContent();
-}
-
-function swoole_curl_close(Swoole\Curl\Handler $obj): void
-{
-    $obj->close();
-}
-
-function swoole_curl_errno(Swoole\Curl\Handler $obj): int
-{
-    return $obj->errno();
-}
-
-function swoole_curl_error(Swoole\Curl\Handler $obj): string
-{
-    return $obj->error();
-}
-
-function swoole_curl_reset(Swoole\Curl\Handler $obj): void
-{
-    $obj->reset();
+    return $obj->exec();
 }
 
 function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
 {
     $info = $obj->getInfo();
-    if ($opt) {
+    if (is_array($info) and $opt) {
         switch ($opt) {
             case CURLINFO_EFFECTIVE_URL:
                 return $info['url'];
@@ -81,7 +56,31 @@ function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
             default:
                 return null;
         }
-    } else {
-        return $info;
     }
+    return $info;
+}
+
+function swoole_curl_errno(Swoole\Curl\Handler $obj)
+{
+    return $obj->errno();
+}
+
+function swoole_curl_error(Swoole\Curl\Handler $obj)
+{
+    return $obj->error();
+}
+
+function swoole_curl_reset(Swoole\Curl\Handler $obj)
+{
+    return $obj->reset();
+}
+
+function swoole_curl_close(Swoole\Curl\Handler $obj)
+{
+    return $obj->close();
+}
+
+function swoole_curl_multi_getcontent(Swoole\Curl\Handler $obj)
+{
+    return $obj->getContent();
 }
