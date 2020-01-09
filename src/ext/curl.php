@@ -36,14 +36,14 @@ function swoole_curl_close(Swoole\Curl\Handler $obj): void
     $obj->close();
 }
 
-function swoole_curl_error(Swoole\Curl\Handler $obj): string
-{
-    return $obj->error();
-}
-
 function swoole_curl_errno(Swoole\Curl\Handler $obj): int
 {
     return $obj->errno();
+}
+
+function swoole_curl_error(Swoole\Curl\Handler $obj): string
+{
+    return $obj->error();
 }
 
 function swoole_curl_reset(Swoole\Curl\Handler $obj): void

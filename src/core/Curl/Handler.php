@@ -728,12 +728,12 @@ final class Handler
         return $this->transfer;
     }
 
-    public function error(): int
+    public function errno(): int
     {
         return $this->errCode;
     }
 
-    public function errno(): string
+    public function error(): string
     {
         return $this->errMsg;
     }
