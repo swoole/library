@@ -7,7 +7,6 @@ use ReflectionClass;
 use Swoole;
 use Swoole\Coroutine\Http\Client;
 use CURLFile;
-use Iterator;
 use Swoole\Curl\Exception as CurlException;
 use Swoole\Http\Status;
 
@@ -283,6 +282,12 @@ class Handler
              * Http Headers
              */
             $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
+            // remove empty headers (keep same with raw cURL)
+            foreach ($this->headers as $header_name => $header_value) {
+                if ($header_value === '') {
+                    unset($this->headers[$header_name]);
+                }
+            }
             $client->setHeaders($this->headers);
             /**
              * Execute
@@ -560,16 +565,15 @@ class Handler
              * Http Header
              */
             case CURLOPT_HTTPHEADER:
-                if (!is_array($value) and !($value instanceof Iterator)) {
+                if (!is_array($value) and !is_iterable($value)) {
                     trigger_error('swoole_curl_setopt(): You must pass either an object or an array with the CURLOPT_HTTPHEADER argument', E_USER_WARNING);
                     return false;
                 }
                 foreach ($value as $header) {
-                    list($k, $v) = explode(':', $header);
-                    $v = trim($v);
-                    if ($v) {
-                        $this->headers[$k] = $v;
-                    }
+                    $header = explode(':', $header, 2);
+                    $header_name = $header[0];
+                    $header_value = trim($header[1] ?? '');
+                    $this->headers[$header_name] = $header_value;
                 }
                 break;
             case CURLOPT_REFERER:
