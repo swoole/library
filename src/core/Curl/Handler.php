@@ -56,15 +56,15 @@ class Handler
     private $infile;
     private $infileSize = PHP_INT_MAX;
     private $outputStream;
-    private $proxy_type;
+    private $proxyType;
     private $proxy;
-    private $proxy_port = 1080;
-    private $proxy_username;
-    private $proxy_password;
+    private $proxyPort = 1080;
+    private $proxyUsername;
+    private $proxyPassword;
     private $clientOptions = [];
     private $followLocation = false;
     private $autoReferer = false;
-    private $maxRedirs;
+    private $maxRedirects;
     private $withHeader = false;
     private $nobody = false;
 
@@ -193,7 +193,7 @@ class Handler
              */
             if ($this->proxy) {
                 $proxy = explode(':', $this->proxy);
-                $proxy_port = $proxy[1] ?? $this->proxy_port;
+                $proxyPort = $proxy[1] ?? $this->proxyPort;
                 $proxy = $proxy[0];
                 if (!filter_var($proxy, FILTER_VALIDATE_IP)) {
                     $ip = Swoole\Coroutine::gethostbyname($proxy, AF_INET, $this->clientOptions['connect_timeout'] ?? -1);
@@ -204,25 +204,25 @@ class Handler
                         $this->proxy = $proxy = $ip;
                     }
                 }
-                switch ($this->proxy_type) {
+                switch ($this->proxyType) {
                     case CURLPROXY_HTTP:
-                        $proxy_options = [
+                        $proxyOptions = [
                             'http_proxy_host' => $proxy,
-                            'http_proxy_port' => $proxy_port,
-                            'http_proxy_username' => $this->proxy_username,
-                            'http_proxy_password' => $this->proxy_password
+                            'http_proxy_port' => $proxyPort,
+                            'http_proxy_username' => $this->proxyUsername,
+                            'http_proxy_password' => $this->proxyPassword
                         ];
                         break;
                     case CURLPROXY_SOCKS5:
-                        $proxy_options = [
+                        $proxyOptions = [
                             'socks5_host' => $proxy,
-                            'socks5_port' => $proxy_port,
-                            'socks5_username' => $this->proxy_username,
-                            'socks5_password' => $this->proxy_password
+                            'socks5_port' => $proxyPort,
+                            'socks5_username' => $this->proxyUsername,
+                            'socks5_password' => $this->proxyPassword
                         ];
                         break;
                     default:
-                        throw new CurlException("Unexpected proxy type [{$this->proxy_type}]");
+                        throw new CurlException("Unexpected proxy type [{$this->proxyType}]");
                 }
             }
             /**
@@ -230,7 +230,7 @@ class Handler
              */
             $client->set(
                 $this->clientOptions +
-                ($proxy_options ?? [])
+                ($proxyOptions ?? [])
             );
             /**
              * Method
@@ -283,9 +283,9 @@ class Handler
              */
             $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
             // remove empty headers (keep same with raw cURL)
-            foreach ($this->headers as $header_name => $header_value) {
-                if ($header_value === '') {
-                    unset($this->headers[$header_name]);
+            foreach ($this->headers as $headerName => $headerValue) {
+                if ($headerValue === '') {
+                    unset($this->headers[$headerName]);
                 }
             }
             $client->setHeaders($this->headers);
@@ -304,7 +304,7 @@ class Handler
             if ($client->statusCode >= 300 and $client->statusCode < 400 and isset($client->headers['location'])) {
                 $redirectParsedUrl = $this->getRedirectUrl($client->headers['location']);
                 $redirectUrl = static::unparseUrl($redirectParsedUrl);
-                if ($this->followLocation and (null === $this->maxRedirs or $this->info['redirect_count'] < $this->maxRedirs)) {
+                if ($this->followLocation and (null === $this->maxRedirects or $this->info['redirect_count'] < $this->maxRedirects)) {
                     if ($this->info['redirect_count'] === 0) {
                         $this->info['starttransfer_time'] = microtime(true) - $timeBegin;
                         $redirectBeginTime = microtime(true);
@@ -481,24 +481,24 @@ class Handler
                         'swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE values: CURLPROXY_HTTP, CURLPROXY_SOCKS5'
                     );
                 }
-                $this->proxy_type = $value;
+                $this->proxyType = $value;
                 break;
             case CURLOPT_PROXY:
                 $this->proxy = $value;
                 break;
             case CURLOPT_PROXYPORT:
-                $this->proxy_port = $value;
+                $this->proxyPort = $value;
                 break;
             case CURLOPT_PROXYUSERNAME:
-                $this->proxy_username = $value;
+                $this->proxyUsername = $value;
                 break;
             case CURLOPT_PROXYPASSWORD:
-                $this->proxy_password = $value;
+                $this->proxyPassword = $value;
                 break;
             case CURLOPT_PROXYUSERPWD:
-                $user_pwd = explode(':', $value);
-                $this->proxy_username = urldecode($user_pwd[0]);
-                $this->proxy_password = urldecode($user_pwd[1] ?? null);
+                $usernamePassword = explode(':', $value);
+                $this->proxyUsername = urldecode($usernamePassword[0]);
+                $this->proxyPassword = urldecode($usernamePassword[1] ?? null);
                 break;
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
@@ -571,9 +571,9 @@ class Handler
                 }
                 foreach ($value as $header) {
                     $header = explode(':', $header, 2);
-                    $header_name = $header[0];
-                    $header_value = trim($header[1] ?? '');
-                    $this->headers[$header_name] = $header_value;
+                    $headerName = $header[0];
+                    $headerValue = trim($header[1] ?? '');
+                    $this->headers[$headerName] = $headerValue;
                 }
                 break;
             case CURLOPT_REFERER:
@@ -648,7 +648,7 @@ class Handler
                 $this->autoReferer = $value;
                 break;
             case CURLOPT_MAXREDIRS:
-                $this->maxRedirs = $value;
+                $this->maxRedirects = $value;
                 break;
             case CURLOPT_PUT:
                 $this->method = 'PUT';
