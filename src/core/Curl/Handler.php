@@ -79,7 +79,7 @@ class Handler
     private $progressFunction;
 
     public $returnTransfer = false;
-    public $method = 'GET';
+    public $method = '';
     public $headers = [];
 
     public $transfer;
@@ -236,7 +236,9 @@ class Handler
             /**
              * Method
              */
-            $client->setMethod($this->method);
+            if ($this->method) {
+                $client->setMethod($this->method);
+            }
             /**
              * Infile
              */
@@ -534,14 +536,16 @@ class Handler
                 $this->clientOptions['ssl_verify_peer'] = $value;
                 break;
             /**
-             * Http Post
+             * Http POST
              */
             case CURLOPT_POST:
                 $this->method = 'POST';
                 break;
             case CURLOPT_POSTFIELDS:
                 $this->postData = $value;
-                $this->method = 'POST';
+                if (!$this->method) {
+                    $this->method = 'POST';
+                }
                 break;
             /**
              * Upload
