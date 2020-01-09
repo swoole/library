@@ -10,7 +10,7 @@ use CURLFile;
 use Swoole\Curl\Exception as CurlException;
 use Swoole\Http\Status;
 
-class Handler
+final class Handler
 {
     /**
      * @var Client
@@ -77,14 +77,14 @@ class Handler
     /** @var callable */
     private $progressFunction;
 
-    public $returnTransfer = false;
-    public $method = '';
-    public $headers = [];
+    private $returnTransfer = false;
+    private $method = '';
+    private $headers = [];
 
-    public $transfer;
+    private $transfer = '';
 
-    public $errCode = 0;
-    public $errMsg = '';
+    private $errCode = 0;
+    private $errMsg = '';
 
     public function __construct(string $url = '')
     {
@@ -721,5 +721,20 @@ class Handler
             }
         }
         return $redirectUri;
+    }
+
+    public function getContent(): string
+    {
+        return $this->transfer;
+    }
+
+    public function error(): int
+    {
+        return $this->errCode;
+    }
+
+    public function errno(): string
+    {
+        return $this->errMsg;
     }
 }

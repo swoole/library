@@ -26,9 +26,9 @@ function swoole_curl_exec(Swoole\Curl\Handler $obj)
     return $obj->execute();
 }
 
-function swoole_curl_multi_getcontent(Swoole\Curl\Handler $obj): ?string
+function swoole_curl_multi_getcontent(Swoole\Curl\Handler $obj): string
 {
-    return $obj->transfer;
+    return $obj->getContent();
 }
 
 function swoole_curl_close(Swoole\Curl\Handler $obj): void
@@ -38,12 +38,12 @@ function swoole_curl_close(Swoole\Curl\Handler $obj): void
 
 function swoole_curl_error(Swoole\Curl\Handler $obj): string
 {
-    return $obj->errMsg;
+    return $obj->error();
 }
 
 function swoole_curl_errno(Swoole\Curl\Handler $obj): int
 {
-    return $obj->errCode;
+    return $obj->errno();
 }
 
 function swoole_curl_reset(Swoole\Curl\Handler $obj): void
