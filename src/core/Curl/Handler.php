@@ -422,6 +422,8 @@ final class Handler
                 $this->maxRedirects = $value;
                 break;
             case CURLOPT_PUT:
+            case CURLOPT_UPLOAD:
+                /** after libcurl 7.12, CURLOPT_PUT is replaced by CURLOPT_UPLOAD */
                 $this->method = 'PUT';
                 break;
             case CURLOPT_INFILE:
