@@ -78,9 +78,13 @@ class PDOStatementProxy extends ObjectProxy
                     $this->parent->inTransaction()
                 ) {
                     $errorInfo = $this->__object->errorInfo();
-                    $exception = new PDOException($errorInfo[2], $errorInfo[1]);
-                    $exception->errorInfo = $errorInfo;
-                    throw $exception;
+
+                    // '00000' means “no error.”, as specified by ANSI SQL and ODBC.
+                    if ("00000" !== $errorInfo[0]) {
+                        $exception = new PDOException($errorInfo[2], $errorInfo[1]);
+                        $exception->errorInfo = $errorInfo;
+                        throw $exception;
+                    }
                 }
                 if ($this->parent->getRound() === $this->parentRound) {
                     /* if not equal, parent has reconnected */

@@ -19,6 +19,9 @@
         "php": ">=7.1",
         "ext-swoole": ">=4.4"
     },
+    "require-dev": {
+        "phpunit/phpunit": "~8.0"
+    },
     "autoload": {
         "files": [
             "src/constants.php",

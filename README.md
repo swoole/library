@@ -32,6 +32,12 @@ docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library
 docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/redis/base.php"
 ```
 
+You can run unit tests included with following command:
+
+```bash
+docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./vendor/bin/phpunit"
+```
+
 ## Compatibility Patch (Swoole version <= v4.4.12)
 
 ```php
