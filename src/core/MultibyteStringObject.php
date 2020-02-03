@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpComposerExtensionStubsInspection */
 
 namespace Swoole;

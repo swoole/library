@@ -1,4 +1,5 @@
 <?php
+
 if (SWOOLE_USE_SHORTNAME) {
     /**
      * @param string $string

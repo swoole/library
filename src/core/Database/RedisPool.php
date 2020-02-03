@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Swoole\Database;
@@ -19,7 +20,7 @@ class RedisPool extends ConnectionPool
     {
         $this->config = $config;
         parent::__construct(function () {
-            $redis = new Redis;
+            $redis = new Redis();
             $redis->connect(
                 $this->config->getHost(),
                 $this->config->getPort(),

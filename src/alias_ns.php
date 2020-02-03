@@ -10,7 +10,6 @@ namespace Swoole\Coroutine {
     }
 
 }
-
 namespace Co {
 
     if (SWOOLE_USE_SHORTNAME) {

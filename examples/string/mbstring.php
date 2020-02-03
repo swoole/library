@@ -1,4 +1,5 @@
 <?php
+
 require __DIR__ . '/../bootstrap.php';
 
 $str = _mbstring("我是中国人");

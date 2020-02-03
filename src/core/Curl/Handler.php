@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection, PhpInconsistentReturnPointsInspection */
 
 namespace Swoole\Curl;
@@ -597,7 +598,7 @@ final class Handler
         $this->info['total_time'] = microtime(true) - $timeBegin;
         $this->info['http_code'] = $client->statusCode;
         $this->info['content_type'] = $client->headers['content-type'] ?? '';
-        $this->info['size_download'] = $this->info['download_content_length'] = strlen($client->body);;
+        $this->info['size_download'] = $this->info['download_content_length'] = strlen($client->body);
         $this->info['speed_download'] = 1 / $this->info['total_time'] * $this->info['size_download'];
         if (isset($redirectBeginTime)) {
             $this->info['redirect_time'] = microtime(true) - $redirectBeginTime;

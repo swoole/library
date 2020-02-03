@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use Swoole\Coroutine;
@@ -13,13 +14,12 @@ const N = 1024;
 Runtime::enableCoroutine();
 $s = microtime(true);
 Coroutine\run(function () {
-    $pool = new RedisPool((new RedisConfig)
+    $pool = new RedisPool((new RedisConfig())
         ->withHost(REDIS_SERVER_HOST)
         ->withPort(REDIS_SERVER_PORT)
         ->withAuth('')
         ->withDbIndex(0)
-        ->withTimeout(1)
-    );
+        ->withTimeout(1));
     for ($n = N; $n--;) {
         Coroutine::create(function () use ($pool) {
             $redis = $pool->get();

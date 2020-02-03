@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpComposerExtensionStubsInspection */
 
 function swoole_curl_init(string $url = ''): Swoole\Curl\Handler
