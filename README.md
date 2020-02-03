@@ -27,9 +27,15 @@ docker exec -t $(docker ps -qf "name=app") bash -c "composer update -n"
 Now you can use commands like following to run examples under folder [examples](https://github.com/swoole/library/tree/master/examples):
 
 ```bash
-docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/mysqli/base.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/pdo/base.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/redis/base.php"
+docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/mysqli/base.php"
+docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/pdo/base.php"
+docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/redis/base.php"
+```
+
+You can run unit tests included with following command:
+
+```bash
+docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
 ```
 
 ## Compatibility Patch (Swoole version <= v4.4.12)
