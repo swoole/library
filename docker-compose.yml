@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    links:
+      - mysql
+      - redis
+    environment:
+      DISABLE_DEFAULT_SERVER: 1
+    volumes:
+      - .:/var/www
+  mysql:
+    image: mysql:5.7.19
+    environment:
+      MYSQL_DATABASE: test
+      MYSQL_USER: username
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+  redis:
+    image: redis:5.0.7

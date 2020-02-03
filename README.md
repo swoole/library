@@ -15,6 +15,23 @@ Just new pull request (and we need unit tests for new features)
 + [Document](https://wiki.swoole.com/wiki/page/p-library.html)
 + [Examples](https://github.com/swoole/library/tree/master/examples)
 
+## Dockerized Local Development
+
+Run following commands to start Docker containers and update Composer packages:
+
+```bash
+docker-compose up
+docker exec -t $(docker ps -qf "name=app") bash -c "composer update -n"
+```
+
+Now you can use commands like following to run examples under folder [examples](https://github.com/swoole/library/tree/master/examples):
+
+```bash
+docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/mysqli/base.php"
+docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/pdo/base.php"
+docker exec -t $(docker ps -qf "name=app") bash -c "php -d swoole.enable_library=off ./examples/redis/base.php"
+```
+
 ## Compatibility Patch (Swoole version <= v4.4.12)
 
 ```php
