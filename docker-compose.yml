@@ -16,6 +16,6 @@ services:
       MYSQL_DATABASE: test
       MYSQL_USER: username
       MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
   redis:
     image: redis:5.0.7
