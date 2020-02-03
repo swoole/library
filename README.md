@@ -1,5 +1,9 @@
 # Swoole Library
 
+[![Latest Version](https://img.shields.io/github/release/swoole/library.svg?style=flat-square)](https://github.com/swoole/library/releases)
+[![Build Status](https://api.travis-ci.org/swoole/library.svg)](https://travis-ci.org/swoole/library)
+[![License](https://img.shields.io/badge/license-apache2-blue.svg)](LICENSE)
+
 ## How to contribute
 
 Just new pull request (and we need unit tests for new features)
