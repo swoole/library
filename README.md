@@ -11,7 +11,7 @@ Just new pull request (and we need unit tests for new features)
 #### Code requirements
 
 + PHP 7.1+
-+ PSR1 and PSR2
++ [PSR1](https://www.php-fig.org/psr/psr-1/) and [PSR12](https://www.php-fig.org/psr/psr-12/)
 + Strict type
 
 ## Develop
@@ -46,6 +46,26 @@ docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
 
 ```php
 define('SWOOLE_USE_SHORTNAME', true); // or false (it depends on you)
+```
+
+## Coding Style Checks and Fixes
+
+To update Composer packages (optional):
+
+```bash
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer update -n"
+```
+
+To check files against the PSR12 coding standard:
+
+```bash
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "php -d swoole.enable_library=off ./vendor/bin/phpcs  --standard=PSR12 examples src"
+```
+
+To correct coding standard violations automatically:
+
+```bash
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "php -d swoole.enable_library=off ./vendor/bin/phpcbf --standard=PSR12 examples src"
 ```
 
 ## License
