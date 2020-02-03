@@ -4,6 +4,7 @@ namespace CrowdStar\Tests\Database;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
+use Swoole\Coroutine;
 use Swoole\Database\PDOPool;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOStatementProxy;
@@ -20,7 +21,7 @@ class PDOStatementProxyTest extends TestCase
      */
     public function testRun()
     {
-        go(function() {
+        Coroutine\run(function() {
             $config = (new PDOConfig())
                 ->withHost(MYSQL_SERVER_HOST)
                 ->withPort(MYSQL_SERVER_PORT)
