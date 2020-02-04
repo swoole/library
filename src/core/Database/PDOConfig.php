@@ -10,7 +10,7 @@ class PDOConfig
     public const PGSQL = 'pgsql';
 
     /** @var string */
-    protected $driver = static::MYSQL;
+    protected $driver = 'mysql';
 
     /** @var string */
     protected $host = '127.0.0.1';
@@ -148,8 +148,8 @@ class PDOConfig
     public static function getAvailableDrivers()
     {
         return [
-            static::MYSQL,
-            static::PGSQL
+            self::MYSQL,
+            self::PGSQL
         ];
     }
 }
