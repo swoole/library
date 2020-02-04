@@ -22,7 +22,7 @@ class PDOPool extends ConnectionPool
         $this->config = $config;
         parent::__construct(function () {
             return new PDO(
-                "mysql:" .
+                "{$this->config->getDriver()}:" .
                 (
                 $this->config->hasUnixSocket() ?
                     "unix_socket={$this->config->getUnixSocket()};" :
