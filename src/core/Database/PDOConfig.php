@@ -41,7 +41,7 @@ class PDOConfig
         return $this->driver;
     }
 
-    public function withDriver($driver): self
+    public function withDriver(string $driver): self
     {
         $this->driver = $driver;
         return $this;
