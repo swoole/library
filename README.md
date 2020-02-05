@@ -42,12 +42,6 @@ You can run unit tests included with following command:
 docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
 ```
 
-## Compatibility Patch (Swoole version <= v4.4.12)
-
-```php
-define('SWOOLE_USE_SHORTNAME', true); // or false (it depends on you)
-```
-
 ## Coding Style Checks and Fixes
 
 To update Composer packages (optional):
