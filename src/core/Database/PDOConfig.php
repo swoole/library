@@ -10,7 +10,7 @@ class PDOConfig
     public const PGSQL = 'pgsql';
 
     /** @var string */
-    protected $driver = 'mysql';
+    protected $driver = self::MYSQL;
 
     /** @var string */
     protected $host = '127.0.0.1';
