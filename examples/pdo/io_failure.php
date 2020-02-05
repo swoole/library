@@ -1,4 +1,12 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
 declare(strict_types=1);
 
 use Swoole\ConnectionPool;
@@ -54,7 +62,7 @@ Coroutine\run(function () {
     /* clients */
     for ($c = C; $c--;) {
         Coroutine::create(function () use ($pool, &$success) {
-            /** @var $pdo PDO */
+            /* @var $pdo PDO */
             while (true) {
                 $pdo = $pool->get();
                 $statement = $pdo->prepare('SELECT 1 + 1');
