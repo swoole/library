@@ -1,4 +1,12 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
 declare(strict_types=1);
 
 use Swoole\Coroutine;
@@ -13,14 +21,15 @@ const C = 64;
 Runtime::enableCoroutine();
 $s = microtime(true);
 Coroutine\run(function () {
-    $pool = new MysqliPool((new MysqliConfig)
-        ->withHost(MYSQL_SERVER_HOST)
-        ->withPort(MYSQL_SERVER_PORT)
+    $pool = new MysqliPool(
+        (new MysqliConfig())
+            ->withHost(MYSQL_SERVER_HOST)
+            ->withPort(MYSQL_SERVER_PORT)
         // ->withUnixSocket('/tmp/mysql.sock')
-        ->withDbName(MYSQL_SERVER_DB)
-        ->withCharset('utf8mb4')
-        ->withUsername(MYSQL_SERVER_USER)
-        ->withPassword(MYSQL_SERVER_PWD)
+            ->withDbName(MYSQL_SERVER_DB)
+            ->withCharset('utf8mb4')
+            ->withUsername(MYSQL_SERVER_USER)
+            ->withPassword(MYSQL_SERVER_PWD)
     );
     Coroutine::create(function () use ($pool) {
         $killer = $pool->get();
@@ -66,7 +75,7 @@ Coroutine\run(function () {
                 if (!$statement->fetch()) {
                     throw new RuntimeException('Fetch failed');
                 }
-                if ($a + $b !== (int)$result) {
+                if ($a + $b !== (int) $result) {
                     throw new RuntimeException('Bad result');
                 }
                 while ($statement->fetch()) {

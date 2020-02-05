@@ -1,4 +1,13 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
 
 namespace Swoole;
 
@@ -18,18 +27,18 @@ class StringObject
         $this->string = $string;
     }
 
-    /**
-     * @return int
-     */
+    public function __toString(): string
+    {
+        return $this->string;
+    }
+
     public function length(): int
     {
         return strlen($this->string);
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
-     * @return bool|int
+     * @return false|int
      */
     public function indexOf(string $needle, int $offset = 0)
     {
@@ -37,9 +46,7 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
-     * @return bool|int
+     * @return false|int
      */
     public function lastIndexOf(string $needle, int $offset = 0)
     {
@@ -47,9 +54,7 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
-     * @return bool|int
+     * @return false|int
      */
     public function pos(string $needle, int $offset = 0)
     {
@@ -57,9 +62,7 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
-     * @return bool|int
+     * @return false|int
      */
     public function rpos(string $needle, int $offset = 0)
     {
@@ -67,8 +70,7 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @return bool|int
+     * @return false|int
      */
     public function ipos(string $needle)
     {
@@ -116,28 +118,20 @@ class StringObject
     }
 
     /**
-     * @param int $offset
-     * @param mixed ...$length
      * @return static
      */
-    public function substr(int $offset, ...$length)
+    public function substr(int $offset, ?int $length = null)
     {
-        return new static(substr($this->string, $offset, ...$length));
+        return new static(substr($this->string, $offset, $length));
     }
 
-    /**
-     * @param $n
-     * @return StringObject
-     */
-    public function repeat($n)
+    public function repeat(int $n): StringObject
     {
         return new static(str_repeat($this->string, $n));
     }
 
     /**
-     * @param string $search
-     * @param string $replace
-     * @param null $count
+     * @param int $count
      * @return static
      */
     public function replace(string $search, string $replace, &$count = null)
@@ -145,55 +139,32 @@ class StringObject
         return new static(str_replace($search, $replace, $this->string, $count));
     }
 
-    /**
-     * @param string $needle
-     * @return bool
-     */
     public function startsWith(string $needle): bool
     {
         return strpos($this->string, $needle) === 0;
     }
 
-    /**
-     * @param string $subString
-     * @return bool
-     */
     public function contains(string $subString): bool
     {
         return strpos($this->string, $subString) !== false;
     }
 
-    /**
-     * @param string $needle
-     * @return bool
-     */
     public function endsWith(string $needle): bool
     {
         return strrpos($this->string, $needle) === (strlen($needle) - 1);
     }
 
-    /**
-     * @param string $delimiter
-     * @param int $limit
-     * @return ArrayObject
-     */
     public function split(string $delimiter, int $limit = PHP_INT_MAX): ArrayObject
     {
         return static::detectArrayType(explode($delimiter, $this->string, $limit));
     }
 
-    /**
-     * @param int $index
-     * @return string
-     */
     public function char(int $index): string
     {
         return $this->string[$index];
     }
 
     /**
-     * @param int $chunkLength
-     * @param string $chunkEnd
      * @return static
      */
     public function chunkSplit(int $chunkLength = 1, string $chunkEnd = '')
@@ -201,11 +172,7 @@ class StringObject
         return new static(chunk_split($this->string, $chunkLength, $chunkEnd));
     }
 
-    /**
-     * @param int $splitLength
-     * @return ArrayObject
-     */
-    public function chunk($splitLength = 1): ArrayObject
+    public function chunk(int $splitLength = 1): ArrayObject
     {
         return static::detectArrayType(str_split($this->string, $splitLength));
     }
@@ -218,18 +185,6 @@ class StringObject
         return $this->string;
     }
 
-    /**
-     * @return string
-     */
-    public function __toString(): string
-    {
-        return $this->string;
-    }
-
-    /**
-     * @param array $value
-     * @return ArrayObject
-     */
     protected static function detectArrayType(array $value): ArrayObject
     {
         return new ArrayObject($value);
