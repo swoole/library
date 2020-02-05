@@ -38,7 +38,7 @@ class StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function indexOf(string $needle, int $offset = 0)
     {
@@ -46,7 +46,7 @@ class StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function lastIndexOf(string $needle, int $offset = 0)
     {
@@ -54,7 +54,7 @@ class StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function pos(string $needle, int $offset = 0)
     {
@@ -62,7 +62,7 @@ class StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function rpos(string $needle, int $offset = 0)
     {
@@ -70,7 +70,7 @@ class StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function ipos(string $needle)
     {

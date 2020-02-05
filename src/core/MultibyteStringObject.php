@@ -21,7 +21,7 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function indexOf(string $needle, int $offset = 0, ?string $encoding = null)
     {
@@ -29,7 +29,7 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function lastIndexOf(string $needle, int $offset = 0, ?string $encoding = null)
     {
@@ -37,7 +37,7 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function pos(string $needle, int $offset = 0, ?string $encoding = null)
     {
@@ -45,7 +45,7 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function rpos(string $needle, int $offset = 0, ?string $encoding = null)
     {
@@ -53,7 +53,7 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @return int|false
+     * @return false|int
      */
     public function ipos(string $needle, ?string $encoding = null)
     {
