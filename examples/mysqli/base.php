@@ -25,7 +25,7 @@ Coroutine\run(function () {
         (new MysqliConfig())
             ->withHost(MYSQL_SERVER_HOST)
             ->withPort(MYSQL_SERVER_PORT)
-        // ->withUnixSocket('/tmp/mysql.sock')
+            // ->withUnixSocket('/tmp/mysql.sock')
             ->withDbName(MYSQL_SERVER_DB)
             ->withCharset('utf8mb4')
             ->withUsername(MYSQL_SERVER_USER)
