@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-if (SWOOLE_USE_SHORTNAME) {
+if (defined('SWOOLE_USE_SHORTNAME') && SWOOLE_USE_SHORTNAME) {
     function _string(string $string = ''): Swoole\StringObject
     {
         return new Swoole\StringObject($string);

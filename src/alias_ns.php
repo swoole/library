@@ -19,7 +19,7 @@ namespace Swoole\Coroutine {
 }
 
 namespace Co {
-    if (SWOOLE_USE_SHORTNAME) {
+    if (defined('SWOOLE_USE_SHORTNAME') && SWOOLE_USE_SHORTNAME) {
         function run(callable $fn, ...$args)
         {
             return \Swoole\Coroutine\Run($fn, ...$args);
