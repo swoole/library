@@ -1,4 +1,12 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
 declare(strict_types=1);
 
 use Swoole\Coroutine;
@@ -13,12 +21,13 @@ const N = 1024;
 Runtime::enableCoroutine();
 $s = microtime(true);
 Coroutine\run(function () {
-    $pool = new RedisPool((new RedisConfig)
-        ->withHost(REDIS_SERVER_HOST)
-        ->withPort(REDIS_SERVER_PORT)
-        ->withAuth('')
-        ->withDbIndex(0)
-        ->withTimeout(1)
+    $pool = new RedisPool(
+        (new RedisConfig())
+            ->withHost(REDIS_SERVER_HOST)
+            ->withPort(REDIS_SERVER_PORT)
+            ->withAuth('')
+            ->withDbIndex(0)
+            ->withTimeout(1)
     );
     for ($n = N; $n--;) {
         Coroutine::create(function () use ($pool) {
