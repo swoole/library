@@ -56,6 +56,12 @@ To update Composer packages (optional):
 docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer update -n"
 ```
 
+To check coding standard violations:
+
+```bash
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer cs-check"
+```
+
 To correct coding standard violations automatically:
 
 ```bash

@@ -37,6 +37,7 @@
         }
     },
     "scripts": {
+        "cs-check": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix --dry-run",
         "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix"
     }
 }
