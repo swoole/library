@@ -13,7 +13,6 @@ namespace Swoole\Database;
 
 class PDOConfig
 {
-
     public const DRIVER_MYSQL = 'mysql';
 
     public const DRIVER_PGSQL = 'pgsql';
@@ -158,7 +157,7 @@ class PDOConfig
     {
         return [
             self::DRIVER_MYSQL,
-            self::DRIVER_PGSQL
+            self::DRIVER_PGSQL,
         ];
     }
 }
