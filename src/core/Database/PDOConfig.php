@@ -13,6 +13,13 @@ namespace Swoole\Database;
 
 class PDOConfig
 {
+    public const DRIVER_MYSQL = 'mysql';
+
+    public const DRIVER_PGSQL = 'pgsql';
+
+    /** @var string */
+    protected $driver = self::DRIVER_MYSQL;
+
     /** @var string */
     protected $host = '127.0.0.1';
 
@@ -36,6 +43,17 @@ class PDOConfig
 
     /** @var array */
     protected $options = [];
+
+    public function getDriver(): string
+    {
+        return $this->driver;
+    }
+
+    public function withDriver(string $driver): self
+    {
+        $this->driver = $driver;
+        return $this;
+    }
 
     public function getHost(): string
     {
@@ -128,5 +146,18 @@ class PDOConfig
     {
         $this->options = $options;
         return $this;
+    }
+
+    /**
+     * Returns the list of available drivers
+     *
+     * @return string[]
+     */
+    public static function getAvailableDrivers()
+    {
+        return [
+            self::DRIVER_MYSQL,
+            self::DRIVER_PGSQL,
+        ];
     }
 }
