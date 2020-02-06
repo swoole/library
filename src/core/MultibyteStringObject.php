@@ -25,7 +25,7 @@ class MultibyteStringObject extends StringObject
      */
     public function indexOf(string $needle, int $offset = 0, ?string $encoding = null)
     {
-        return mb_strpos($this->string, $needle, $offset, $encoding);
+        return mb_strpos($this->string, ...func_get_args());
     }
 
     /**
@@ -33,7 +33,7 @@ class MultibyteStringObject extends StringObject
      */
     public function lastIndexOf(string $needle, int $offset = 0, ?string $encoding = null)
     {
-        return mb_strrpos($this->string, $needle, $offset, $encoding);
+        return mb_strrpos($this->string, ...func_get_args());
     }
 
     /**
@@ -41,7 +41,7 @@ class MultibyteStringObject extends StringObject
      */
     public function pos(string $needle, int $offset = 0, ?string $encoding = null)
     {
-        return mb_strpos($this->string, $needle, $offset, $encoding);
+        return mb_strpos($this->string, ...func_get_args());
     }
 
     /**
@@ -49,7 +49,7 @@ class MultibyteStringObject extends StringObject
      */
     public function rpos(string $needle, int $offset = 0, ?string $encoding = null)
     {
-        return mb_strrpos($this->string, $needle, $offset, $encoding);
+        return mb_strrpos($this->string, ...func_get_args());
     }
 
     /**
@@ -57,7 +57,7 @@ class MultibyteStringObject extends StringObject
      */
     public function ipos(string $needle, ?string $encoding = null)
     {
-        return mb_stripos($this->string, $needle, $encoding);
+        return mb_stripos($this->string, ...func_get_args());
     }
 
     /**
@@ -65,11 +65,11 @@ class MultibyteStringObject extends StringObject
      */
     public function substr(int $offset, ?int $length = null, ?string $encoding = null)
     {
-        return new static(mb_substr($this->string, $offset, $length, $encoding));
+        return new static(mb_substr($this->string, ...func_get_args()));
     }
 
     public function chunk(int $splitLength = 1, ?int $limit = null): ArrayObject
     {
-        return static::detectArrayType(mb_split($this->string, $splitLength, $limit));
+        return static::detectArrayType(mb_split($this->string, ...func_get_args()));
     }
 }

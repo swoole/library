@@ -42,7 +42,7 @@ class StringObject
      */
     public function indexOf(string $needle, int $offset = 0)
     {
-        return strpos($this->string, $needle, $offset);
+        return strpos($this->string, ...func_get_args());
     }
 
     /**
@@ -50,7 +50,7 @@ class StringObject
      */
     public function lastIndexOf(string $needle, int $offset = 0)
     {
-        return strrpos($this->string, $needle, $offset);
+        return strrpos($this->string, ...func_get_args());
     }
 
     /**
@@ -58,7 +58,7 @@ class StringObject
      */
     public function pos(string $needle, int $offset = 0)
     {
-        return strpos($this->string, $needle, $offset);
+        return strpos($this->string, ...func_get_args());
     }
 
     /**
@@ -66,7 +66,7 @@ class StringObject
      */
     public function rpos(string $needle, int $offset = 0)
     {
-        return strrpos($this->string, $needle, $offset);
+        return strrpos($this->string, ...func_get_args());
     }
 
     /**
@@ -122,7 +122,7 @@ class StringObject
      */
     public function substr(int $offset, ?int $length = null)
     {
-        return new static(substr($this->string, $offset, $length));
+        return new static(substr($this->string, ...func_get_args()));
     }
 
     public function repeat(int $n): StringObject
@@ -131,7 +131,6 @@ class StringObject
     }
 
     /**
-     * @param int $count
      * @return static
      */
     public function replace(string $search, string $replace, &$count = null)
@@ -169,12 +168,12 @@ class StringObject
      */
     public function chunkSplit(int $chunkLength = 1, string $chunkEnd = '')
     {
-        return new static(chunk_split($this->string, $chunkLength, $chunkEnd));
+        return new static(chunk_split($this->string, ...func_get_args()));
     }
 
     public function chunk(int $splitLength = 1): ArrayObject
     {
-        return static::detectArrayType(str_split($this->string, $splitLength));
+        return static::detectArrayType(str_split($this->string, ...func_get_args()));
     }
 
     /**
