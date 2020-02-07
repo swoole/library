@@ -316,7 +316,11 @@ class Constant
 
     public const OPTION_STATIC_HANDLER_LOCATIONS = 'static_handler_locations';
 
+    public const OPTION_BUFFER_INPUT_SIZE = 'input_buffer_size';
+
     public const OPTION_INPUT_BUFFER_SIZE = 'input_buffer_size';
+
+    public const OPTION_BUFFER_OUTPUT_SIZE = 'output_buffer_size';
 
     public const OPTION_OUTPUT_BUFFER_SIZE = 'output_buffer_size';
 
