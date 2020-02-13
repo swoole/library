@@ -36,7 +36,7 @@ class ObjectProxy
         return $this->__object->{$name};
     }
 
-    public function __set(string $name, $value)
+    public function __set(string $name, $value): void
     {
         $this->__object->{$name} = $value;
     }

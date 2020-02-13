@@ -156,7 +156,7 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
      * @param mixed $key
      * @param mixed $value
      */
-    public function offsetSet($key, $value)
+    public function offsetSet($key, $value): void
     {
         $this->array[$key] = $value;
     }
@@ -164,7 +164,7 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
     /**
      * @param mixed $key
      */
-    public function offsetUnset($key)
+    public function offsetUnset($key): void
     {
         unset($this->array[$key]);
     }

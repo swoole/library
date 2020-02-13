@@ -131,6 +131,7 @@ class StringObject
     }
 
     /**
+     * @param null|int $count
      * @return static
      */
     public function replace(string $search, string $replace, &$count = null)
