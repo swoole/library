@@ -142,8 +142,9 @@ class Client
         if (empty($host)) {
             $host = $fpmAddress['path'] ?? '';
             if (empty($host)) {
-                throw new InvalidArgumentException('Host is empty');
+                throw new InvalidArgumentException('Invalid address');
             }
+            $host = "unix:/{$host}";
         }
         $client = new Client($host, $port);
         $pathInfo = parse_url($path);
