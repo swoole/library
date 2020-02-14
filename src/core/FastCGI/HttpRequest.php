@@ -14,13 +14,13 @@ namespace Swoole\FastCGI;
 class HttpRequest extends Request
 {
     protected $params = [
-        'DOCUMENT_ROOT' => "\0", /* must be configured */
         'REQUEST_SCHEME' => 'http',
         'REQUEST_METHOD' => 'GET',
-        'SCRIPT_NAME' => '', /* path_info */
-        'SCRIPT_FILENAME' => '', /* DOCUMENT_ROOT + SCRIPT_NAME */
-        'REQUEST_URI' => '/',
+        'DOCUMENT_ROOT' => '',
+        'SCRIPT_FILENAME' => '',
+        'SCRIPT_NAME' => '',
         'DOCUMENT_URI' => '/',
+        'REQUEST_URI' => '/',
         'QUERY_STRING' => '',
         'CONTENT_TYPE' => 'text/plain',
         'CONTENT_LENGTH' => '0',
@@ -35,12 +35,44 @@ class HttpRequest extends Request
         'REDIRECT_STATUS' => '200',
     ];
 
+    public function getScheme(): ?string
+    {
+        return $this->params['REQUEST_SCHEME'] ?? null;
+    }
+
+    public function withScheme(string $scheme): self
+    {
+        $this->params['REQUEST_SCHEME'] = $scheme;
+        return $this;
+    }
+
+    public function withoutScheme(): void
+    {
+        unset($this->params['REQUEST_SCHEME']);
+    }
+
+    public function getMethod(): ?string
+    {
+        return $this->params['REQUEST_METHOD'] ?? null;
+    }
+
+    public function withMethod(string $method): self
+    {
+        $this->params['REQUEST_METHOD'] = $method;
+        return $this;
+    }
+
+    public function withoutMethod(): void
+    {
+        unset($this->params['REQUEST_METHOD']);
+    }
+
     public function getDocumentRoot(): ?string
     {
         return $this->params['DOCUMENT_ROOT'] ?? null;
     }
 
-    public function withDocumentRoot($documentRoot): self
+    public function withDocumentRoot(string $documentRoot): self
     {
         $this->params['DOCUMENT_ROOT'] = $documentRoot;
         return $this;
@@ -51,60 +83,12 @@ class HttpRequest extends Request
         unset($this->params['DOCUMENT_ROOT']);
     }
 
-    public function getRequestScheme(): ?string
-    {
-        return $this->params['REQUEST_SCHEME'] ?? null;
-    }
-
-    public function withRequestScheme($requestScheme): self
-    {
-        $this->params['REQUEST_SCHEME'] = $requestScheme;
-        return $this;
-    }
-
-    public function withoutRequestScheme(): void
-    {
-        unset($this->params['REQUEST_SCHEME']);
-    }
-
-    public function getRequestMethod(): ?string
-    {
-        return $this->params['REQUEST_METHOD'] ?? null;
-    }
-
-    public function withRequestMethod($requestMethod): self
-    {
-        $this->params['REQUEST_METHOD'] = $requestMethod;
-        return $this;
-    }
-
-    public function withoutRequestMethod(): void
-    {
-        unset($this->params['REQUEST_METHOD']);
-    }
-
-    public function getScriptName(): ?string
-    {
-        return $this->params['SCRIPT_NAME'] ?? null;
-    }
-
-    public function withScriptName($scriptName): self
-    {
-        $this->params['SCRIPT_NAME'] = $scriptName;
-        return $this;
-    }
-
-    public function withoutScriptName(): void
-    {
-        unset($this->params['SCRIPT_NAME']);
-    }
-
     public function getScriptFilename(): ?string
     {
         return $this->params['SCRIPT_FILENAME'] ?? null;
     }
 
-    public function withScriptFilename($scriptFilename): self
+    public function withScriptFilename(string $scriptFilename): self
     {
         $this->params['SCRIPT_FILENAME'] = $scriptFilename;
         return $this;
@@ -115,20 +99,20 @@ class HttpRequest extends Request
         unset($this->params['SCRIPT_FILENAME']);
     }
 
-    public function getRequestUri(): ?string
+    public function getScriptName(): ?string
     {
-        return $this->params['REQUEST_URI'] ?? null;
+        return $this->params['SCRIPT_NAME'] ?? null;
     }
 
-    public function withRequestUri($requestUri): self
+    public function withScriptName(string $scriptName): self
     {
-        $this->params['REQUEST_URI'] = $requestUri;
+        $this->params['SCRIPT_NAME'] = $scriptName;
         return $this;
     }
 
-    public function withoutRequestUri(): void
+    public function withoutScriptName(): void
     {
-        unset($this->params['REQUEST_URI']);
+        unset($this->params['SCRIPT_NAME']);
     }
 
     public function getDocumentUri(): ?string
@@ -136,7 +120,7 @@ class HttpRequest extends Request
         return $this->params['DOCUMENT_URI'] ?? null;
     }
 
-    public function withDocumentUri($documentUri): self
+    public function withDocumentUri(string $documentUri): self
     {
         $this->params['DOCUMENT_URI'] = $documentUri;
         return $this;
@@ -147,12 +131,28 @@ class HttpRequest extends Request
         unset($this->params['DOCUMENT_URI']);
     }
 
+    public function getRequestUri(): ?string
+    {
+        return $this->params['REQUEST_URI'] ?? null;
+    }
+
+    public function withRequestUri(string $requestUri): self
+    {
+        $this->params['REQUEST_URI'] = $requestUri;
+        return $this;
+    }
+
+    public function withoutRequestUri(): void
+    {
+        unset($this->params['REQUEST_URI']);
+    }
+
     public function getQueryString(): ?string
     {
         return $this->params['QUERY_STRING'] ?? null;
     }
 
-    public function withQueryString($queryString): self
+    public function withQueryString(string $queryString): self
     {
         $this->params['QUERY_STRING'] = $queryString;
         return $this;
@@ -168,7 +168,7 @@ class HttpRequest extends Request
         return $this->params['CONTENT_TYPE'] ?? null;
     }
 
-    public function withContentType($contentType): self
+    public function withContentType(string $contentType): self
     {
         $this->params['CONTENT_TYPE'] = $contentType;
         return $this;
@@ -179,14 +179,14 @@ class HttpRequest extends Request
         unset($this->params['CONTENT_TYPE']);
     }
 
-    public function getContentLength(): ?string
+    public function getContentLength(): ?int
     {
-        return $this->params['CONTENT_LENGTH'] ?? null;
+        return isset($this->params['CONTENT_LENGTH']) ? (int) $this->params['CONTENT_LENGTH'] : null;
     }
 
-    public function withContentLength($contentLength): self
+    public function withContentLength(int $contentLength): self
     {
-        $this->params['CONTENT_LENGTH'] = $contentLength;
+        $this->params['CONTENT_LENGTH'] = (string) $contentLength;
         return $this;
     }
 
@@ -200,7 +200,7 @@ class HttpRequest extends Request
         return $this->params['GATEWAY_INTERFACE'] ?? null;
     }
 
-    public function withGatewayInterface($gatewayInterface): self
+    public function withGatewayInterface(string $gatewayInterface): self
     {
         $this->params['GATEWAY_INTERFACE'] = $gatewayInterface;
         return $this;
@@ -211,18 +211,18 @@ class HttpRequest extends Request
         unset($this->params['GATEWAY_INTERFACE']);
     }
 
-    public function getServerProtocol(): ?string
+    public function getProtocolVersion(): ?string
     {
         return $this->params['SERVER_PROTOCOL'] ?? null;
     }
 
-    public function withServerProtocol($serverProtocol): self
+    public function withProtocolVersion(string $serverProtocol): self
     {
         $this->params['SERVER_PROTOCOL'] = $serverProtocol;
         return $this;
     }
 
-    public function withoutServerProtocol(): void
+    public function withoutProtocolVersion(): void
     {
         unset($this->params['SERVER_PROTOCOL']);
     }
@@ -232,7 +232,7 @@ class HttpRequest extends Request
         return $this->params['SERVER_SOFTWARE'] ?? null;
     }
 
-    public function withServerSoftware($serverSoftware): self
+    public function withServerSoftware(string $serverSoftware): self
     {
         $this->params['SERVER_SOFTWARE'] = $serverSoftware;
         return $this;
@@ -248,7 +248,7 @@ class HttpRequest extends Request
         return $this->params['REMOTE_ADDR'] ?? null;
     }
 
-    public function withRemoteAddr($remoteAddr): self
+    public function withRemoteAddr(string $remoteAddr): self
     {
         $this->params['REMOTE_ADDR'] = $remoteAddr;
         return $this;
@@ -259,14 +259,14 @@ class HttpRequest extends Request
         unset($this->params['REMOTE_ADDR']);
     }
 
-    public function getRemotePort(): ?string
+    public function getRemotePort(): ?int
     {
-        return $this->params['REMOTE_PORT'] ?? null;
+        return isset($this->params['REMOTE_PORT']) ? (int) $this->params['REMOTE_PORT'] : null;
     }
 
-    public function withRemotePort($remotePort): self
+    public function withRemotePort(int $remotePort): self
     {
-        $this->params['REMOTE_PORT'] = $remotePort;
+        $this->params['REMOTE_PORT'] = (string) $remotePort;
         return $this;
     }
 
@@ -280,7 +280,7 @@ class HttpRequest extends Request
         return $this->params['SERVER_ADDR'] ?? null;
     }
 
-    public function withServerAddr($serverAddr): self
+    public function withServerAddr(string $serverAddr): self
     {
         $this->params['SERVER_ADDR'] = $serverAddr;
         return $this;
@@ -291,14 +291,14 @@ class HttpRequest extends Request
         unset($this->params['SERVER_ADDR']);
     }
 
-    public function getServerPort(): ?string
+    public function getServerPort(): ?int
     {
-        return $this->params['SERVER_PORT'] ?? null;
+        return isset($this->params['SERVER_PORT']) ? (int) $this->params['SERVER_PORT'] : null;
     }
 
-    public function withServerPort($serverPort): self
+    public function withServerPort(int $serverPort): self
     {
-        $this->params['SERVER_PORT'] = $serverPort;
+        $this->params['SERVER_PORT'] = (string) $serverPort;
         return $this;
     }
 
@@ -312,7 +312,7 @@ class HttpRequest extends Request
         return $this->params['SERVER_NAME'] ?? null;
     }
 
-    public function withServerName($serverName): self
+    public function withServerName(string $serverName): self
     {
         $this->params['SERVER_NAME'] = $serverName;
         return $this;
@@ -328,7 +328,7 @@ class HttpRequest extends Request
         return $this->params['REDIRECT_STATUS'] ?? null;
     }
 
-    public function withRedirectStatus($redirectStatus): self
+    public function withRedirectStatus(string $redirectStatus): self
     {
         $this->params['REDIRECT_STATUS'] = $redirectStatus;
         return $this;
@@ -339,10 +339,59 @@ class HttpRequest extends Request
         unset($this->params['REDIRECT_STATUS']);
     }
 
-    /** @return $this */
-    public function withBody(string $body): Message
+    public function getHeader(string $name): ?string
     {
+        return $this->params[static::convertHeaderNameToParamName($name)] ?? null;
+    }
+
+    public function withHeader(string $name, string $value): self
+    {
+        $this->params[static::convertHeaderNameToParamName($name)] = $value;
+        return $this;
+    }
+
+    public function withoutHeader(string $name): void
+    {
+        unset($this->params[static::convertHeaderNameToParamName($name)]);
+    }
+
+    public function getHeaders(): array
+    {
+        $headers = [];
+        foreach ($this->params as $name => $value) {
+            if (strpos($name, 'HTTP_') === 0) {
+                $headers[static::convertParamNameToHeaderName($name)] = $value;
+            }
+        }
+        return $headers;
+    }
+
+    public function withHeaders(array $headers): self
+    {
+        foreach ($headers as $name => $value) {
+            $this->withHeader($name, $value);
+        }
+        return $this;
+    }
+
+    /** @return $this */
+    public function withBody($body): Message
+    {
+        if (is_array($body)) {
+            $body = http_build_query($body);
+            $this->withContentType('application/x-www-form-urlencoded');
+        }
         parent::withBody($body);
         return $this->withContentLength(strlen($body));
+    }
+
+    protected static function convertHeaderNameToParamName(string $name)
+    {
+        return 'HTTP_' . str_replace('-', '_', strtoupper($name));
+    }
+
+    protected static function convertParamNameToHeaderName(string $name)
+    {
+        return ucwords(str_replace('_', '-', substr($name, strlen('HTTP_'))), '-');
     }
 }

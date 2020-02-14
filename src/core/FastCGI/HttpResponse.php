@@ -24,19 +24,21 @@ class HttpResponse extends Response
     /** @var array */
     protected $headers = [];
 
-    public function parse(array $records)
+    public function __construct(array $records = [])
     {
-        parent::parse($records);
-        [$headers, $body] = explode("\r\n\r\n", $this->getBody(), 2);
+        parent::__construct($records);
+        $body = (string) $this->getBody();
+        if (strlen($body) === 0) {
+            return;
+        }
+        [$headers, $body] = @explode("\r\n\r\n", $body, 2);
         $headers = explode("\r\n", $headers);
         foreach ($headers as $header) {
-            [$name, $value] = explode(': ', $header, 2);
+            [$name, $value] = @explode(': ', $header, 2);
             $headers[$name] = $value;
         }
         if ($headers['Status'] ?? null) {
-            $tmp = explode(' ', $headers['Status'], 2);
-            $statusCode = $tmp[0] ?? null;
-            $reasonPhrase = $tmp[1] ?? null;
+            [$statusCode, $reasonPhrase] = @explode(' ', $headers['Status'], 2);
             unset($headers['Status']);
         }
         $statusCode = (int) ($statusCode ?? Status::INTERNAL_SERVER_ERROR);
@@ -45,7 +47,6 @@ class HttpResponse extends Response
             ->withReasonPhrase($reasonPhrase)
             ->withHeaders($headers)
             ->withBody($body);
-        return $this;
     }
 
     public function getStatusCode(): int

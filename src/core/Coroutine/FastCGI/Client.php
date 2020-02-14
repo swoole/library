@@ -42,7 +42,7 @@ class Client
     {
         if (stripos($host, 'unix:/') === 0) {
             $this->af = AF_UNIX;
-            $host = '/' . ltrim(str_replace('unix:/', '', $host), '/');
+            $host = '/' . ltrim(substr($host, strlen('unix:/')), '/');
             $port = 0;
         } elseif (strpos($host, ':') !== false) {
             $this->af = AF_INET6;
@@ -54,7 +54,7 @@ class Client
         $this->ssl = $ssl;
     }
 
-    public function rawQuery(Request $request, float $timeout = -1): array
+    public function execute(Request $request, float $timeout = -1): Response
     {
         if (!$this->socket) {
             $socket = new Socket($this->af, SOCK_STREAM, IPPROTO_IP);
@@ -112,7 +112,12 @@ class Client
                     $this->socket->close();
                     $this->socket = null;
                 }
-                return $records;
+                switch (true) {
+                    case $request instanceof HttpRequest:
+                        return new HttpResponse($records);
+                    default:
+                        return new Response($records);
+                }
             }
         }
         _rst:
@@ -124,23 +129,13 @@ class Client
         throw new Exception($socket->errMsg, $socket->errCode);
     }
 
-    public function query(Request $request, float $timeout = -1): Response
+    public static function call(string $address, string $path, $data = '', float $timeout = -1): string
     {
-        return (new Response())->parse($this->rawQuery($request, $timeout));
-    }
-
-    public function httpQuery(HttpRequest $request, float $timeout = -1): HttpResponse
-    {
-        return (new HttpResponse())->parse($this->rawQuery($request, $timeout));
-    }
-
-    public static function httpTask(string $fpmAddress, string $path, string $data = '', float $timeout = -1): string
-    {
-        $fpmAddress = parse_url($fpmAddress);
-        $host = $fpmAddress['host'] ?? '';
-        $port = $fpmAddress['port'] ?? 0;
+        $address = parse_url($address);
+        $host = $address['host'] ?? '';
+        $port = $address['port'] ?? 0;
         if (empty($host)) {
-            $host = $fpmAddress['path'] ?? '';
+            $host = $address['path'] ?? '';
             if (empty($host)) {
                 throw new InvalidArgumentException('Invalid address');
             }
@@ -150,18 +145,20 @@ class Client
         $pathInfo = parse_url($path);
         $path = $pathInfo['path'] ?? '';
         $root = dirname($path);
-        $uri = '/' . basename($path);
+        $scriptName = '/' . basename($path);
+        $documentUri = $scriptName;
         $query = $pathInfo['query'] ?? '';
-        $request = (new HttpRequest())
+        $requestUri = $query ? "{$documentUri}?{$query}" : $documentUri;
+        $request = new HttpRequest();
+        $request->withDocumentRoot($root)
             ->withScriptFilename($path)
-            ->withDocumentRoot($root)
-            ->withDocumentUri($uri)
-            ->withRequestUri($uri)
-            ->withScriptName($uri)
+            ->withScriptName($documentUri)
+            ->withDocumentUri($documentUri)
+            ->withRequestUri($requestUri)
             ->withQueryString($query)
-            ->withRequestMethod(strlen($data) === 0 ? 'GET' : 'POST')
-            ->withBody($data);
-        $response = $client->httpQuery($request, $timeout);
+            ->withBody($data)
+            ->withMethod($request->getContentLength() === 0 ? 'GET' : 'POST');
+        $response = $client->execute($request, $timeout);
         return $response->getBody();
     }
 }

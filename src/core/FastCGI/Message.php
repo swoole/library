@@ -61,9 +61,9 @@ class Message
         return $this->body;
     }
 
-    public function withBody(string $body): self
+    public function withBody($body): self
     {
-        $this->body = $body;
+        $this->body = (string) $body;
         return $this;
     }
 

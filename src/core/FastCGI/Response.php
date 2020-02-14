@@ -17,12 +17,7 @@ use Swoole\FastCGI\Record\Stdout;
 
 class Response extends Message
 {
-    public static function verify(array $records): bool
-    {
-        return !empty($records) && $records[count($records) - 1] instanceof EndRequest;
-    }
-
-    public function parse(array $records)
+    public function __construct(array $records = [])
     {
         if (!static::verify($records)) {
             throw new InvalidArgumentException('Bad records');
@@ -40,6 +35,11 @@ class Response extends Message
                 }
             }
         }
-        return $this->withBody($body)->withError($error);
+        $this->withBody($body)->withError($error);
+    }
+
+    public static function verify(array $records): bool
+    {
+        return !empty($records) && $records[count($records) - 1] instanceof EndRequest;
     }
 }
