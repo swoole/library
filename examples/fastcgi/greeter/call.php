@@ -11,19 +11,17 @@ declare(strict_types=1);
 
 use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
-use Swoole\FastCGI\HttpRequest;
 
-require __DIR__ . '/../bootstrap.php';
+require __DIR__ . '/../../bootstrap.php';
 
 Coroutine\run(function () {
     try {
-        $client = new Client('127.0.0.1', 9000);
-        $request = (new HttpRequest())
-            ->withScriptFilename(__DIR__ . '/greeter.php')
-            ->withMethod('POST')
-            ->withBody(['who' => 'Swoole']);
-        $response = $client->execute($request);
-        echo "Result: {$response->getBody()}\n";
+        $result = Client::call(
+            '127.0.0.1:9000',
+            __DIR__ . '/greeter.php',
+            ['who' => 'Swoole']
+        );
+        echo "Result: {$result}\n";
     } catch (Client\Exception $exception) {
         echo "Error: {$exception->getMessage()}\n";
     }
