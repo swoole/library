@@ -63,7 +63,7 @@ class Client
                 'open_fastcgi_protocol' => true,
             ]);
             if (!$socket->connect($this->host, $this->port, $timeout)) {
-                goto _error;
+                $this->ioException();
             }
             $this->socket = $socket;
         } else {
@@ -71,19 +71,19 @@ class Client
         }
         $sendData = (string) $request;
         if ($socket->sendAll($sendData) !== strlen($sendData)) {
-            goto _error;
+            $this->ioException();
         }
         $records = [];
         while (true) {
-            if (SWOOLE_VERSION_ID < 40500) {
+            if (SWOOLE_VERSION_ID <= 40415) {
                 $recvData = '';
                 while (true) {
-                    $tmp = $socket->recv($timeout);
+                    $tmp = $socket->recv(8192, $timeout);
                     if (!$tmp) {
                         if ($tmp === '') {
-                            goto _rst;
+                            $this->ioException(SOCKET_ECONNRESET);
                         }
-                        goto _error;
+                        $this->ioException();
                     }
                     $recvData .= $tmp;
                     if (FrameParser::hasFrame($recvData)) {
@@ -94,14 +94,12 @@ class Client
                 $recvData = $socket->recvPacket($timeout);
                 if (!$recvData) {
                     if ($recvData === '') {
-                        goto _rst;
+                        $this->ioException(SOCKET_ECONNRESET);
                     }
-                    goto _error;
+                    $this->ioException();
                 }
                 if (!FrameParser::hasFrame($recvData)) {
-                    $socket->errCode = SOCKET_EPROTO;
-                    $socket->errMsg = swoole_strerror(SOCKET_EPROTO);
-                    goto _error;
+                    $this->ioException(SOCKET_EPROTO);
                 }
             }
             do {
@@ -120,13 +118,8 @@ class Client
                 }
             }
         }
-        _rst:
-        $socket->errCode = SOCKET_ECONNRESET;
-        $socket->errMsg = swoole_strerror(SOCKET_ECONNRESET);
-        _error:
-        $socket->close();
-        $this->socket = null;
-        throw new Exception($socket->errMsg, $socket->errCode);
+        /* never here */
+        exit(1);
     }
 
     public static function call(string $address, string $path, $data = '', float $timeout = -1): string
@@ -160,5 +153,17 @@ class Client
             ->withMethod($request->getContentLength() === 0 ? 'GET' : 'POST');
         $response = $client->execute($request, $timeout);
         return $response->getBody();
+    }
+
+    protected function ioException(?int $errno = null): void
+    {
+        $socket = $this->socket;
+        if ($errno !== null) {
+            $socket->errCode = $errno;
+            $socket->errMsg = swoole_strerror($errno);
+        }
+        $socket->close();
+        $this->socket = null;
+        throw new Exception($socket->errMsg, $socket->errCode);
     }
 }
