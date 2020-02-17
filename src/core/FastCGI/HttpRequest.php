@@ -115,6 +115,14 @@ class HttpRequest extends Request
         unset($this->params['SCRIPT_NAME']);
     }
 
+    public function withUri(string $uri): self
+    {
+        $info = parse_url($uri);
+        return $this->withRequestUri($uri)
+            ->withDocumentUri($info['path'] ?? '')
+            ->withQueryString($info['query'] ?? '');
+    }
+
     public function getDocumentUri(): ?string
     {
         return $this->params['DOCUMENT_URI'] ?? null;
@@ -145,6 +153,14 @@ class HttpRequest extends Request
     public function withoutRequestUri(): void
     {
         unset($this->params['REQUEST_URI']);
+    }
+
+    public function withQuery($query): self
+    {
+        if (is_array($query)) {
+            $query = http_build_query($query);
+        }
+        return $this->withQueryString($query);
     }
 
     public function getQueryString(): ?string
