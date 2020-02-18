@@ -17,7 +17,7 @@ require __DIR__ . '/../../bootstrap.php';
 Coroutine\run(function () {
     try {
         $result = Client::call(
-            '127.0.0.1:9000',
+            'php-fpm:9000',
             __DIR__ . '/greeter.php',
             ['who' => 'Swoole']
         );

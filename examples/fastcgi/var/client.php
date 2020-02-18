@@ -17,7 +17,7 @@ require __DIR__ . '/../../bootstrap.php';
 
 Coroutine\run(function () {
     try {
-        $client = new Client('127.0.0.1', 9000);
+        $client = new Client('php-fpm', 9000);
         $request = (new HttpRequest())
             ->withDocumentRoot(__DIR__)
             ->withScriptFilename(__DIR__ . '/var.php')
