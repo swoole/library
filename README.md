@@ -74,6 +74,14 @@ To correct coding standard violations automatically:
 docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer cs-fix"
 ```
 
+## Third Party Libraries
+
+Here are all the third party libraries used in this project:
+
+* The FastCGI part is derived from Composer package [lisachenko/protocol-fcgi](https://github.com/lisachenko/protocol-fcgi).
+
+You can find the licensing information of these third party libraries [here](https://github.com/swoole/library/blob/master/THIRD-PARTY-NOTICES).
+
 ## License
 
-Apache License Version 2.0 see http://www.apache.org/licenses/LICENSE-2.0.html
+This project follows [the Apache 2 license](https://github.com/swoole/library/blob/master/LICENSE).
