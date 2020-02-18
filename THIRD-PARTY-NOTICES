@@ -1,4 +1,19 @@
-Copyright (c) 2015 Michael Dowling, https://github.com/mtdowling <mtdowling@gmail.com>
+Swoole Library uses third-party libraries or other resources that may
+be distributed under licenses different than the Swoole project.
+
+In the event that we accidentally failed to list a required notice,
+please bring it to our attention through any of the ways detailed here :
+
+           team@swoole.com
+
+The attached notices are provided for information only.
+
+1) License Notice for Composer Package "lisachenko/protocol-fcgi"
+-----------------------------------------------------------------
+
+https://github.com/lisachenko/protocol-fcgi/blob/master/LICENSE
+
+Copyright (c) 2015 Lisachenko Alexander <lisachenko.it@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
