@@ -75,7 +75,7 @@ class Client
         }
         $records = [];
         while (true) {
-            if (SWOOLE_VERSION_ID <= 40415) {
+            if (SWOOLE_VERSION_ID < 40500) {
                 $recvData = '';
                 while (true) {
                     $tmp = $socket->recv(8192, $timeout);
