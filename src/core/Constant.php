@@ -304,9 +304,9 @@ class Constant
 
     public const OPTION_HTTP_COMPRESSION = 'http_compression';
 
-    public const OPTION_HTTP_GZIP_LEVEL = 'http_gzip_level';
-
     public const OPTION_HTTP_COMPRESSION_LEVEL = 'http_compression_level';
+
+    public const OPTION_HTTP_GZIP_LEVEL = 'http_gzip_level';
 
     public const OPTION_UPLOAD_TMP_DIR = 'upload_tmp_dir';
 
