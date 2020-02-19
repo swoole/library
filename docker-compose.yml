@@ -10,6 +10,10 @@ services:
       DISABLE_DEFAULT_SERVER: 1
     volumes:
       - .:/var/www
+  php-fpm:
+    image: php:7.4-fpm
+    volumes:
+      - .:/var/www
   mysql:
     image: mysql:5.7.19
     environment:
