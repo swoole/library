@@ -35,7 +35,7 @@ Now you can use commands like following to run examples under folder [examples](
 docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/mysqli/base.php"
 docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/pdo/base.php"
 docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/redis/base.php"
-#
+
 # Examples of FastCGI calls:
 docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/fastcgi/greeter/call.php"
 docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/fastcgi/greeter/client.php"
