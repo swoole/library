@@ -26,6 +26,7 @@
     "autoload": {
         "files": [
             "src/constants.php",
+            "src/core/Coroutine/functions.php",
             "src/std/exec.php",
             "src/ext/curl.php",
             "src/functions.php",
