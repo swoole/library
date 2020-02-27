@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
+use InvalidArgumentException;
+
 class HttpRequest extends Request
 {
     protected $params = [
@@ -227,20 +229,29 @@ class HttpRequest extends Request
         unset($this->params['GATEWAY_INTERFACE']);
     }
 
-    public function getProtocolVersion(): ?string
+    public function getServerProtocol(): ?string
     {
         return $this->params['SERVER_PROTOCOL'] ?? null;
     }
 
-    public function withProtocolVersion(string $serverProtocol): self
+    public function withServerProtocol(string $serverProtocol): self
     {
         $this->params['SERVER_PROTOCOL'] = $serverProtocol;
         return $this;
     }
 
-    public function withoutProtocolVersion(): void
+    public function withoutServerProtocol(): void
     {
         unset($this->params['SERVER_PROTOCOL']);
+    }
+
+    public function withProtocolVersion(string $protocolVersion): self
+    {
+        if (!is_numeric($protocolVersion)) {
+            throw new InvalidArgumentException('Protocol version must be numeric');
+        }
+        $this->params['SERVER_PROTOCOL'] = "HTTP/{$protocolVersion}";
+        return $this;
     }
 
     public function getServerSoftware(): ?string
