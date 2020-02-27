@@ -130,7 +130,7 @@ class Client
     {
         $url = parse_url($url);
         $host = $url['host'] ?? '';
-        $port = (int) ($url['port'] ?? 0);
+        $port = $url['port'] ?? 0;
         if (empty($host)) {
             $host = $url['path'] ?? '';
             if (empty($host)) {
