@@ -9,13 +9,11 @@
 
 declare(strict_types=1);
 
-namespace Swoole\Library\Tests\Database;
+namespace Swoole\Database;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
-use Swoole\Database\PDOConfig;
-use Swoole\Database\PDOPool;
 
 /**
  * Class PDOStatementProxyTest
@@ -26,7 +24,7 @@ use Swoole\Database\PDOPool;
 class PDOStatementProxyTest extends TestCase
 {
     /**
-     * @covers \PDOStatementProxy::__call()
+     * @covers PDOStatementProxy::__call()
      */
     public function testRun()
     {
