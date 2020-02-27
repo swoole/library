@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class StdoutTest extends TestCase
 {
-    protected static $rawMessage = '01060000000404007465737400000000';
+    protected static $rawMessage = '01060001000404007465737400000000';
 
     public function testPacking(): void
     {

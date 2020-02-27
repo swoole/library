@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class BeginRequestTest extends TestCase
 {
-    protected static $rawMessage = '01010000000800000001010000000000';
+    protected static $rawMessage = '01010001000800000001010000000000';
 
     public function testPacking(): void
     {

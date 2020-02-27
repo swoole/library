@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class GetValuesResultTest extends TestCase
 {
-    protected static $rawMessage = '010a0000001206000f01464347495f4d5058535f434f4e4e5331000000000000';
+    protected static $rawMessage = '010a0001001206000f01464347495f4d5058535f434f4e4e5331000000000000';
 
     public function testPacking(): void
     {

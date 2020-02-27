@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class UnknownTypeTest extends TestCase
 {
-    protected static $rawMessage = '010b0000000800002a57544621000000';
+    protected static $rawMessage = '010b0001000800002a57544621000000';
 
     public function testPacking(): void
     {
