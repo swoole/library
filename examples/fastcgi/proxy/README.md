@@ -21,3 +21,5 @@ sudo echo "127.0.0.1 www.my-wordpress.com" >> /etc/hosts
 ```
 
 Now you can open `www.my-wordpress.com` in the browser to visit your `WordPress`
+
+![WordPress](https://user-images.githubusercontent.com/25978241/75431248-8b417000-5987-11ea-98a4-da68ff80c47d.png)
