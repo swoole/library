@@ -126,11 +126,11 @@ class Client
         exit(1);
     }
 
-    public static function parseUrl($url)
+    public static function parseUrl(string $url): array
     {
         $url = parse_url($url);
         $host = $url['host'] ?? '';
-        $port = $url['port'] ?? 0;
+        $port = (int) ($url['port'] ?? 0);
         if (empty($host)) {
             $host = $url['path'] ?? '';
             if (empty($host)) {

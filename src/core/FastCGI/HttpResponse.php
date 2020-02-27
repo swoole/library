@@ -108,8 +108,9 @@ class HttpResponse extends Response
         return $this->setCookieHeaderLines;
     }
 
-    public function withSetCookieHeaderLine($value)
+    public function withSetCookieHeaderLine(string $value): self
     {
         $this->setCookieHeaderLines[] = $value;
+        return $this;
     }
 }

@@ -18,18 +18,25 @@ use Swoole\Http;
 
 class Proxy
 {
+    /* @var string */
     protected $host;
 
+    /* @var int */
     protected $port;
 
+    /* @var float */
     protected $timeout = -1;
 
+    /* @var string */
     protected $documentRoot;
 
+    /* @var bool */
     protected $https = false;
 
+    /* @var string */
     protected $index = 'index.php';
 
+    /* @var array */
     protected $params = [];
 
     /* @var null|callable */
