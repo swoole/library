@@ -24,7 +24,7 @@ use Swoole\Coroutine;
 class PDOStatementProxyTest extends TestCase
 {
     /**
-     * @covers PDOStatementProxy::__call()
+     * @covers \Swoole\Database\PDOStatementProxy::__call()
      */
     public function testRun()
     {
