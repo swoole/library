@@ -91,6 +91,9 @@ class Params extends Record
     {
         $payload = '';
         foreach ($this->values as $nameData => $valueData) {
+            if ($valueData === null) {
+                continue;
+            }
             $nameLength = strlen($nameData);
             $valueLength = strlen((string) $valueData);
             $isLongName = $nameLength > 127;

@@ -54,6 +54,10 @@ class Client
         $this->ssl = $ssl;
     }
 
+    /**
+     * @throws Exception
+     * @return HttpResponse|Response
+     */
     public function execute(Request $request, float $timeout = -1): Response
     {
         if (!$this->socket) {
@@ -122,19 +126,24 @@ class Client
         exit(1);
     }
 
-    public static function call(string $address, string $path, $data = '', float $timeout = -1): string
+    public static function parseUrl(string $url): array
     {
-        $address = parse_url($address);
-        $host = $address['host'] ?? '';
-        $port = $address['port'] ?? 0;
+        $url = parse_url($url);
+        $host = $url['host'] ?? '';
+        $port = $url['port'] ?? 0;
         if (empty($host)) {
-            $host = $address['path'] ?? '';
+            $host = $url['path'] ?? '';
             if (empty($host)) {
-                throw new InvalidArgumentException('Invalid address');
+                throw new InvalidArgumentException('Invalid url');
             }
             $host = "unix:/{$host}";
         }
-        $client = new Client($host, $port);
+        return [$host, $port];
+    }
+
+    public static function call(string $url, string $path, $data = '', float $timeout = -1): string
+    {
+        $client = new Client(...static::parseUrl($url));
         $pathInfo = parse_url($path);
         $path = $pathInfo['path'] ?? '';
         $root = dirname($path);

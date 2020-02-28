@@ -27,6 +27,9 @@ class HttpResponse extends Response
     /** @var array */
     protected $headersMap = [];
 
+    /** @var array */
+    protected $setCookieHeaderLines = [];
+
     public function __construct(array $records = [])
     {
         parent::__construct($records);
@@ -36,17 +39,19 @@ class HttpResponse extends Response
         }
         [$headers, $body] = @explode("\r\n\r\n", $body, 2);
         $headers = explode("\r\n", $headers);
-        if ($headers['Status'] ?? null) {
-            [$statusCode, $reasonPhrase] = @explode(' ', $headers['Status'], 2);
-            unset($headers['Status']);
-        }
-        $statusCode = (int) ($statusCode ?? Status::INTERNAL_SERVER_ERROR);
-        $reasonPhrase = (string) ($reasonPhrase ?? Status::getReasonPhrase($statusCode));
-        $this->withStatusCode($statusCode)->withReasonPhrase($reasonPhrase);
         foreach ($headers as $header) {
             [$name, $value] = @explode(': ', $header, 2);
-            $this->withHeader($name, $value);
+            if (strcasecmp($name, 'Status') === 0) {
+                [$statusCode, $reasonPhrase] = @explode(' ', $value, 2);
+            } elseif (strcasecmp($name, 'Set-Cookie') === 0) {
+                $this->withSetCookieHeaderLine($value);
+            } else {
+                $this->withHeader($name, $value);
+            }
         }
+        $statusCode = (int) ($statusCode ?? Status::OK);
+        $reasonPhrase = (string) ($reasonPhrase ?? Status::getReasonPhrase($statusCode));
+        $this->withStatusCode($statusCode)->withReasonPhrase($reasonPhrase);
         $this->withBody($body);
     }
 
@@ -95,6 +100,17 @@ class HttpResponse extends Response
         foreach ($headers as $name => $value) {
             $this->withHeader($name, $value);
         }
+        return $this;
+    }
+
+    public function getSetCookieHeaderLines(): array
+    {
+        return $this->setCookieHeaderLines;
+    }
+
+    public function withSetCookieHeaderLine(string $value): self
+    {
+        $this->setCookieHeaderLines[] = $value;
         return $this;
     }
 }

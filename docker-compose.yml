@@ -1,6 +1,22 @@
-version: '3'
+version: '3.2'
 
 services:
+  wordpress:
+    image: wordpress:php7.4-fpm
+    links:
+      - mysql
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: username
+      WORDPRESS_DB_PASSWORD: password
+      WORDPRESS_DB_NAME: test
+      WORDPRESS_TABLE_PREFIX: wp_
+    volumes:
+      - type: volume
+        source: wordpress
+        target: /var/www/html
+        volume:
+          nocopy: false
   app:
     build: .
     links:
@@ -8,18 +24,24 @@ services:
       - redis
     environment:
       DISABLE_DEFAULT_SERVER: 1
+    ports:
+      - 80:80
     volumes:
       - .:/var/www
+      - wordpress:/var/www/html
   php-fpm:
     image: php:7.4-fpm
     volumes:
       - .:/var/www
   mysql:
-    image: mysql:5.7.19
+    image: mysql:5.7
     environment:
       MYSQL_DATABASE: test
       MYSQL_USER: username
       MYSQL_PASSWORD: password
       MYSQL_ROOT_PASSWORD: root
   redis:
-    image: redis:5.0.7
+    image: redis:5.0
+
+volumes:
+  wordpress:
