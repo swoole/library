@@ -509,6 +509,12 @@ final class Handler
             case CURLOPT_PROGRESSFUNCTION:
                 $this->progressFunction = $value;
                 break;
+            case CURLOPT_HTTPAUTH:
+                if (!($value & CURLAUTH_BASIC)) {
+                    trigger_error("swoole_curl_setopt(): CURLOPT_HTTPAUTH[{$value}] is not supported", E_USER_WARNING);
+                    return false;
+                }
+                break;
             case CURLOPT_USERPWD:
                 $this->headers['Authorization'] = 'Basic ' . base64_encode($value);
                 break;
