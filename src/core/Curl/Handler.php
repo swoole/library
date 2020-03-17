@@ -444,6 +444,9 @@ final class Handler
                     $header = explode(':', $header, 2);
                     $headerName = $header[0];
                     $headerValue = trim($header[1] ?? '');
+                    if (strlen($headerValue) === 0) {
+                        continue;
+                    }
                     $this->headers[$headerName] = $headerValue;
                 }
                 break;
