@@ -656,7 +656,7 @@ final class Handler
             /*
              * Http Headers
              */
-            $this->headers['Host'] = $this->urlInfo['host'] . (isset($this->urlInfo['port']) ? (':' . $this->urlInfo['port']) : ''); /* TODO: remove it (built-in support) */
+            $this->headers['Host'] = $this->urlInfo['host'];
             // remove empty headers (keep same with raw cURL)
             foreach ($this->headers as $headerName => $headerValue) {
                 if ($headerValue === '') {
