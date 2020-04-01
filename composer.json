@@ -17,14 +17,16 @@
     },
     "require": {
         "php": ">=7.1",
-        "ext-mysqli": "*",
-        "ext-pdo": "*",
-        "ext-redis": ">=3.1.3",
         "ext-swoole": ">=4.4"
     },
     "require-dev": {
         "phpunit/phpunit": "~8.0",
         "friendsofphp/php-cs-fixer": "^2.16"
+    },
+    "suggest": {
+        "ext-mysqli": "Required to use mysqli database",
+        "ext-pdo": "Required to use pdo database",
+        "ext-redis": "Required to use redis database, and the required version is greater than or equal to 3.1.3"
     },
     "autoload": {
         "files": [
