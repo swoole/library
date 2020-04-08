@@ -58,6 +58,7 @@ final class Handler
         'protocol' => 0,
         'ssl_verifyresult' => 0,
         'scheme' => '',
+        'fail_onerror' => false,
     ];
 
     private $withHeaderOut = false;
@@ -119,6 +120,8 @@ final class Handler
     private $errCode = 0;
 
     private $errMsg = '';
+
+    private $failOnError = false;
 
     private $closed = false;
 
@@ -476,6 +479,9 @@ final class Handler
                     return false;
                 }
                 break;
+            case CURLOPT_FAILONERROR:
+                $this->failOnError = $value;
+                break;
             /*
              * Http Cookie
              */
@@ -698,6 +704,9 @@ final class Handler
                     $this->info['redirect_url'] = $redirectUrl;
                     break;
                 }
+            } elseif($this->failOnError && $client->statusCode >= 400) {
+                $this->setError(CURLE_HTTP_RETURNED_ERROR, "The requested URL returned error: {$client->statusCode} ". Status::getReasonPhrase($client->statusCode));
+                return false;
             } else {
                 break;
             }
