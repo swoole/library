@@ -58,7 +58,6 @@ final class Handler
         'protocol' => 0,
         'ssl_verifyresult' => 0,
         'scheme' => '',
-        'fail_onerror' => false,
     ];
 
     private $withHeaderOut = false;
