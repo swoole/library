@@ -703,8 +703,8 @@ final class Handler
                     $this->info['redirect_url'] = $redirectUrl;
                     break;
                 }
-            } elseif($this->failOnError && $client->statusCode >= 400) {
-                $this->setError(CURLE_HTTP_RETURNED_ERROR, "The requested URL returned error: {$client->statusCode} ". Status::getReasonPhrase($client->statusCode));
+            } elseif ($this->failOnError && $client->statusCode >= 400) {
+                $this->setError(CURLE_HTTP_RETURNED_ERROR, "The requested URL returned error: {$client->statusCode} " . Status::getReasonPhrase($client->statusCode));
                 return false;
             } else {
                 break;
