@@ -6,8 +6,8 @@
 Table of Contents
 =================
 
-* [How to contribute](#how-to-contribute)
-   * [Code requirements](#code-requirements)
+* [How to Contribute](#how-to-contribute)
+   * [Code Requirements](#code-requirements)
 * [Develop](#develop)
 * [Dockerized Local Development](#dockerized-local-development)
 * [Examples](#examples)
@@ -18,11 +18,11 @@ Table of Contents
 * [Third Party Libraries](#third-party-libraries)
 * [License](#license)
 
-## How to contribute
+## How to Contribute
 
 Just new pull request (and we need unit tests for new features)
 
-### Code requirements
+### Code Requirements
 
 + PHP 7.1+
 + [PSR1](https://www.php-fig.org/psr/psr-1/) and [PSR12](https://www.php-fig.org/psr/psr-12/)
