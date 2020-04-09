@@ -6,17 +6,17 @@
 Table of Contents
 =================
 
-      * [How to contribute](#how-to-contribute)
-         * [Code requirements](#code-requirements)
-      * [Develop](#develop)
-      * [Dockerized Local Development](#dockerized-local-development)
-      * [Examples](#examples)
-         * [Examples of Database Connection Pool](#examples-of-database-connection-pool)
-         * [Examples of FastCGI Calls](#examples-of-fastcgi-calls)
-      * [Compatibility Patch (Swoole version &lt;= v4.4.12)](#compatibility-patch-swoole-version--v4412)
-      * [Coding Style Checks and Fixes](#coding-style-checks-and-fixes)
-      * [Third Party Libraries](#third-party-libraries)
-      * [License](#license)
+* [How to contribute](#how-to-contribute)
+   * [Code requirements](#code-requirements)
+* [Develop](#develop)
+* [Dockerized Local Development](#dockerized-local-development)
+* [Examples](#examples)
+   * [Examples of Database Connection Pool](#examples-of-database-connection-pool)
+   * [Examples of FastCGI Calls](#examples-of-fastcgi-calls)
+* [Compatibility Patch (Swoole version &lt;= v4.4.12)](#compatibility-patch-swoole-version--v4412)
+* [Coding Style Checks and Fixes](#coding-style-checks-and-fixes)
+* [Third Party Libraries](#third-party-libraries)
+* [License](#license)
 
 ## How to contribute
 
