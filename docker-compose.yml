@@ -1,6 +1,23 @@
 version: '3.2'
 
 services:
+  app:
+    build: .
+    links:
+      - mysql
+      - redis
+      - wordpress
+    environment:
+      DISABLE_DEFAULT_SERVER: 1
+    ports:
+      - 80:80
+    volumes:
+      - .:/var/www
+      - wordpress:/var/www/html
+  php-fpm:
+    image: php:7.4-fpm
+    volumes:
+      - .:/var/www
   wordpress:
     image: wordpress:php7.4-fpm
     links:
@@ -17,22 +34,6 @@ services:
         target: /var/www/html
         volume:
           nocopy: false
-  app:
-    build: .
-    links:
-      - mysql
-      - redis
-    environment:
-      DISABLE_DEFAULT_SERVER: 1
-    ports:
-      - 80:80
-    volumes:
-      - .:/var/www
-      - wordpress:/var/www/html
-  php-fpm:
-    image: php:7.4-fpm
-    volumes:
-      - .:/var/www
   mysql:
     image: mysql:5.7
     environment:

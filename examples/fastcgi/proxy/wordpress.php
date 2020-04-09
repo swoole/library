@@ -17,16 +17,17 @@ use Swoole\Http\Server;
 
 require dirname(__DIR__, 2) . '/bootstrap.php';
 
+$documentRoot = '/var/www/html';
 $server = new Server('0.0.0.0', 80, SWOOLE_BASE);
 $server->set([
     Constant::OPTION_WORKER_NUM => swoole_cpu_num() * 2,
     Constant::OPTION_HTTP_PARSE_COOKIE => false,
     Constant::OPTION_HTTP_PARSE_POST => false,
-    Constant::OPTION_DOCUMENT_ROOT => '/var/www/html',
+    Constant::OPTION_DOCUMENT_ROOT => $documentRoot,
     Constant::OPTION_ENABLE_STATIC_HANDLER => true,
     Constant::OPTION_STATIC_HANDLER_LOCATIONS => ['/'],
 ]);
-$proxy = new Proxy('wordpress:9000', '/var/www/html');
+$proxy = new Proxy('wordpress:9000', $documentRoot);
 $server->on('request', function (Request $request, Response $response) use ($proxy) {
     $proxy->pass($request, $response);
 });
