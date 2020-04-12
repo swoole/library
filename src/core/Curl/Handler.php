@@ -7,7 +7,7 @@
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
 
-/** @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection, PhpInconsistentReturnPointsInspection */
+/* @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection, PhpInconsistentReturnPointsInspection */
 
 declare(strict_types=1);
 
@@ -567,8 +567,8 @@ final class Handler
         if (!$this->client) {
             $this->create();
         }
-        $client = $this->client;
         do {
+            $client = $this->client;
             /*
              * Http Proxy
              */
