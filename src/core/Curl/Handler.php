@@ -7,7 +7,7 @@
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
 
-/** @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection, PhpInconsistentReturnPointsInspection */
+/* @noinspection PhpComposerExtensionStubsInspection, PhpDuplicateSwitchCaseBodyInspection, PhpInconsistentReturnPointsInspection */
 
 declare(strict_types=1);
 
