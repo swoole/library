@@ -567,8 +567,8 @@ final class Handler
         if (!$this->client) {
             $this->create();
         }
-        $client = $this->client;
         do {
+            $client = $this->client;
             /*
              * Http Proxy
              */
