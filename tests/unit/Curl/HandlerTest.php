@@ -16,12 +16,12 @@ use Swoole\Coroutine;
 use Swoole\Runtime;
 
 /**
- * Class CURLTest
+ * Class HandlerTest
  *
  * @internal
  * @coversNothing
  */
-class CURLTest extends TestCase
+class HandlerTest extends TestCase
 {
     public function testRedirect()
     {
@@ -33,7 +33,7 @@ class CURLTest extends TestCase
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
             curl_setopt($ch, CURLOPT_HEADER, 0);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             curl_exec($ch);
