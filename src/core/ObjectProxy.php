@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use ErrorException;
 use TypeError;
 
 class ObjectProxy
@@ -24,6 +25,11 @@ class ObjectProxy
             throw new TypeError('Non-object given');
         }
         $this->__object = $object;
+    }
+
+    public function __clone()
+    {
+        throw new ErrorException('Trying to clone an uncloneable database proxy object in PHP/Swoole');
     }
 
     public function __getObject()
