@@ -404,6 +404,8 @@ final class Handler
             case CURLOPT_STDERR:
             case CURLOPT_WRITEHEADER:
             case CURLOPT_BUFFERSIZE:
+            case CURLOPT_SSLCERTTYPE:
+            case CURLOPT_SSLKEYTYPE:
                 break;
             /*
              * SSL
@@ -412,6 +414,12 @@ final class Handler
                 break;
             case CURLOPT_SSL_VERIFYPEER:
                 $this->clientOptions['ssl_verify_peer'] = $value;
+                break;
+            case CURLOPT_SSLCERT:
+                $this->clientOptions['ssl_cert_file'] = $value;
+                break;
+            case CURLOPT_SSLKEY:
+                $this->clientOptions['ssl_key_file'] = $value;
                 break;
             /*
              * Http POST
