@@ -96,6 +96,10 @@ final class Handler
 
     private $nobody = false;
 
+    private $sslCertType;
+
+    private $sslKeyType;
+
     /** @var callable */
     private $headerFunction;
 
@@ -412,6 +416,18 @@ final class Handler
                 break;
             case CURLOPT_SSL_VERIFYPEER:
                 $this->clientOptions['ssl_verify_peer'] = $value;
+                break;
+            case CURLOPT_SSLCERTTYPE:
+                $this->sslCertType = $value;
+                break;
+            case CURLOPT_SSLCERT:
+                $this->clientOptions['ssl_cert_file'] = $value;
+                break;
+            case CURLOPT_SSLKEYTYPE:
+                $this->sslKeyType = $value;
+                break;
+            case CURLOPT_SSLKEY:
+                $this->clientOptions['ssl_key_file'] = $value;
                 break;
             /*
              * Http POST
