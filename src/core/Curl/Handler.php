@@ -96,10 +96,6 @@ final class Handler
 
     private $nobody = false;
 
-    private $sslCertType;
-
-    private $sslKeyType;
-
     /** @var callable */
     private $headerFunction;
 
@@ -408,6 +404,8 @@ final class Handler
             case CURLOPT_STDERR:
             case CURLOPT_WRITEHEADER:
             case CURLOPT_BUFFERSIZE:
+            case CURLOPT_SSLCERTTYPE:
+            case CURLOPT_SSLKEYTYPE:
                 break;
             /*
              * SSL
@@ -417,14 +415,8 @@ final class Handler
             case CURLOPT_SSL_VERIFYPEER:
                 $this->clientOptions['ssl_verify_peer'] = $value;
                 break;
-            case CURLOPT_SSLCERTTYPE:
-                $this->sslCertType = $value;
-                break;
             case CURLOPT_SSLCERT:
                 $this->clientOptions['ssl_cert_file'] = $value;
-                break;
-            case CURLOPT_SSLKEYTYPE:
-                $this->sslKeyType = $value;
                 break;
             case CURLOPT_SSLKEY:
                 $this->clientOptions['ssl_key_file'] = $value;
