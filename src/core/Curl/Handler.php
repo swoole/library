@@ -554,6 +554,10 @@ final class Handler
             case CURLOPT_INFILESIZE:
                 $this->infileSize = $value;
                 break;
+            case CURLOPT_HTTPGET:
+                /* Since GET is the default, this is only necessary if the request method has been changed. */
+                $this->method = 'GET';
+                break;
             default:
                 throw new Swoole\Curl\Exception("swoole_curl_setopt(): option[{$opt}] is not supported");
         }
