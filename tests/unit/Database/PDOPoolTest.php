@@ -7,11 +7,11 @@
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
 
-declare (strict_types = 1);
+declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PDO;
+use PDOException;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Runtime;
@@ -44,16 +44,14 @@ class PDOPoolTest extends TestCase
                 Coroutine::create(function () use ($pool, $n, &$actual) {
                     $pdo = $pool->get();
                     try {
-                        $statement = $pdo->prepare("SELECT :n as n");
+                        $statement = $pdo->prepare('SELECT :n as n');
                         $statement->execute([':n' => $n]);
-                        $row       = $statement->fetch(\PDO::FETCH_ASSOC);
+                        $row = $statement->fetch(\PDO::FETCH_ASSOC);
                         // simulate error happens
                         $statement = $pdo->prepare('KILL CONNECTION_ID()');
                         $statement->execute();
-                    } catch (\Throwable $th) {
-                        if ($th->getMessage() !== 'Connection was killed') {
-                            throw $th;
-                        }
+                    } catch (PDOException $th) {
+                        // do nothing
                     }
                     $pdo = null;
                     $pool->put(null);
