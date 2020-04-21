@@ -16,6 +16,8 @@ use Swoole\ObjectProxy;
 
 class MysqliProxy extends ObjectProxy
 {
+    public const IO_METHOD_REGEX = '/^autocommit|begin_transaction|change_user|close|commit|kill|multi_query|ping|prepare|query|real_connect|real_query|reap_async_query|refresh|release_savepoint|rollback|savepoint|select_db|send_query|set_charset|ssl_set$/i';
+
     public const IO_ERRORS = [
         2002, // MYSQLND_CR_CONNECTION_ERROR
         2006, // MYSQLND_CR_SERVER_GONE_ERROR
@@ -49,11 +51,10 @@ class MysqliProxy extends ObjectProxy
     public function __call(string $name, array $arguments)
     {
         for ($n = 3; $n--;) {
-            $this->__object->errno = 0;
             $ret = @$this->__object->{$name}(...$arguments);
             if ($ret === false) {
-                /* no error */
-                if ($this->__object->errno === 0) {
+                /* non-IO method */
+                if (!preg_match(static::IO_METHOD_REGEX, $name)) {
                     break;
                 }
                 /* no more chances or non-IO failures */
@@ -101,10 +102,15 @@ class MysqliProxy extends ObjectProxy
         }
     }
 
-    public function set_opt($option, $value): void
+    public function options($option, $value): bool
     {
         $this->setOptContext[$option] = $value;
-        $this->__object->set_opt($option, $value);
+        return $this->__object->options($option, $value);
+    }
+
+    public function set_opt($option, $value)
+    {
+        return $this->options($option, $value);
     }
 
     public function set_charset(string $charset): bool
