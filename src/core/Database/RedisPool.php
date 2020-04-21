@@ -35,7 +35,7 @@ class RedisPool extends ConnectionPool
                 $this->config->getTimeout(),
                 $this->config->getReserved(),
                 $this->config->getRetryInterval(),
-                $this->config->getReadTimeout()
+                $this->config->getReadTimeout(),
             ];
             $arguments = array_filter($arguments);
             $redis->connect(...$arguments);
