@@ -102,13 +102,13 @@ class MysqliProxy extends ObjectProxy
         }
     }
 
-    public function options($option, $value): bool
+    public function options(int $option, $value): bool
     {
         $this->setOptContext[$option] = $value;
         return $this->__object->options($option, $value);
     }
 
-    public function set_opt($option, $value)
+    public function set_opt(int $option, $value): bool
     {
         return $this->options($option, $value);
     }
