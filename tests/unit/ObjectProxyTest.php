@@ -43,7 +43,7 @@ class ObjectProxyTest extends DatabaseTestCase
                 try {
                     var_dump(clone $db);
                 } catch (Error $e) {
-                    if ($e->getMessage() != 'Trying to clone an uncloneable database proxy object in PHP/Swoole') {
+                    if ($e->getMessage() != 'Trying to clone an uncloneable database proxy object') {
                         throw $e;
                     }
                 }
