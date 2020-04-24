@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-use ErrorException;
+use Error;
 use Swoole\Tests\DatabaseTestCase;
 
 /**
@@ -42,7 +42,7 @@ class ObjectProxyTest extends DatabaseTestCase
             foreach ($dbs as $db) {
                 try {
                     var_dump(clone $db);
-                } catch (ErrorException $e) {
+                } catch (Error $e) {
                     if ($e->getMessage() != 'Trying to clone an uncloneable database proxy object in PHP/Swoole') {
                         throw $e;
                     }
