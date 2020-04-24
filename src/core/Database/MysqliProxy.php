@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace Swoole\Database;
 
 use mysqli;
-use Swoole\ObjectProxy;
 
 class MysqliProxy extends ObjectProxy
 {

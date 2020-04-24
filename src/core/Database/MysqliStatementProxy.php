@@ -13,7 +13,6 @@ namespace Swoole\Database;
 
 use mysqli;
 use mysqli_stmt;
-use Swoole\ObjectProxy;
 
 class MysqliStatementProxy extends ObjectProxy
 {

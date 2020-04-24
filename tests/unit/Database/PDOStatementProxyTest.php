@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace Swoole\Database;
 
 use PDO;
-use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
+use Swoole\Tests\DatabaseTestCase;
 
 /**
  * Class PDOStatementProxyTest
@@ -21,7 +21,7 @@ use Swoole\Coroutine;
  * @internal
  * @coversNothing
  */
-class PDOStatementProxyTest extends TestCase
+class PDOStatementProxyTest extends DatabaseTestCase
 {
     /**
      * @covers \Swoole\Database\PDOStatementProxy::__call()
@@ -29,17 +29,8 @@ class PDOStatementProxyTest extends TestCase
     public function testRun()
     {
         Coroutine\run(function () {
-            $config = (new PDOConfig())
-                ->withHost(MYSQL_SERVER_HOST)
-                ->withPort(MYSQL_SERVER_PORT)
-                ->withDbName(MYSQL_SERVER_DB)
-                ->withCharset('utf8mb4')
-                ->withUsername(MYSQL_SERVER_USER)
-                ->withPassword(MYSQL_SERVER_PWD);
-
-            $db = (new PDOPool($config))->get();
             self::assertFalse(
-                $db->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(PDO::FETCH_ASSOC),
+                $this->getPdoPool()->get()->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(PDO::FETCH_ASSOC),
                 'FALSE is returned if no results found.'
             );
         });
