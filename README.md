@@ -35,17 +35,29 @@ Just new pull request (and we need unit tests for new features)
 
 ## Dockerized Local Development
 
-Run following commands to start Docker containers and update Composer packages:
+First, run following command to autoload PHP classes/files (no exra Composer packages to be installed):
+
+```bash
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole composer update -n
+```
+
+Secondly, run next command to start Docker containers:
 
 ```bash
 docker-compose up
-docker exec -t $(docker ps -qf "name=app") bash -c "composer update -n"
 ```
 
-You can run unit tests included with following command:
+Alternatively, if you need to rebuild the service(s) and to restart the containers:
 
 ```bash
-docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
+docker-compose build --no-cache
+docker-compose up --force-recreate
+```
+
+Now you can run unit tests included:
+
+```bash
+docker exec -t $(docker ps -qf "name=app") ./vendor/bin/phpunit
 ```
 
 ## Examples
