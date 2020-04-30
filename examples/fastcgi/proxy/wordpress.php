@@ -25,10 +25,14 @@ $server->set([
     Constant::OPTION_HTTP_PARSE_POST => false,
     Constant::OPTION_DOCUMENT_ROOT => $documentRoot,
     Constant::OPTION_ENABLE_STATIC_HANDLER => true,
-    Constant::OPTION_STATIC_HANDLER_LOCATIONS => ['/'],
+    Constant::OPTION_STATIC_HANDLER_LOCATIONS => ['/wp-admin', '/wp-content', '/wp-includes',],
 ]);
 $proxy = new Proxy('wordpress:9000', $documentRoot);
-$server->on('request', function (Request $request, Response $response) use ($proxy) {
+$server->on('request', function (Request $request, Response $response) use ($proxy, $documentRoot) {
+    // Requests to /wp-login.php, /wp-signup.php, etc should not be processed using /index.php.
+    if (!is_readable($documentRoot . $request->server['path_info'])) {
+        $request->server['path_info'] = '/index.php';
+    }
     $proxy->pass($request, $response);
 });
 $server->start();
