@@ -38,7 +38,7 @@ Just new pull request (and we need unit tests for new features)
 First, run following command to autoload PHP classes/files (no exra Composer packages to be installed):
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole composer update -n
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer update -n
 ```
 
 Secondly, run next command to start Docker containers:
