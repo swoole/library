@@ -20,8 +20,9 @@
         "ext-swoole": ">=4.4"
     },
     "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.16",
         "phpunit/phpunit": "~9.0",
-        "friendsofphp/php-cs-fixer": "^2.16"
+        "swoole/ide-helper": "dev-master"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
@@ -47,8 +48,17 @@
             "tests/DatabaseTestCase.php"
         ]
     },
+    "config": {
+        "discard-changes": true
+    },
     "scripts": {
         "cs-check": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix --dry-run",
-        "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix"
+        "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix",
+        "post-install-cmd" : [
+            "rm -rf ./vendor/swoole/ide-helper/output/swoole_library"
+        ],
+        "post-update-cmd" : [
+            "rm -rf ./vendor/swoole/ide-helper/output/swoole_library"
+        ]
     }
 }
