@@ -2,5 +2,6 @@
 /.php_cs
 /.phpunit.result.cache
 /composer.lock
+/html/*
 /phpunit.xml
 /vendor
