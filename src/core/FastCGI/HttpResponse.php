@@ -37,14 +37,21 @@ class HttpResponse extends Response
         if (strlen($body) === 0) {
             return;
         }
-        [$headers, $body] = @explode("\r\n\r\n", $body, 2);
+        if (strpos($body, "\r\n\r\n") === false) {
+            $this->withStatusCode(502)->withReasonPhrase('Invalid FastCGI Response')->withError($body);
+            return;
+        }
+        [$headers, $body] = explode("\r\n\r\n", $body, 2);
         $headers = explode("\r\n", $headers);
         foreach ($headers as $header) {
-            [$name, $value] = @explode(':', $header, 2);
+            if (strpos($header, ':') === false) {
+                continue; // Invalid HTTP header? Ignore it!
+            }
+            [$name, $value] = explode(':', $header, 2);
             $name = trim($name);
             $value = trim($value);
             if (strcasecmp($name, 'Status') === 0) {
-                [$statusCode, $reasonPhrase] = @explode(' ', $value, 2);
+                [$statusCode, $reasonPhrase] = explode(' ', $value, 2);
             } elseif (strcasecmp($name, 'Set-Cookie') === 0) {
                 $this->withSetCookieHeaderLine($value);
             } else {
