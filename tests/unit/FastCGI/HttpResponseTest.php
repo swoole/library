@@ -23,17 +23,22 @@ use Swoole\FastCGI\Record\Stdout;
  */
 class HttpResponseTest extends TestCase
 {
+    /**
+     * @var string
+     */
+    protected $poweredBy = 'PHP/' . PHP_VERSION;
+
     public function dataHeaders(): array
     {
         return [
             [
                 [
-                    'X-Powered-By' => 'PHP/7.4.5',
+                    'X-Powered-By' => $this->poweredBy,
                     'Content-Type' => 'text/html; charset=UTF-8',
                     'Link' => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                 ],
-                <<<'EOT'
-X-Powered-By: PHP/7.4.5
+                <<<EOT
+X-Powered-By: {$this->poweredBy}
 Content-Type: text/html; charset=UTF-8
 Link: <http://127.0.0.1/wp-json/>; rel="https://api.w.org/"
 
@@ -59,7 +64,7 @@ EOT,
         return [
             [
                 [
-                    'X-Powered-By' => 'PHP/7.4.5',
+                    'X-Powered-By' => $this->poweredBy,
                     'Content-type' => 'text/html; charset=UTF-8',
                 ],
                 DOCUMENT_ROOT . '/non-existing-script.php',
@@ -67,7 +72,7 @@ EOT,
             ],
             [
                 [
-                    'X-Powered-By' => 'PHP/7.4.5',
+                    'X-Powered-By' => $this->poweredBy,
                     'Link' => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                     'Content-type' => 'text/html; charset=UTF-8',
                 ],
@@ -76,7 +81,7 @@ EOT,
             ],
             [
                 [
-                    'X-Powered-By' => 'PHP/7.4.5',
+                    'X-Powered-By' => $this->poweredBy,
                     'Content-Type' => 'application/json',
                 ],
                 DOCUMENT_ROOT . '/header1.php',
