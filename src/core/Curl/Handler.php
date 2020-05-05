@@ -327,6 +327,9 @@ final class Handler
             case CURLOPT_PORT:
                 $this->setPort((int) $value);
                 break;
+            case CURLOPT_FORBID_REUSE:
+                $this->clientOptions[Constant::OPTION_KEEP_ALIVE] = !$value;
+                break;
             case CURLOPT_RETURNTRANSFER:
                 $this->returnTransfer = $value;
                 $this->transfer = '';
