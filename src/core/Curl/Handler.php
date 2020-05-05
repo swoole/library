@@ -421,6 +421,12 @@ final class Handler
             case CURLOPT_SSLKEY:
                 $this->clientOptions['ssl_key_file'] = $value;
                 break;
+            case CURLOPT_CAINFO:
+                $this->clientOptions['ssl_cafile'] = $value;
+                break;
+            case CURLOPT_CAPATH:
+                $this->clientOptions['ssl_capath'] = $value;
+                break;
             /*
              * Http POST
              */
