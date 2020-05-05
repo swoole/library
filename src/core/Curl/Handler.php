@@ -16,6 +16,7 @@ namespace Swoole\Curl;
 use CURLFile;
 use ReflectionClass;
 use Swoole;
+use Swoole\Constant;
 use Swoole\Coroutine\Http\Client;
 use Swoole\Curl\Exception as CurlException;
 use Swoole\Http\Status;
@@ -413,19 +414,19 @@ final class Handler
             case CURLOPT_SSL_VERIFYHOST:
                 break;
             case CURLOPT_SSL_VERIFYPEER:
-                $this->clientOptions['ssl_verify_peer'] = $value;
+                $this->clientOptions[Constant::OPTION_SSL_VERIFY_PEER] = $value;
                 break;
             case CURLOPT_SSLCERT:
-                $this->clientOptions['ssl_cert_file'] = $value;
+                $this->clientOptions[Constant::OPTION_SSL_CERT_FILE] = $value;
                 break;
             case CURLOPT_SSLKEY:
-                $this->clientOptions['ssl_key_file'] = $value;
+                $this->clientOptions[Constant::OPTION_SSL_KEY_FILE] = $value;
                 break;
             case CURLOPT_CAINFO:
-                $this->clientOptions['ssl_cafile'] = $value;
+                $this->clientOptions[Constant::OPTION_SSL_CAFILE] = $value;
                 break;
             case CURLOPT_CAPATH:
-                $this->clientOptions['ssl_capath'] = $value;
+                $this->clientOptions[Constant::OPTION_SSL_CAPATH] = $value;
                 break;
             /*
              * Http POST
@@ -502,16 +503,16 @@ final class Handler
                 $this->headers['Cookie'] = $value;
                 break;
             case CURLOPT_CONNECTTIMEOUT:
-                $this->clientOptions['connect_timeout'] = $value;
+                $this->clientOptions[Constant::OPTION_CONNECT_TIMEOUT] = $value;
                 break;
             case CURLOPT_CONNECTTIMEOUT_MS:
-                $this->clientOptions['connect_timeout'] = $value / 1000;
+                $this->clientOptions[Constant::OPTION_CONNECT_TIMEOUT] = $value / 1000;
                 break;
             case CURLOPT_TIMEOUT:
-                $this->clientOptions['timeout'] = $value;
+                $this->clientOptions[Constant::OPTION_TIMEOUT] = $value;
                 break;
             case CURLOPT_TIMEOUT_MS:
-                $this->clientOptions['timeout'] = $value / 1000;
+                $this->clientOptions[Constant::OPTION_TIMEOUT] = $value / 1000;
                 break;
             case CURLOPT_FILE:
                 $this->outputStream = $value;
