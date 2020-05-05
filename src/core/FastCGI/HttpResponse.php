@@ -39,7 +39,7 @@ class HttpResponse extends Response
         }
         $array = explode("\r\n\r\n", $body, 2); // An array that contains the HTTP headers and the body.
         if (count($array) != 2) {
-            $this->withStatusCode(502)->withReasonPhrase('Invalid FastCGI Response')->withError($body);
+            $this->withStatusCode(Status::BAD_GATEWAY)->withReasonPhrase('Invalid FastCGI Response')->withError($body);
             return;
         }
         $headers = explode("\r\n", $array[0]);

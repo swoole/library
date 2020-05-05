@@ -195,7 +195,7 @@ EOT,
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
         $response = new HttpResponse([new Stdout($contentData), new EndRequest()]);
         self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
-        self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase (if included)');
+        self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
     }
 
     public function dataStatusFromFPM(): array
@@ -241,7 +241,7 @@ EOT,
                 $client = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
                 self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
-                self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase (if included)');
+                self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
             }
         );
     }
