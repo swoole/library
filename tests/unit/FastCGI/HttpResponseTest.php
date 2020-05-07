@@ -46,6 +46,26 @@ Hello world!
 EOT,
                 'default headers from WordPress homepage',
             ],
+            [
+                [
+                    'X-Foo0' => 'Bar0',
+                    'X-Foo1' => 'Bar1',
+                    'X-Foo3' => 'Bar3',
+                    'X-Foo4' => 'Bar4',
+                    'X-Foo5' => 'Bar5',
+                ],
+                <<<'EOT'
+X-Foo0: Bar0
+X-Foo1:Bar1
+X-Foo2 Bar2
+X-Foo3:Bar3 
+ X-Foo4:Bar4
+ X-Foo5:  Bar5 
+
+Hello world!
+EOT,
+                'test variations of HTTP headers',
+            ],
         ];
     }
 
@@ -87,6 +107,19 @@ EOT,
                 DOCUMENT_ROOT . '/header1.php',
                 'Test headers returned from script "header1.php" (an HTTP header without space after the colon)',
             ],
+            [
+                [
+                    'X-Powered-By' => $this->poweredBy,
+                    'X-Foo0' => 'Bar0',
+                    'X-Foo1' => 'Bar1',
+                    'X-Foo3' => 'Bar3',
+                    'X-Foo4' => 'Bar4',
+                    'X-Foo5' => 'Bar5',
+                    'Content-type' => 'text/html; charset=UTF-8',
+                ],
+                DOCUMENT_ROOT . '/header2.php',
+                'Test variations of HTTP headers',
+            ],
         ];
     }
 
@@ -101,6 +134,114 @@ EOT,
                 $client = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
                 self::assertSame($expectedHeaders, $response->getHeaders(), $message);
+            }
+        );
+    }
+
+    public function dataStatus(): array
+    {
+        return [
+            [
+                400,
+                'Bad Request',
+                <<<'EOT'
+Status: 400 Bad Request
+
+Hello world!
+EOT,
+                'test HTTP status overridden with reason phrase included',
+            ],
+            [
+                401,
+                'Unauthorized',
+                <<<'EOT'
+Status: 401
+
+Hello world!
+EOT,
+                'test HTTP status overridden without reason phrase included',
+            ],
+            [
+                402,
+                ' Payment Required',
+                <<<'EOT'
+Status:  402  Payment Required  
+
+Hello world!
+EOT,
+                'test HTTP status overridden with reason phrase and extra spaces included',
+            ],
+            [
+                403,
+                'Forbidden',
+                <<<'EOT'
+Status:  403  
+
+Hello world!
+EOT,
+                'test HTTP status overridden with extra spaces included, but no reason phrase',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataStatus
+     * @covers \Swoole\FastCGI\HttpResponse
+     * @param mixed $expectedStatusCode
+     * @param mixed $expectedReasonPhrase
+     */
+    public function testStatus($expectedStatusCode, $expectedReasonPhrase, string $contentData): void
+    {
+        $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
+        $response = new HttpResponse([new Stdout($contentData), new EndRequest()]);
+        self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
+        self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
+    }
+
+    public function dataStatusFromFPM(): array
+    {
+        return [
+            [
+                400,
+                'Bad Request',
+                DOCUMENT_ROOT . '/status0.php',
+                'test HTTP status overridden with reason phrase included',
+            ],
+            [
+                401,
+                'Unauthorized',
+                DOCUMENT_ROOT . '/status1.php',
+                'test HTTP status overridden without reason phrase included',
+            ],
+            [
+                402,
+                ' Payment Required',
+                DOCUMENT_ROOT . '/status2.php',
+                'test HTTP status overridden with reason phrase and extra spaces included',
+            ],
+            [
+                403,
+                'Forbidden',
+                DOCUMENT_ROOT . '/status3.php',
+                'test HTTP status overridden with extra spaces included, but no reason phrase',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider dataStatusFromFPM
+     * @covers \Swoole\FastCGI\HttpResponse
+     * @param mixed $expectedStatusCode
+     * @param mixed $expectedReasonPhrase
+     */
+    public function testStatusFromFPM($expectedStatusCode, $expectedReasonPhrase, string $filename): void
+    {
+        Coroutine\run(
+            function () use ($expectedStatusCode, $expectedReasonPhrase, $filename) {
+                $client = new Client('php-fpm', 9000);
+                $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
+                self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
+                self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
             }
         );
     }
