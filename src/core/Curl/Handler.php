@@ -677,9 +677,10 @@ final class Handler
                 if (is_string($this->postData) and empty($this->headers['Content-Type'])) {
                     $this->headers['Content-Type'] = 'application/x-www-form-urlencoded';
                 }
-                $client->setData($this->postData);
-                $this->postData = [];
             }
+            $client->setData($this->postData);
+            $this->postData = [];
+
             /*
              * Http Headers
              */
