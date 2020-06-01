@@ -41,4 +41,16 @@ class HandlerTest extends TestCase
             self::assertEquals(200, $httpCode, 'HTTP status code should be 200 instead of 301');
         });
     }
+
+    /**
+     * @covers \Swoole\Curl\Handler::__toString()
+     */
+    public function testToString()
+    {
+        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
+        Coroutine\run(function () {
+            $ch = curl_init();
+            self::assertRegExp('/Object\(\w+\) of type \(curl\)/', (string) $ch);
+        });
+    }
 }
