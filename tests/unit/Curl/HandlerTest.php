@@ -53,4 +53,22 @@ class HandlerTest extends TestCase
             self::assertRegExp('/Object\(\w+\) of type \(curl\)/', (string) $ch);
         });
     }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testCustomHost()
+    {
+        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
+        Coroutine\run(function () {
+            $ip = Coroutine::gethostbyname('httpbin.org');
+            $ch = curl_init("http://{$ip}/get");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: httpbin.org']);
+            $body = curl_exec($ch);
+            $body = json_decode($body, true);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            curl_close($ch);
+        });
+    }
 }

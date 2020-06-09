@@ -695,10 +695,9 @@ final class Handler
             // Notice: setHeaders must be placed last, because headers may be changed by other parts
             // As much as possible to ensure that Host is the first header.
             // See: http://tools.ietf.org/html/rfc7230#section-5.4
-            $this->headers['Host'] = $this->urlInfo['host'];
-            // remove empty headers (keep same with raw cURL)
             foreach ($this->headers as $headerName => $headerValue) {
                 if ($headerValue === '') {
+                    // remove empty headers (keep same with raw cURL)
                     unset($this->headers[$headerName]);
                 }
             }
