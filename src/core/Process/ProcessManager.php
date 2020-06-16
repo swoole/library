@@ -20,41 +20,58 @@ class ProcessManager
 
     protected $workerNum = 0;
 
-    protected $ipcType;
+    protected $ipcType = 0;
 
-    protected $msgqueueKey;
+    protected $msgQueueKey = 0;
 
     protected $startFuncMap = [];
 
-    public function __construct(int $ipcType = 0, int $msgqueueKey = 0)
-    {
-        $this->ipcType = $ipcType;
-        $this->msgqueueKey = $msgqueueKey;
-    }
-
-    public function add(callable $func, bool $enableCoroutine = false)
+    public function add(callable $func, bool $enableCoroutine = false): void
     {
         $this->addBatch(1, $func, $enableCoroutine);
     }
 
-    public function addBatch(int $workerNum, callable $func, bool $enableCoroutine = false)
+    public function setIPCType(int $ipcType): ProcessManager
+    {
+        $this->ipcType = $ipcType;
+        return $this;
+    }
+
+    public function getIPCType(): int
+    {
+        return $this->ipcType;
+    }
+
+    public function setMsgQueueKey(int $msgQueueKey): ProcessManager
+    {
+        $this->msgQueueKey = $msgQueueKey;
+        return $this;
+    }
+
+    public function getMsgQueueKey(): int
+    {
+        return $this->msgQueueKey;
+    }
+
+    public function addBatch(int $workerNum, callable $func, bool $enableCoroutine = false): ProcessManager
     {
         for ($i = 0; $i < $workerNum; $i++) {
             $this->startFuncMap[] = [$func, $enableCoroutine];
             $this->workerNum += 1;
         }
+        return $this;
     }
 
-    public function start()
+    public function start(): void
     {
-        $this->pool = new Pool($this->workerNum, $this->ipcType, $this->msgqueueKey, false);
+        $this->pool = new Pool($this->workerNum, $this->ipcType, $this->msgQueueKey, false);
 
         $this->pool->on(Constant::EVENT_WORKER_START, function (Pool $pool, int $workerId) {
             [$func, $enableCoroutine] = $this->startFuncMap[$workerId];
             if ($enableCoroutine) {
                 run($func, $pool, $workerId);
             } else {
-                call_user_func($func, $pool, $workerId);
+                $func($pool, $workerId);
             }
         });
 
