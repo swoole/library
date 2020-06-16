@@ -26,6 +26,12 @@ class ProcessManager
 
     protected $startFuncMap = [];
 
+    public function __construct(int $ipcType = 0, int $msgQueueKey = 0)
+    {
+        $this->ipcType = $ipcType;
+        $this->msgQueueKey = $msgQueueKey;
+    }
+
     public function add(callable $func, bool $enableCoroutine = false): void
     {
         $this->addBatch(1, $func, $enableCoroutine);
