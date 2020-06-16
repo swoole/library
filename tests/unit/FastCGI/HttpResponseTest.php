@@ -84,7 +84,7 @@ EOT,
         return [
             [
                 [
-                    'X-Powered-By' => $this->poweredBy,
+                    'X-Powered-By' => 'to be replaced',
                     'Content-type' => 'text/html; charset=UTF-8',
                 ],
                 DOCUMENT_ROOT . '/non-existing-script.php',
@@ -92,7 +92,7 @@ EOT,
             ],
             [
                 [
-                    'X-Powered-By' => $this->poweredBy,
+                    'X-Powered-By' => 'to be replaced',
                     'Link' => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                     'Content-type' => 'text/html; charset=UTF-8',
                 ],
@@ -101,7 +101,7 @@ EOT,
             ],
             [
                 [
-                    'X-Powered-By' => $this->poweredBy,
+                    'X-Powered-By' => 'to be replaced',
                     'Content-Type' => 'application/json',
                 ],
                 DOCUMENT_ROOT . '/header1.php',
@@ -109,7 +109,7 @@ EOT,
             ],
             [
                 [
-                    'X-Powered-By' => $this->poweredBy,
+                    'X-Powered-By' => 'to be replaced',
                     'X-Foo0' => 'Bar0',
                     'X-Foo1' => 'Bar1',
                     'X-Foo3' => 'Bar3',
@@ -133,6 +133,12 @@ EOT,
             function () use ($expectedHeaders, $filename, $message) {
                 $client = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
+
+                /*
+                 * Unit tests run in the Swoole image, thus we can't get the PHP-FPM version directly when running tests.
+                 * Here we we override expected HTTP header "X-Powered-By" with whatever returned from PHP-FPM.
+                 */
+                $expectedHeaders['X-Powered-By'] = $response->getHeaders()['X-Powered-By'];
                 self::assertSame($expectedHeaders, $response->getHeaders(), $message);
             }
         );
