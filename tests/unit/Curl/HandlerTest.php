@@ -71,4 +71,24 @@ class HandlerTest extends TestCase
             curl_close($ch);
         });
     }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testHeaderName()
+    {
+        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
+        Coroutine\run(function () {
+            $ch = curl_init('http://httpbin.org/get');
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            $response = curl_exec($ch);
+            $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            $headers = substr($response, 0, $headerSize);
+            $this->assertStringContainsString('Date:', $headers);
+            $this->assertStringContainsString('Content-Type:', $headers);
+            $this->assertStringContainsString('Content-Length:', $headers);
+            curl_close($ch);
+        });
+    }
 }
