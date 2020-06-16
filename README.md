@@ -99,7 +99,7 @@ define('SWOOLE_USE_SHORTNAME', true); // or false (it depends on you)
 To update Composer packages (optional):
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer update -n"
+docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer update -n
 ```
 
 To check coding standard violations:
