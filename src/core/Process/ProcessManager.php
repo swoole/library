@@ -11,21 +11,20 @@ declare(strict_types=1);
 
 namespace Swoole\Process;
 
+use Swoole\Constant;
 use function Swoole\Coroutine\run;
 
 class ProcessManager
 {
-    const WorkerStart = 'WorkerStart';
+    protected $pool;
 
-    private $pool;
+    protected $workerNum = 0;
 
-    private $workerNum = 0;
+    protected $ipcType;
 
-    private $ipcType;
+    protected $msgqueueKey;
 
-    private $msgqueueKey;
-
-    private $startFuncMap = [];
+    protected $startFuncMap = [];
 
     public function __construct(int $ipcType = 0, int $msgqueueKey = 0)
     {
@@ -50,7 +49,7 @@ class ProcessManager
     {
         $this->pool = new Pool($this->workerNum, $this->ipcType, $this->msgqueueKey, false);
 
-        $this->pool->on(self::WorkerStart, function (Pool $pool, int $workerId) {
+        $this->pool->on(Constant::EVENT_WORKER_START, function (Pool $pool, int $workerId) {
             [$func, $enableCoroutine] = $this->startFuncMap[$workerId];
             if ($enableCoroutine) {
                 run($func, $pool, $workerId);

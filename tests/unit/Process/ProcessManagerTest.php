@@ -29,7 +29,6 @@ class ProcessManagerTest extends TestCase
         $counter = new Atomic(0);
 
         $pm->add(function (Pool $pool, int $workerId) use ($counter) {
-            var_dump($counter);
             $counter->add();
             $this->assertEquals(0, $workerId);
             if ($counter->get() >= 5) {
@@ -71,9 +70,8 @@ class ProcessManagerTest extends TestCase
     public function testAddBatch()
     {
         $pm = new ProcessManager();
-        $counter = new Atomic(0);
 
-        $pm->addBatch(2, function (Pool $pool, int $workerId) use ($counter) {
+        $pm->addBatch(2, function (Pool $pool, int $workerId) {
             if ($workerId == 1) {
                 $pool->shutdown();
             }
