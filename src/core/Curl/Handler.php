@@ -85,7 +85,7 @@ final class Handler
 
     private $proxyPassword;
 
-    private $clientOptions = [];
+    private $clientOptions = ['lowercase_header' => false];
 
     private $followLocation = false;
 
