@@ -23,28 +23,32 @@ use Swoole\Coroutine;
  */
 class ProcessManagerTest extends TestCase
 {
+    /**
+     * @covers \Swoole\Process\ProcessManager::add
+     */
     public function testAdd()
     {
         $pm = new ProcessManager();
-        $counter = new Atomic(0);
+        $atomic = new Atomic(0);
 
-        $pm->add(function (Pool $pool, int $workerId) use ($counter) {
-            $counter->add();
+        $pm->add(function (Pool $pool, int $workerId) use ($atomic) {
             $this->assertEquals(0, $workerId);
-            if ($counter->get() >= 5) {
-                $pool->shutdown();
-            }
+            sleep(0.1);
+            $atomic->wakeup();
         });
-        $pm->add(function (Pool $pool, int $workerId) use ($counter) {
-            $counter->add();
+
+        $pm->add(function (Pool $pool, int $workerId) use ($atomic) {
             $this->assertEquals(1, $workerId);
-            if ($counter->get() >= 5) {
-                $pool->shutdown();
-            }
+            $atomic->wait(1.5);
+            $pool->shutdown();
         });
+
         $pm->start();
     }
 
+    /**
+     * @covers \Swoole\Process\ProcessManager::add
+     */
     public function testAddDisableCoroutine()
     {
         $pm = new ProcessManager();
@@ -53,9 +57,13 @@ class ProcessManagerTest extends TestCase
             $this->assertEquals(-1, Coroutine::getCid());
             $pool->shutdown();
         });
+
         $pm->start();
     }
 
+    /**
+     * @covers \Swoole\Process\ProcessManager::add
+     */
     public function testAddEnableCoroutine()
     {
         $pm = new ProcessManager();
@@ -64,9 +72,13 @@ class ProcessManagerTest extends TestCase
             $this->assertEquals(1, Coroutine::getCid());
             $pool->shutdown();
         }, true);
+
         $pm->start();
     }
 
+    /**
+     * @covers \Swoole\Process\ProcessManager::addBatch
+     */
     public function testAddBatch()
     {
         $pm = new ProcessManager();
