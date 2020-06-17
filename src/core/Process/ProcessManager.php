@@ -16,61 +16,48 @@ use function Swoole\Coroutine\run;
 
 class ProcessManager
 {
+    /**
+     * @var Pool
+     */
     protected $pool;
 
-    protected $workerNum = 0;
+    /**
+     * @var int
+     */
+    protected $ipcType = SWOOLE_IPC_NONE;
 
-    protected $ipcType = 0;
-
+    /**
+     * @var int
+     */
     protected $msgQueueKey = 0;
 
+    /**
+     * @var array
+     */
     protected $startFuncMap = [];
 
-    public function __construct(int $ipcType = 0, int $msgQueueKey = 0)
+    public function __construct(int $ipcType = SWOOLE_IPC_NONE, int $msgQueueKey = 0)
     {
-        $this->ipcType = $ipcType;
-        $this->msgQueueKey = $msgQueueKey;
+        $this->setIPCType($ipcType)->setMsgQueueKey($msgQueueKey);
     }
 
-    public function add(callable $func, bool $enableCoroutine = false): void
+    public function add(callable $func, bool $enableCoroutine = false): self
     {
         $this->addBatch(1, $func, $enableCoroutine);
-    }
-
-    public function setIPCType(int $ipcType): ProcessManager
-    {
-        $this->ipcType = $ipcType;
         return $this;
     }
 
-    public function getIPCType(): int
-    {
-        return $this->ipcType;
-    }
-
-    public function setMsgQueueKey(int $msgQueueKey): ProcessManager
-    {
-        $this->msgQueueKey = $msgQueueKey;
-        return $this;
-    }
-
-    public function getMsgQueueKey(): int
-    {
-        return $this->msgQueueKey;
-    }
-
-    public function addBatch(int $workerNum, callable $func, bool $enableCoroutine = false): ProcessManager
+    public function addBatch(int $workerNum, callable $func, bool $enableCoroutine = false): self
     {
         for ($i = 0; $i < $workerNum; $i++) {
             $this->startFuncMap[] = [$func, $enableCoroutine];
-            $this->workerNum += 1;
         }
         return $this;
     }
 
     public function start(): void
     {
-        $this->pool = new Pool($this->workerNum, $this->ipcType, $this->msgQueueKey, false);
+        $this->pool = new Pool(count($this->startFuncMap), $this->ipcType, $this->msgQueueKey, false);
 
         $this->pool->on(Constant::EVENT_WORKER_START, function (Pool $pool, int $workerId) {
             [$func, $enableCoroutine] = $this->startFuncMap[$workerId];
@@ -82,5 +69,27 @@ class ProcessManager
         });
 
         $this->pool->start();
+    }
+
+    public function setIPCType(int $ipcType): self
+    {
+        $this->ipcType = $ipcType;
+        return $this;
+    }
+
+    public function getIPCType(): int
+    {
+        return $this->ipcType;
+    }
+
+    public function setMsgQueueKey(int $msgQueueKey): self
+    {
+        $this->msgQueueKey = $msgQueueKey;
+        return $this;
+    }
+
+    public function getMsgQueueKey(): int
+    {
+        return $this->msgQueueKey;
     }
 }
