@@ -85,9 +85,9 @@ class HandlerTest extends TestCase
             $response = curl_exec($ch);
             $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
             $headers = substr($response, 0, $headerSize);
-            $this->assertStringContainsString('Date:', $headers);
-            $this->assertStringContainsString('Content-Type:', $headers);
-            $this->assertStringContainsString('Content-Length:', $headers);
+            $this->assertStringContainsStringIgnoringCase("\nDate:", $headers);
+            $this->assertStringContainsStringIgnoringCase("\nContent-Type:", $headers);
+            $this->assertStringContainsStringIgnoringCase("\nContent-Length:", $headers);
             curl_close($ch);
         });
     }
