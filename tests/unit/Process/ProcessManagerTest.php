@@ -33,7 +33,7 @@ class ProcessManagerTest extends TestCase
 
         $pm->add(function (Pool $pool, int $workerId) use ($atomic) {
             $this->assertEquals(0, $workerId);
-            sleep(0.1);
+            usleep(100000);
             $atomic->wakeup();
         });
 
@@ -69,7 +69,7 @@ class ProcessManagerTest extends TestCase
         $pm = new ProcessManager();
 
         $pm->add(function (Pool $pool, int $workerId) {
-            $this->assertEquals(1, Coroutine::getCid());
+            $this->assertGreaterThanOrEqual(1, Coroutine::getCid());
             $pool->shutdown();
         }, true);
 
