@@ -20,7 +20,6 @@ class StringObject
 
     /**
      * StringObject constructor.
-     * @param string $string
      */
     public function __construct(string $string = '')
     {
@@ -38,8 +37,6 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
      * @return false|int
      */
     public function indexOf(string $needle, int $offset = 0)
@@ -48,8 +45,6 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
      * @return false|int
      */
     public function lastIndexOf(string $needle, int $offset = 0)
@@ -58,8 +53,6 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
      * @return false|int
      */
     public function pos(string $needle, int $offset = 0)
@@ -68,8 +61,6 @@ class StringObject
     }
 
     /**
-     * @param string $needle
-     * @param int $offset
      * @return false|int
      */
     public function rpos(string $needle, int $offset = 0)
@@ -78,7 +69,6 @@ class StringObject
     }
 
     /**
-     * @param string $needle
      * @return false|int
      */
     public function ipos(string $needle)
@@ -127,8 +117,6 @@ class StringObject
     }
 
     /**
-     * @param int $offset
-     * @param int|null $length
      * @return static
      */
     public function substr(int $offset, ?int $length = null)
@@ -136,10 +124,6 @@ class StringObject
         return new static(substr($this->string, ...func_get_args()));
     }
 
-    /**
-     * @param int $n
-     * @return StringObject
-     */
     public function repeat(int $n): StringObject
     {
         return new static(str_repeat($this->string, $n));
@@ -147,7 +131,6 @@ class StringObject
 
     /**
      * @param $str
-     * @return StringObject
      */
     public function append($str): StringObject
     {
@@ -160,8 +143,6 @@ class StringObject
     }
 
     /**
-     * @param string $search
-     * @param string $replace
      * @param null|int $count
      * @return static
      */
@@ -190,10 +171,6 @@ class StringObject
         return static::detectArrayType(explode($delimiter, $this->string, $limit));
     }
 
-    /**
-     * @param int $index
-     * @return string
-     */
     public function char(int $index): string
     {
         if ($index > strlen($this->string)) {
@@ -203,8 +180,6 @@ class StringObject
     }
 
     /**
-     * @param int $chunkLength
-     * @param string $chunkEnd
      * @return static
      */
     public function chunkSplit(int $chunkLength = 76, string $chunkEnd = '')
@@ -217,10 +192,7 @@ class StringObject
         return static::detectArrayType(str_split($this->string, ...func_get_args()));
     }
 
-    /**
-     * @return string
-     */
-    public function toString() : string
+    public function toString(): string
     {
         return $this->string;
     }

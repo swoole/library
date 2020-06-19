@@ -12,8 +12,11 @@ declare(strict_types=1);
 namespace Swoole\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Swoole\StringObject;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class StringObjectTest extends TestCase
 {
     /**
@@ -39,7 +42,7 @@ class StringObjectTest extends TestCase
      */
     public function testLength()
     {
-        $str = "hello world";
+        $str = 'hello world';
         $stro = swoole_string($str);
         $this->assertEquals(strlen($str), $stro->length());
     }
@@ -49,7 +52,7 @@ class StringObjectTest extends TestCase
      */
     public function testSubstr()
     {
-        $this->assertEquals(swoole_string("hello swoole and hello world")
+        $this->assertEquals(swoole_string('hello swoole and hello world')
             ->substr(4, 8)->toString(), 'o swoole');
     }
 
@@ -67,7 +70,7 @@ class StringObjectTest extends TestCase
      */
     public function testStartsWith()
     {
-        $this->assertTrue(swoole_string("hello swoole and hello world")->startsWith('hello swoole'));
+        $this->assertTrue(swoole_string('hello swoole and hello world')->startsWith('hello swoole'));
     }
 
     /**
@@ -75,7 +78,7 @@ class StringObjectTest extends TestCase
      */
     public function testContains()
     {
-        $this->assertTrue(swoole_string("hello swoole and hello world")->contains('swoole'));
+        $this->assertTrue(swoole_string('hello swoole and hello world')->contains('swoole'));
     }
 
     /**
@@ -83,15 +86,15 @@ class StringObjectTest extends TestCase
      */
     public function chunk()
     {
-        $r = swoole_string("hello swoole and hello world")->chunk(5)->toArray();
-        $expectResult = array(
+        $r = swoole_string('hello swoole and hello world')->chunk(5)->toArray();
+        $expectResult = [
             0 => 'hello',
             1 => ' swoo',
             2 => 'le an',
             3 => 'd hel',
             4 => 'lo wo',
             5 => 'rld',
-        );
+        ];
         $this->assertEquals($expectResult, $r);
     }
 
@@ -100,7 +103,7 @@ class StringObjectTest extends TestCase
      */
     public function testUpper()
     {
-        $str = "HELLO world";
+        $str = 'HELLO world';
         $result = swoole_string($str)->upper();
         $this->assertEquals($result->toString(), 'HELLO WORLD');
     }
@@ -110,7 +113,7 @@ class StringObjectTest extends TestCase
      */
     public function testPos()
     {
-        $this->assertEquals(swoole_string("hello swoole and hello world")->pos('and'), 13);
+        $this->assertEquals(swoole_string('hello swoole and hello world')->pos('and'), 13);
     }
 
     /**
@@ -118,7 +121,7 @@ class StringObjectTest extends TestCase
      */
     public function testChunkSplit()
     {
-        $str = "hello swoole and hello world";
+        $str = 'hello swoole and hello world';
         $r = swoole_string($str)
             ->chunkSplit(5, PHP_EOL)->toString();
         $expectResult = chunk_split($str, 5, PHP_EOL);
@@ -130,7 +133,8 @@ class StringObjectTest extends TestCase
      */
     public function testRepeat()
     {
-        $this->assertEquals(swoole_string('ABC')->repeat(10),
+        $this->assertEquals(
+            swoole_string('ABC')->repeat(10),
             str_repeat('ABC', 10)
         );
     }
@@ -140,11 +144,13 @@ class StringObjectTest extends TestCase
      */
     public function testAppend()
     {
-        $this->assertEquals(swoole_string('ABC')->append(" hello"),
+        $this->assertEquals(
+            swoole_string('ABC')->append(' hello'),
             'ABC hello'
         );
 
-        $this->assertEquals(swoole_string('ABC')->append(swoole_string(" hello")),
+        $this->assertEquals(
+            swoole_string('ABC')->append(swoole_string(' hello')),
             'ABC hello'
         );
     }
@@ -167,7 +173,7 @@ class StringObjectTest extends TestCase
     public function testTrim()
     {
         $str = swoole_string("   \nhello world\n")->trim();
-        $this->assertEquals($str->toString(), "hello world");
+        $this->assertEquals($str->toString(), 'hello world');
     }
 
     /**
@@ -175,7 +181,7 @@ class StringObjectTest extends TestCase
      */
     public function testIpos()
     {
-        $this->assertEquals(swoole_string("hello swoole AND hello world")->ipos('and'), 13);
+        $this->assertEquals(swoole_string('hello swoole AND hello world')->ipos('and'), 13);
     }
 
     /**
@@ -183,7 +189,7 @@ class StringObjectTest extends TestCase
      */
     public function testLower()
     {
-        $str = "HELLO WORLD";
+        $str = 'HELLO WORLD';
         $result = swoole_string($str)->lower();
         $this->assertEquals($result->toString(), 'hello world');
     }
@@ -193,7 +199,7 @@ class StringObjectTest extends TestCase
      */
     public function testSplit()
     {
-        $str = "hello swoole and hello world";
+        $str = 'hello swoole and hello world';
         $result = swoole_string($str)->split(' ');
         $this->assertEquals($result->toArray(), explode(' ', $str));
     }
@@ -203,7 +209,7 @@ class StringObjectTest extends TestCase
      */
     public function testLastIndexOf()
     {
-        $this->assertEquals(swoole_string("hello swoole and hello world")->lastIndexOf('hello'), 17);
+        $this->assertEquals(swoole_string('hello swoole and hello world')->lastIndexOf('hello'), 17);
     }
 
     /**
@@ -211,7 +217,7 @@ class StringObjectTest extends TestCase
      */
     public function testIndexOf()
     {
-        $this->assertEquals(swoole_string("hello swoole and hello world")->indexOf('swoole'), 6);
+        $this->assertEquals(swoole_string('hello swoole and hello world')->indexOf('swoole'), 6);
     }
 
     /**
@@ -219,7 +225,7 @@ class StringObjectTest extends TestCase
      */
     public function testRpos()
     {
-        $this->assertEquals(swoole_string("hello swoole and hello world")->rpos('hello'), 17);
+        $this->assertEquals(swoole_string('hello swoole and hello world')->rpos('hello'), 17);
     }
 
     /**
@@ -227,6 +233,6 @@ class StringObjectTest extends TestCase
      */
     public function testEndsWith()
     {
-        $this->assertTrue(swoole_string("hello swoole and hello world")->endsWith('world'));
+        $this->assertTrue(swoole_string('hello swoole and hello world')->endsWith('world'));
     }
 }

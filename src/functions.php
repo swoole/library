@@ -6,6 +6,7 @@
  * @contact  team@swoole.com
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
+
 declare(strict_types=1);
 
 if (SWOOLE_USE_SHORTNAME) {

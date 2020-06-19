@@ -13,6 +13,10 @@ namespace Swoole\Tests;
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class ArrayObjectTest extends TestCase
 {
     /**
@@ -35,11 +39,9 @@ class ArrayObjectTest extends TestCase
      * ArrayObjectTest constructor.
      * @covers \Swoole\ArrayObject::each()
      * @covers \Swoole\ArrayObject::split()
-     * @param string|null $name
-     * @param array $data
      * @param string $dataName
      */
-    function __construct(?string $name = null, array $data = [], $dataName = '')
+    public function __construct(?string $name = null, array $data = [], $dataName = '')
     {
         $_data = '11, 33, 22, 44,12,32,55, 23,19,23';
         $this->data = swoole_string($_data)->split(',')->each(function (&$item) {
@@ -53,10 +55,10 @@ class ArrayObjectTest extends TestCase
             'nihao' => '中国人',
         ]);
         $this->data_4 = swoole_array([
-            "d" => "lemon",
-            "a" => "orange",
-            "b" => "banana",
-            "c" => "apple",
+            'd' => 'lemon',
+            'a' => 'orange',
+            'b' => 'banana',
+            'c' => 'apple',
         ]);
 
         $array = explode(',', $_data);
@@ -112,11 +114,10 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data, $expectResult);
     }
 
-    public function testTraverse ()
+    public function testTraverse()
     {
         $newArray = [];
-        foreach($this->data as $value)
-        {
+        foreach ($this->data as $value) {
             $newArray[] = $value;
         }
         $this->assertEquals($this->control_data, $newArray);
@@ -140,7 +141,7 @@ class ArrayObjectTest extends TestCase
         });
 
         $find = false;
-        foreach($data as $v) {
+        foreach ($data as $v) {
             if ($v <= 20) {
                 $find = true;
                 break;
@@ -287,34 +288,38 @@ class ArrayObjectTest extends TestCase
 
     public function testColumn()
     {
-        $records = array(
-            array(
+        $records = [
+            [
                 'id' => 2135,
                 'first_name' => 'John',
                 'last_name' => 'Doe',
-            ),
-            array(
+            ],
+            [
                 'id' => 3245,
                 'first_name' => 'Sally',
                 'last_name' => 'Smith',
-            ),
-            array(
+            ],
+            [
                 'id' => 5342,
                 'first_name' => 'Jane',
                 'last_name' => 'Jones',
-            ),
-            array(
+            ],
+            [
                 'id' => 5623,
                 'first_name' => 'Peter',
                 'last_name' => 'Doe',
-            )
+            ],
+        ];
+
+        $this->assertEquals(
+            array_column($records, 'first_name'),
+            swoole_array($records)->column('first_name')->toArray()
         );
 
-        $this->assertEquals(array_column($records, 'first_name'),
-            swoole_array($records)->column('first_name')->toArray());
-
-        $this->assertEquals(array_column($records, 'first_name', 'id'),
-            swoole_array($records)->column('first_name', 'id')->toArray());
+        $this->assertEquals(
+            array_column($records, 'first_name', 'id'),
+            swoole_array($records)->column('first_name', 'id')->toArray()
+        );
     }
 
     public function testIndexOf()
@@ -381,7 +386,7 @@ class ArrayObjectTest extends TestCase
 
     public function testUasort()
     {
-        $data1 = array('a' => 4, 'b' => 8, 'c' => -1, 'd' => -9, 'e' => 2, 'f' => 5, 'g' => 3, 'h' => -4);
+        $data1 = ['a' => 4, 'b' => 8, 'c' => -1, 'd' => -9, 'e' => 2, 'f' => 5, 'g' => 3, 'h' => -4];
         $data2 = swoole_array($data1);
         $cmp = function ($a, $b) {
             if ($a == $b) {
@@ -395,7 +400,7 @@ class ArrayObjectTest extends TestCase
 
     public function testNatsort()
     {
-        $data1 = array("img12.png", "img10.png", "img2.png", "img1.png");
+        $data1 = ['img12.png', 'img10.png', 'img2.png', 'img1.png'];
         $data2 = swoole_array($data1);
         natsort($data1);
         $this->assertEquals($data1, $data2->natsort()->toArray());
@@ -403,7 +408,7 @@ class ArrayObjectTest extends TestCase
 
     public function testNatcasesort()
     {
-        $data1 = array('IMG0.png', 'img12.png', 'img10.png', 'img2.png', 'img1.png', 'IMG3.png');
+        $data1 = ['IMG0.png', 'img12.png', 'img10.png', 'img2.png', 'img1.png', 'IMG3.png'];
         $data2 = swoole_array($data1);
         natcasesort($data1);
         $this->assertEquals($data1, $data2->natcasesort()->toArray());
@@ -418,7 +423,7 @@ class ArrayObjectTest extends TestCase
             return ($a < $b) ? -1 : 1;
         };
 
-        $data1 = array(3, 2, 5, 6, 1);
+        $data1 = [3, 2, 5, 6, 1];
         $data2 = swoole_array($data1);
         usort($data1, $cmp);
         $this->assertEquals($data1, $data2->usort($cmp)->toArray());
@@ -426,14 +431,13 @@ class ArrayObjectTest extends TestCase
 
     public function testUksort()
     {
-        $cmp = function ($a, $b)
-        {
+        $cmp = function ($a, $b) {
             $a = preg_replace('@^(a|an|the) @', '', $a);
             $b = preg_replace('@^(a|an|the) @', '', $b);
             return strcasecmp($a, $b);
         };
 
-        $data1 = array("John" => 1, "the Earth" => 2, "an apple" => 3, "a banana" => 4);
+        $data1 = ['John' => 1, 'the Earth' => 2, 'an apple' => 3, 'a banana' => 4];
         $data2 = swoole_array($data1);
         uksort($data1, $cmp);
         $this->assertEquals($data1, $data2->uksort($cmp)->toArray());
@@ -524,13 +528,16 @@ class ArrayObjectTest extends TestCase
 
     public function testChunk()
     {
-        $this->assertEquals($this->data->chunk(2)->toArray(),
-            array_chunk($this->data->toArray(), 2));
+        $this->assertEquals(
+            $this->data->chunk(2)->toArray(),
+            array_chunk($this->data->toArray(), 2)
+        );
     }
 
     public function testSlice()
     {
-        $this->assertEquals($this->data->slice(2, 4)->toArray(),
+        $this->assertEquals(
+            $this->data->slice(2, 4)->toArray(),
             array_slice($this->control_data, 2, 4)
         );
     }
