@@ -14,7 +14,6 @@ namespace Swoole;
 use ArrayAccess;
 use Countable;
 use Iterator;
-use function PHPUnit\Framework\throwException;
 use RuntimeException;
 use Serializable;
 
