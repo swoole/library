@@ -26,7 +26,6 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
 
     /**
      * ArrayObject constructor.
-     * @param array $array
      */
     public function __construct(array $array = [])
     {
