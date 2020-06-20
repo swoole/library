@@ -41,7 +41,29 @@ function swoole_array(array $array = []): Swoole\ArrayObject
     return new Swoole\ArrayObject($array);
 }
 
+function swoole_array_list(...$arrray): Swoole\ArrayObject
+{
+    return new Swoole\ArrayObject($arrray);
+}
+
 function swoole_array_default_value(array $array, $key, $default_value = null)
 {
     return array_key_exists($key, $array) ? $array[$key] : $default_value;
+}
+
+if (!function_exists('array_key_last')) {
+    function array_key_last(array $array)
+    {
+        return key(array_slice($array, -1));
+    }
+}
+
+if (!function_exists('array_key_first')) {
+    function array_key_first(array $array)
+    {
+        foreach ($array as $key => $unused) {
+            return $key;
+        }
+        return null;
+    }
 }
