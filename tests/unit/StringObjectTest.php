@@ -235,4 +235,17 @@ class StringObjectTest extends TestCase
     {
         $this->assertTrue(swoole_string('hello swoole and hello world')->endsWith('world'));
     }
+
+    /**
+     * @covers \Swoole\StringObject::equals()
+     */
+    public function testEquals()
+    {
+        $str = swoole_string('123456');
+        $this->assertTrue($str->equals('123456'));
+        $this->assertFalse($str->equals('hello world'));
+        $this->assertTrue($str->equals(123456));
+        $this->assertTrue($str->equals(swoole_string('123456'), true));
+        $this->assertFalse($str->equals(123456, true));
+    }
 }

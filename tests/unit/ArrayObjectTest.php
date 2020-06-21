@@ -277,6 +277,14 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data->search(999), $data->count() - 1);
     }
 
+    public function testAppend()
+    {
+        $data = clone $this->data;
+        $data->append(999)->append(888);
+        $this->assertTrue($data->contains(999));
+        $this->assertTrue($data->contains(888));
+    }
+
     public function testShuffle()
     {
         $data1 = clone $this->data;
