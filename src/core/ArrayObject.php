@@ -314,9 +314,9 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
         return array_unshift($this->array, $value);
     }
 
-    public function append($value): ArrayObject
+    public function append(...$values): ArrayObject
     {
-        $this->pushBack($value);
+        array_push($this->array, ...$values);
         return $this;
     }
 

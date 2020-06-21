@@ -281,8 +281,10 @@ class ArrayObjectTest extends TestCase
     {
         $data = clone $this->data;
         $data->append(999)->append(888);
+        $data->append(10000, 20000, 30000);
         $this->assertTrue($data->contains(999));
         $this->assertTrue($data->contains(888));
+        $this->assertTrue($data->contains(30000));
     }
 
     public function testShuffle()
