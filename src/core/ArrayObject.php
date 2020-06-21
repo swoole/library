@@ -16,6 +16,7 @@ use Countable;
 use Iterator;
 use RuntimeException;
 use Serializable;
+use Swoole\Exception\ArrayKeyNotExists;
 
 class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
 {
@@ -95,6 +96,9 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
      */
     public function get($key)
     {
+        if (!$this->exists($key)) {
+            throw new ArrayKeyNotExists($key);
+        }
         return static::detectType($this->array[$key]);
     }
 
