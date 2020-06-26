@@ -45,7 +45,8 @@
     },
     "autoload-dev": {
         "classmap": [
-            "tests/DatabaseTestCase.php"
+            "tests/DatabaseTestCase.php",
+            "tests/HookFlagsTrait.php"
         ]
     },
     "config": {

@@ -13,7 +13,7 @@ namespace Swoole\Curl;
 
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
-use Swoole\Runtime;
+use Swoole\Tests\HookFlagsTrait;
 
 /**
  * Class HandlerTest
@@ -23,12 +23,31 @@ use Swoole\Runtime;
  */
 class HandlerTest extends TestCase
 {
+    use HookFlagsTrait;
+
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        self::saveHookFlags();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::restoreHookFlags();
+        parent::tearDownAfterClass();
+    }
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        self::setHookFlags(SWOOLE_HOOK_CURL);
+    }
+
     /**
      * @covers \Swoole\Curl\Handler::execute()
      */
     public function testRedirect()
     {
-        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
         Coroutine\run(function () {
             $ch = curl_init('https://shorturl.at/wxWX4');
             self::assertInstanceOf(Handler::class, $ch, 'Variable $ch should be a Handler object instead of a curl resource');
@@ -47,10 +66,9 @@ class HandlerTest extends TestCase
      */
     public function testToString()
     {
-        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
         Coroutine\run(function () {
             $ch = curl_init();
-            self::assertRegExp('/Object\(\w+\) of type \(curl\)/', (string) $ch);
+            self::assertMatchesRegularExpression('/Object\(\w+\) of type \(curl\)/', (string) $ch);
         });
     }
 
@@ -59,7 +77,6 @@ class HandlerTest extends TestCase
      */
     public function testCustomHost()
     {
-        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
         Coroutine\run(function () {
             $ip = Coroutine::gethostbyname('httpbin.org');
             $ch = curl_init("http://{$ip}/get");
@@ -77,7 +94,6 @@ class HandlerTest extends TestCase
      */
     public function testHeaderName()
     {
-        Runtime::enableCoroutine(SWOOLE_HOOK_CURL);
         Coroutine\run(function () {
             $ch = curl_init('http://httpbin.org/get');
             curl_setopt($ch, CURLOPT_HEADER, true);

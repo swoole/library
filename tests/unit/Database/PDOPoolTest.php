@@ -14,7 +14,7 @@ namespace Swoole\Database;
 use PDOException;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
-use Swoole\Runtime;
+use Swoole\Tests\HookFlagsTrait;
 
 /**
  * Class PDOPoolTest
@@ -24,10 +24,12 @@ use Swoole\Runtime;
  */
 class PDOPoolTest extends TestCase
 {
+    use HookFlagsTrait;
+
     public function testPutWhenErrorHappens()
     {
-        $flags = Runtime::getHookFlags(SWOOLE_HOOK_ALL);
-        Runtime::enableCoroutine();
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
         $expect = ['0', '1', '2', '3', '4'];
         $actual = [];
         Coroutine\run(function () use (&$actual) {
@@ -62,6 +64,6 @@ class PDOPoolTest extends TestCase
         });
         sort($actual);
         $this->assertEquals($expect, $actual);
-        Runtime::enableCoroutine($flags);
+        self::restoreHookFlags();
     }
 }
