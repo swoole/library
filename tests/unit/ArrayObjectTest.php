@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace Swoole\Tests;
+namespace Swoole;
 
 use PHPUnit\Framework\TestCase;
 
