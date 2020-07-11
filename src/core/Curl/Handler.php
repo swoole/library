@@ -420,6 +420,7 @@ final class Handler
             case CURLOPT_BUFFERSIZE:
             case CURLOPT_SSLCERTTYPE:
             case CURLOPT_SSLKEYTYPE:
+            case CURLOPT_REDIR_PROTOCOLS:
                 break;
             /*
              * SSL
