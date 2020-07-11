@@ -420,7 +420,6 @@ final class Handler
             case CURLOPT_BUFFERSIZE:
             case CURLOPT_SSLCERTTYPE:
             case CURLOPT_SSLKEYTYPE:
-            case CURLOPT_REDIR_PROTOCOLS:
                 break;
             /*
              * SSL
@@ -499,6 +498,11 @@ final class Handler
             case CURLOPT_PROTOCOLS:
                 if ($value > 3) {
                     throw new CurlException("swoole_curl_setopt(): CURLOPT_PROTOCOLS[{$value}] is not supported");
+                }
+                break;
+            case CURLOPT_REDIR_PROTOCOLS:
+                if ($value > 3) {
+                    throw new CurlException("swoole_curl_setopt(): CURLOPT_REDIR_PROTOCOLS[{$value}] is not supported");
                 }
                 break;
             case CURLOPT_HTTP_VERSION:
