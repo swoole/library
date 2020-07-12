@@ -500,6 +500,11 @@ final class Handler
                     throw new CurlException("swoole_curl_setopt(): CURLOPT_PROTOCOLS[{$value}] is not supported");
                 }
                 break;
+            case CURLOPT_REDIR_PROTOCOLS:
+                if ($value > 3) {
+                    throw new CurlException("swoole_curl_setopt(): CURLOPT_REDIR_PROTOCOLS[{$value}] is not supported");
+                }
+                break;
             case CURLOPT_HTTP_VERSION:
                 if ($value != CURL_HTTP_VERSION_1_1) {
                     trigger_error("swoole_curl_setopt(): CURLOPT_HTTP_VERSION[{$value}] is not supported", E_USER_WARNING);
