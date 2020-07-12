@@ -496,12 +496,12 @@ final class Handler
                 $this->method = (string) $value;
                 break;
             case CURLOPT_PROTOCOLS:
-                if ($value > 3) {
+                if ($value > (CURLPROTO_HTTP | CURLPROTO_HTTPS)) {
                     throw new CurlException("swoole_curl_setopt(): CURLOPT_PROTOCOLS[{$value}] is not supported");
                 }
                 break;
             case CURLOPT_REDIR_PROTOCOLS:
-                if ($value > 3) {
+                if ($value > (CURLPROTO_HTTP | CURLPROTO_HTTPS)) {
                     throw new CurlException("swoole_curl_setopt(): CURLOPT_REDIR_PROTOCOLS[{$value}] is not supported");
                 }
                 break;
