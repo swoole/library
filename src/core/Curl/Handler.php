@@ -715,6 +715,8 @@ final class Handler
                 $errCode = $client->errCode;
                 if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED or $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
                     $this->setError(CURLE_COULDNT_RESOLVE_HOST, 'Could not resolve host: ' . $client->host);
+                } else {
+                    $this->setError($errCode, $client->errMsg);
                 }
                 $this->info['total_time'] = microtime(true) - $timeBegin;
                 return false;
