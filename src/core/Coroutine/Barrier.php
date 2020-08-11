@@ -12,15 +12,11 @@ declare(strict_types=1);
 namespace Swoole\Coroutine;
 
 use Swoole\Coroutine;
+use Swoole\Exception;
 
 class Barrier
 {
-    private $cid;
-
-    public function __construct()
-    {
-        $this->cid = Co::getCid();
-    }
+    private $cid = -1;
 
     public function __destruct()
     {
@@ -32,8 +28,15 @@ class Barrier
         return new static();
     }
 
-    public static function wait(&$barrier)
+    /**
+     * @throws Exception
+     */
+    public static function wait(Barrier &$barrier)
     {
+        if ($barrier->cid != -1) {
+            throw new Exception('The barrier is waiting, cannot wait again.');
+        }
+        $barrier->cid = Coroutine::getCid();
         $barrier = null;
         Coroutine::yield();
     }
