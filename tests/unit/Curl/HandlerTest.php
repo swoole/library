@@ -49,7 +49,7 @@ class HandlerTest extends TestCase
     public function testRedirect()
     {
         Coroutine\run(function () {
-            $ch = curl_init('https://shorturl.at/wxWX4');
+            $ch = curl_init('http://alturl.com/6xb2v');
             self::assertInstanceOf(Handler::class, $ch, 'Variable $ch should be a Handler object instead of a curl resource');
 
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
