@@ -40,4 +40,26 @@ class BarrierTest extends TestCase
             $this->assertGreaterThan($et - $st, 0.55);
         });
     }
+
+    public function testWaitTimeout()
+    {
+        run(function () {
+            $barrier = Barrier::make();
+            $count = 0;
+            $N = 4;
+            $st = microtime(true);
+            foreach (range(1, $N) as $i) {
+                \Swoole\Coroutine::create(function () use ($barrier, &$count) {
+                    System::sleep(0.5);
+                    $count++;
+                });
+            }
+            Barrier::wait($barrier, 0.1);
+            $et = microtime(true);
+
+            $this->assertEquals($count, 0);
+            $this->assertLessThan($et - $st, 0.1);
+            $this->assertGreaterThan($et - $st, 0.15);
+        });
+    }
 }
