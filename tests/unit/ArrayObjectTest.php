@@ -561,4 +561,24 @@ class ArrayObjectTest extends TestCase
     {
         $this->assertTrue($this->data_3->exists('swoole'));
     }
+
+    public function testFirst()
+    {
+        $this->assertEquals($this->data_4->first(), 'lemon');
+    }
+
+    public function testLast()
+    {
+        $this->assertEquals($this->data_4->last(), 'apple');
+    }
+
+    public function testFirstKey()
+    {
+        $this->assertEquals($this->data_4->firstKey(), 'd');
+    }
+
+    public function testLastKey()
+    {
+        $this->assertEquals($this->data_4->lastKey(), 'c');
+    }
 }
