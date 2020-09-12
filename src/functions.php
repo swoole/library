@@ -54,7 +54,10 @@ function swoole_array_default_value(array $array, $key, $default_value = null)
 if (!function_exists('array_key_last')) {
     function array_key_last(array $array)
     {
-        return key(array_slice($array, -1));
+        if (!empty($array)) {
+            return key(array_slice($array, -1, 1, true));
+        }
+        return null;
     }
 }
 
