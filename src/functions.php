@@ -9,6 +9,10 @@
 
 declare(strict_types=1);
 
+if (!extension_loaded('swoole')) {
+    define('SWOOLE_USE_SHORTNAME', true);
+}
+
 if (SWOOLE_USE_SHORTNAME) {
     function _string(string $string = ''): Swoole\StringObject
     {
