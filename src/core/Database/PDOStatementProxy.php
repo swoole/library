@@ -93,18 +93,18 @@ class PDOStatementProxy extends ObjectProxy
                     $this->__object->setFetchMode(...$this->setFetchModeContext);
                 }
                 if ($this->bindParamContext) {
-                    foreach ($this->bindParamContext as $param => $paramContext) {
-                        $this->__object->bindParam($param, ...$paramContext);
+                    foreach ($this->bindParamContext as $param => $item) {
+                        $this->__object->bindParam($param, ...$item);
                     }
                 }
                 if ($this->bindColumnContext) {
-                    foreach ($this->bindColumnContext as $column => $columnContext) {
-                        $this->__object->bindColumn($column, ...$columnContext);
+                    foreach ($this->bindColumnContext as $column => $item) {
+                        $this->__object->bindColumn($column, ...$item);
                     }
                 }
                 if ($this->bindValueContext) {
-                    foreach ($this->bindValueContext as $value => $valueContext) {
-                        $this->__object->bindParam($value, ...$valueContext);
+                    foreach ($this->bindValueContext as $value => $item) {
+                        $this->__object->bindParam($value, ...$item);
                     }
                 }
                 continue;
