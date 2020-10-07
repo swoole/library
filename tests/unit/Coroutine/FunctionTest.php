@@ -105,4 +105,22 @@ class FunctionTest extends TestCase
             $this->assertLessThan(0.22, $end - $start);
         });
     }
+
+    public function testMap()
+    {
+        run(function () {
+            $start = microtime(true);
+            $list = [1, 2, 3, 4];
+            $results = map($list, function (int $i): int {
+                System::sleep(0.2);
+                return $i * 2;
+            });
+            $end = microtime(true);
+
+            $this->assertSameSize($results, $list);
+            $this->assertGreaterThan(0.2, $end - $start);
+            $this->assertLessThan(0.22, $end - $start);
+            $this->assertSame([2, 4, 6, 8], $results);
+        });
+    }
 }
