@@ -41,3 +41,18 @@ function parallel(int $n, callable $fn): void
     }
     $wg->wait();
 }
+
+function map(array $list, callable $fn, float $timeout = -1): array
+{
+    $wg = new WaitGroup();
+    $wg->add(count($list));
+    foreach ($list as $id => $elem) {
+        Coroutine::create(function () use ($wg, &$list, $id, $elem, $fn): void {
+            $list[$id] = null;
+            $list[$id] = $fn($elem);
+            $wg->done();
+        });
+    }
+    $wg->wait($timeout);
+    return $list;
+}
