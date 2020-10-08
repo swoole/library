@@ -581,4 +581,12 @@ class ArrayObjectTest extends TestCase
     {
         $this->assertEquals($this->data_4->lastKey(), 'c');
     }
+
+    public function testIsAssoc()
+    {
+        $this->assertFalse($this->data->isAssoc());
+        $this->assertFalse($this->data_2->isAssoc());
+        $this->assertTrue($this->data_3->isAssoc());
+        $this->assertTrue($this->data_4->isAssoc());
+    }
 }

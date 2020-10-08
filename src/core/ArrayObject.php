@@ -652,6 +652,20 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
     }
 
     /**
+     * @return bool
+     */
+    public function isAssoc(): bool
+    {
+        foreach (array_keys($this->array) as $key) {
+            if (is_string($key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param mixed $value
      * @return ArrayObject|mixed|StringObject
      */
