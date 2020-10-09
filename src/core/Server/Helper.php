@@ -13,7 +13,7 @@ namespace Swoole\Server;
 
 class Helper
 {
-    const OPTIONS = [
+    const SERVER_OPTIONS = [
         'chroot' => true,
         'user' => true,
         'group' => true,
