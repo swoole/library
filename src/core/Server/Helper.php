@@ -121,18 +121,10 @@ class Helper
         'ssl_dhparam' => true,
     ];
 
-    public static function checkOptions(array $options)
+    public static function checkOptions(array $input_options)
     {
-        self::check($options, self::OPTIONS + self::PORT_OPTIONS);
-    }
+        $const_options = self::SERVER_OPTIONS + self::PORT_OPTIONS;
 
-    public static function checkPortOptions(array $options)
-    {
-        self::check($options, self::PORT_OPTIONS);
-    }
-
-    private static function check($input_options, $const_options)
-    {
         foreach ($input_options as $k => $v) {
             if (!array_key_exists(strtolower($k), $const_options)) {
                 trigger_error("unsupported option [{$k}]");
