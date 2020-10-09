@@ -19,6 +19,26 @@ class Helper
 {
     const STATS_TIMER_INTERVAL_TIME = 1000;
 
+    const GLOBAL_OPTIONS = [
+        'debug_mode' => true,
+        'trace_flags' => true,
+        'log_file' => true,
+        'log_level' => true,
+        'log_date_format' => true,
+        'log_date_with_microseconds' => true,
+        'log_rotation' => true,
+        'display_errors' => true,
+        'dns_server' => true,
+        'socket_dns_timeout' => true,
+        'socket_connect_timeout' => true,
+        'socket_write_timeout' => true,
+        'socket_send_timeout' => true,
+        'socket_read_timeout' => true,
+        'socket_recv_timeout' => true,
+        'socket_buffer_size' => true,
+        'socket_timeout' => true,
+    ];
+
     const SERVER_OPTIONS = [
         'chroot' => true,
         'user' => true,
@@ -76,7 +96,6 @@ class Helper
         'output_buffer_size' => true,
         'buffer_output_size' => true,
         'message_queue_key' => true,
-        'stats_file' => true,
     ];
 
     const PORT_OPTIONS = [
@@ -130,7 +149,7 @@ class Helper
 
     public static function checkOptions(array $input_options)
     {
-        $const_options = self::SERVER_OPTIONS + self::PORT_OPTIONS;
+        $const_options = self::GLOBAL_OPTIONS + self::SERVER_OPTIONS + self::PORT_OPTIONS;
 
         foreach ($input_options as $k => $v) {
             if (!array_key_exists(strtolower($k), $const_options)) {
