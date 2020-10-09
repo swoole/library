@@ -30,7 +30,7 @@ Just new pull request (and we need unit tests for new features)
 
 ## Develop
 
-+ [Document](https://wiki.swoole.com/wiki/page/p-library.html)
++ [Document](https://wiki.swoole.com/#/library)
 + [Examples](https://github.com/swoole/library/tree/master/examples)
 
 ## Dockerized Local Development
