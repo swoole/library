@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\Server;
 
+use Swoole\Exception;
+
 class Helper
 {
     const SERVER_OPTIONS = [
@@ -127,7 +129,7 @@ class Helper
 
         foreach ($input_options as $k => $v) {
             if (!array_key_exists(strtolower($k), $const_options)) {
-                trigger_error("unsupported option [{$k}]");
+                throw new Exception("unsupported option [{$k}]");
             }
         }
     }
