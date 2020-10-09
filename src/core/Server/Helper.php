@@ -76,6 +76,7 @@ class Helper
         'output_buffer_size' => true,
         'buffer_output_size' => true,
         'message_queue_key' => true,
+        'stats_file' => true,
     ];
 
     const PORT_OPTIONS = [
