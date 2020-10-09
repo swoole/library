@@ -12,9 +12,13 @@ declare(strict_types=1);
 namespace Swoole\Server;
 
 use Swoole\Exception;
+use Swoole\Server;
+use Swoole\Timer;
 
 class Helper
 {
+    const STATS_TIMER_INTERVAL_TIME = 1000;
+
     const SERVER_OPTIONS = [
         'chroot' => true,
         'user' => true,
@@ -132,5 +136,32 @@ class Helper
                 throw new Exception("unsupported option [{$k}]");
             }
         }
+    }
+
+    public static function onWorkerStart(Server $server, int $workerId)
+    {
+        if (!empty($server->setting['stats_file']) and $workerId == 0) {
+            $server->stats_timer = Timer::tick(self::STATS_TIMER_INTERVAL_TIME, function () use ($server) {
+                $stats = $server->stats();
+                $lines = [];
+                foreach ($stats as $k => $v) {
+                    $lines[] = "$k: $v";
+                }
+                $out = implode("\n", $lines);
+                file_put_contents($server->setting['stats_file'], $out);
+            });
+        }
+    }
+
+    public static function onWorkerExit(Server $server, int $workerId)
+    {
+        if ($server->stats_timer) {
+            Timer::clear($server->stats_timer);
+            $server->stats_timer = null;
+        }
+    }
+
+    public static function onWorkerStop(Server $server, int $workerId) {
+
     }
 }
