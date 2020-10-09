@@ -136,6 +136,7 @@ class Helper
             if (!array_key_exists(strtolower($k), $const_options)) {
                 //TODO throw exception
                 trigger_error("unsupported option [{$k}]", E_USER_WARNING);
+                debug_print_backtrace();
             }
         }
     }
