@@ -55,6 +55,7 @@
     "scripts": {
         "cs-check": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix --dry-run",
         "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix",
+        "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
         "post-install-cmd" : [
             "rm -rf ./vendor/swoole/ide-helper/output/swoole_library"
         ],
