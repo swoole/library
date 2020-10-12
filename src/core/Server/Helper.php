@@ -170,7 +170,7 @@ class Helper
                 $stats = $server->stats();
                 $lines = [];
                 foreach ($stats as $k => $v) {
-                    $lines[] = "$k: $v";
+                    $lines[] = "{$k}: {$v}";
                 }
                 $out = implode("\n", $lines);
                 file_put_contents($server->setting['stats_file'], $out);
@@ -186,7 +186,7 @@ class Helper
         }
     }
 
-    public static function onWorkerStop(Server $server, int $workerId) {
-
+    public static function onWorkerStop(Server $server, int $workerId)
+    {
     }
 }
