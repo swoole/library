@@ -402,7 +402,7 @@ final class Handler
                 }
                 break;
             case CURLOPT_TCP_NODELAY:
-                $this->clientOptions[Constant::OPTION_OPEN_TCP_NODELAY] = $value;
+                $this->clientOptions[Constant::OPTION_OPEN_TCP_NODELAY] = boolval($value);
                 break;
             /*
              * Ignore options
