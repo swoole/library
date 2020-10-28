@@ -1,0 +1,25 @@
+name: PHPUnit for Swoole Library
+
+on: [ push, pull_request ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Services
+        run: |
+          docker-compose up -d
+          docker ps -a
+          docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer install -n
+
+      - name: Run Test Cases
+        run: |
+          docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/php-cs-fixer fix --dry-run"
+          docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
+          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.1 parallel-lint src
+          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.2 parallel-lint src
+          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.3 parallel-lint src
+          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.4 parallel-lint src
