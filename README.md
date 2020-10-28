@@ -1,6 +1,6 @@
 # Swoole Library
 
-[![Build Status](https://api.travis-ci.org/swoole/library.svg)](https://travis-ci.org/swoole/library)
+[![Library Status](https://github.com/swoole/library/workflows/Tests/badge.svg)](https://github.com/swoole/library/actions)
 [![License](https://img.shields.io/badge/license-apache2-blue.svg)](LICENSE)
 
 Table of Contents
