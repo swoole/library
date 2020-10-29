@@ -62,4 +62,21 @@ class BarrierTest extends TestCase
             $this->assertGreaterThan($et - $st, 0.15);
         });
     }
+
+    public function testSubCoNoUseCo()
+    {
+        run(function () {
+            $barrier = Barrier::make();
+            $count = 0;
+            $N = 4;
+            foreach (range(1, $N) as $i) {
+                \Swoole\Coroutine::create(function () use ($barrier, &$count) {
+                    $count++;
+                });
+            }
+            Barrier::wait($barrier);
+
+            $this->assertEquals($count, $N);
+        });
+    }
 }
