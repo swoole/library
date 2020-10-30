@@ -63,6 +63,8 @@ class Barrier
         $barrier = null;
         if (!isset(self::$cancel_list[$cid])) {
             Coroutine::yield();
+        } else {
+            unset(self::$cancel_list[$cid]);
         }
     }
 }
