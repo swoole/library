@@ -35,9 +35,12 @@ class BarrierTest extends TestCase
             Barrier::wait($barrier);
             $et = microtime(true);
 
-            $this->assertEquals($count, $N);
-            $this->assertLessThan($et - $st, 0.5);
-            $this->assertGreaterThan($et - $st, 0.55);
+            $this->assertEquals($count, $N, 'All four child coroutines have finished execution; the counter is increased to 4.');
+            $this->assertThat(
+                $et - $st,
+                $this->logicalAnd($this->greaterThan(0.50), $this->lessThan(0.55)),
+                'It takes barely over 0.5 second to finish execution of the four child coroutines.'
+            );
         });
     }
 
@@ -57,9 +60,12 @@ class BarrierTest extends TestCase
             Barrier::wait($barrier, 0.1);
             $et = microtime(true);
 
-            $this->assertEquals($count, 0);
-            $this->assertLessThan($et - $st, 0.1);
-            $this->assertGreaterThan($et - $st, 0.15);
+            $this->assertEquals($count, 0, 'None of the four child coroutines finishes execution when timeout happens; the counter remains as 0.');
+            $this->assertThat(
+                $et - $st,
+                $this->logicalAnd($this->greaterThan(0.10), $this->lessThan(0.15)),
+                'The parent coroutine stops waiting when timeout happens.'
+            );
         });
     }
 
@@ -76,7 +82,7 @@ class BarrierTest extends TestCase
             }
             Barrier::wait($barrier);
 
-            $this->assertEquals($count, $N);
+            $this->assertEquals($count, $N, 'The parent coroutine keeps running without switching execution to child coroutines.');
         });
     }
 }
