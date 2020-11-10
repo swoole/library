@@ -125,6 +125,10 @@ final class Handler
 
     private $closed = false;
 
+    private $cookieJar = '';
+
+    private $cookieFile = '';
+
     public function __construct(string $url = '')
     {
         if ($url) {
@@ -528,6 +532,14 @@ final class Handler
             case CURLOPT_COOKIE:
                 $this->headers['Cookie'] = $value;
                 break;
+            case CURLOPT_COOKIEJAR:
+                $this->cookieJar = (string) $value;
+                break;
+            case CURLOPT_COOKIEFILE:
+                if (is_file($value)) {
+                    $this->headers['Cookie'] = file_get_contents($value);
+                }
+                break;
             case CURLOPT_CONNECTTIMEOUT:
                 $this->clientOptions[Constant::OPTION_CONNECT_TIMEOUT] = $value;
                 break;
@@ -814,6 +826,14 @@ final class Handler
             } else {
                 $this->info['filetime'] = -1;
             }
+        }
+
+        if ($this->cookieJar && $this->cookieJar !== '') {
+            $cookies = '';
+            foreach ((array) $client->set_cookie_headers as $cookie) {
+                $cookies .= "{$cookie};";
+            }
+            file_put_contents($this->cookieJar, $cookies);
         }
 
         if ($this->returnTransfer) {
