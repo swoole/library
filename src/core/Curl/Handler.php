@@ -387,6 +387,7 @@ final class Handler
                 $this->proxyUsername = urldecode($usernamePassword[0]);
                 $this->proxyPassword = urldecode($usernamePassword[1] ?? null);
                 break;
+            case CURLOPT_NOPROXY:
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
                 break;
@@ -407,14 +408,15 @@ final class Handler
             /*
              * Ignore options
              */
+            case CURLOPT_CERTINFO:
             case CURLOPT_VERBOSE:
                 // trigger_error(E_USER_WARNING, 'swoole_curl_setopt(): CURLOPT_VERBOSE is not supported');
             case CURLOPT_SSLVERSION:
             case CURLOPT_NOSIGNAL:
             case CURLOPT_FRESH_CONNECT:
-                /*
-                 * From PHP 5.1.3, this option has no effect: the raw output will always be returned when CURLOPT_RETURNTRANSFER is used.
-                 */
+            /*
+             * From PHP 5.1.3, this option has no effect: the raw output will always be returned when CURLOPT_RETURNTRANSFER is used.
+             */
             case CURLOPT_BINARYTRANSFER: /* TODO */
             case CURLOPT_DNS_USE_GLOBAL_CACHE:
             case CURLOPT_DNS_CACHE_TIMEOUT:
