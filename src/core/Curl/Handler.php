@@ -485,6 +485,9 @@ final class Handler
                     $this->headers[$headerName] = $headerValue;
                 }
                 break;
+            case CURLOPT_HEADEROPT:
+            case CURLOPT_PROXYHEADER:
+                break;
             case CURLOPT_REFERER:
                 $this->headers['Referer'] = $value;
                 break;
