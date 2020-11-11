@@ -448,6 +448,11 @@ final class Handler
             case CURLOPT_CAPATH:
                 $this->clientOptions[Constant::OPTION_SSL_CAPATH] = $value;
                 break;
+            case CURLOPT_KEYPASSWD:
+            case CURLOPT_SSLCERTPASSWD:
+            case CURLOPT_SSLKEYPASSWD:
+                $this->clientOptions[Constant::OPTION_SSL_PASSPHRASE] = $value;
+                break;
             /*
              * Http POST
              */
