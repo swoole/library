@@ -531,10 +531,14 @@ final class Handler
                 $this->headers['Cookie'] = $value;
                 break;
             case CURLOPT_COOKIEJAR:
+                if ($value === '-') {
+                    trigger_error('swoole_curl_setopt(): CURLOPT_COOKIEJAR is not supported written cookies to stdout', E_USER_WARNING);
+                    return false;
+                }
                 $this->cookieJar = (string) $value;
                 break;
             case CURLOPT_COOKIEFILE:
-                if (is_file($value)) {
+                if (is_file((string) $value)) {
                     $this->headers['Cookie'] = file_get_contents($value);
                 }
                 break;
