@@ -127,8 +127,6 @@ final class Handler
 
     private $cookieJar = '';
 
-    private $cookieFile = '';
-
     public function __construct(string $url = '')
     {
         if ($url) {
