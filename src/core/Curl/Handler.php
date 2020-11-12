@@ -536,10 +536,6 @@ final class Handler
                 $this->headers['Cookie'] = $value;
                 break;
             case CURLOPT_COOKIEJAR:
-                if ($value === '-') {
-                    trigger_error('swoole_curl_setopt(): CURLOPT_COOKIEJAR is not supported written cookies to stdout', E_USER_WARNING);
-                    return false;
-                }
                 $this->cookieJar = (string) $value;
                 break;
             case CURLOPT_COOKIEFILE:
@@ -836,11 +832,17 @@ final class Handler
         }
 
         if ($this->cookieJar && $this->cookieJar !== '') {
-            $cookies = '';
-            foreach ((array) $client->set_cookie_headers as $cookie) {
-                $cookies .= "{$cookie};";
+            if ($this->cookieJar === '-') {
+                foreach ((array) $client->set_cookie_headers as $cookie) {
+                    echo $cookie . PHP_EOL;
+                }
+            } else {
+                $cookies = '';
+                foreach ((array) $client->set_cookie_headers as $cookie) {
+                    $cookies .= "{$cookie};";
+                }
+                file_put_contents($this->cookieJar, $cookies);
             }
-            file_put_contents($this->cookieJar, $cookies);
         }
 
         if ($this->returnTransfer) {
