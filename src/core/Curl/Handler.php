@@ -659,6 +659,12 @@ final class Handler
                 $client->setMethod($this->method);
             }
             /*
+             * Add Content-Length
+             */
+            if (!isset($this->headers['Content-Length']) && $this->infileSize !== PHP_INT_MAX) {
+                $this->headers['Content-Length'] = $this->infileSize;
+            }
+            /*
              * Data
              */
             if ($this->infile) {
