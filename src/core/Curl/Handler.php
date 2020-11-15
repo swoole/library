@@ -389,7 +389,6 @@ final class Handler
                 $this->proxyUsername = urldecode($usernamePassword[0]);
                 $this->proxyPassword = urldecode($usernamePassword[1] ?? null);
                 break;
-            case CURLOPT_NOPROXY:
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
                 break;
@@ -410,7 +409,6 @@ final class Handler
             /*
              * Ignore options
              */
-            case CURLOPT_CERTINFO:
             case CURLOPT_VERBOSE:
                 // trigger_error(E_USER_WARNING, 'swoole_curl_setopt(): CURLOPT_VERBOSE is not supported');
             case CURLOPT_SSLVERSION:
@@ -427,6 +425,10 @@ final class Handler
             case CURLOPT_BUFFERSIZE:
             case CURLOPT_SSLCERTTYPE:
             case CURLOPT_SSLKEYTYPE:
+            case CURLOPT_NOPROXY:
+            case CURLOPT_CERTINFO:
+            case CURLOPT_HEADEROPT:
+            case CURLOPT_PROXYHEADER:
                 break;
             /*
              * SSL
@@ -491,9 +493,6 @@ final class Handler
                     }
                     $this->headers[$headerName] = $headerValue;
                 }
-                break;
-            case CURLOPT_HEADEROPT:
-            case CURLOPT_PROXYHEADER:
                 break;
             case CURLOPT_REFERER:
                 $this->headers['Referer'] = $value;
