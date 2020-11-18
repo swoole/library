@@ -683,7 +683,8 @@ final class Handler
                 // POST data
                 if ($this->postData) {
                     if (is_string($this->postData)) {
-                        if (empty($this->headers['Content-Type'])) {
+                        $this->headers = array_change_key_case($this->headers, CASE_LOWER);
+                        if (empty($this->headers['content-type'])) {
                             $this->headers['Content-Type'] = 'application/x-www-form-urlencoded';
                         }
                     } elseif (is_array($this->postData)) {
