@@ -311,7 +311,7 @@ final class Handler
         $this->errCode = $code;
         $this->errMsg = $msg ? $msg : curl_strerror($code);
     }
-    
+
     private function hasHeader(string $headerName): bool
     {
         return isset($this->headerMap[strtolower($headerName)]);
@@ -724,7 +724,7 @@ final class Handler
             // Notice: setHeaders must be placed last, because headers may be changed by other parts
             // As much as possible to ensure that Host is the first header.
             // See: http://tools.ietf.org/html/rfc7230#section-5.4
-            $client->setHeaders($headers);
+            $client->setHeaders($this->headers);
             /**
              * Execute.
              */
