@@ -811,6 +811,10 @@ final class Handler
             }
         }
 
+        if ($this->writeFunction) {
+            call_user_func($this->writeFunction, $client, $transfer);
+            return true;
+        }
         if ($this->returnTransfer) {
             return $this->transfer = $transfer;
         }
