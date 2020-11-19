@@ -317,9 +317,7 @@ final class Handler
         $lowerCaseHeaderName = strtolower($headerName);
 
         if (isset($this->headerMap[$lowerCaseHeaderName])) {
-            $oldHeaderName = $this->headerMap[$lowerCaseHeaderName];
-
-            unset($this->headerMap[$lowerCaseHeaderName], $this->headers[$oldHeaderName]);
+            unset($this->headers[$this->headerMap[$lowerCaseHeaderName]]);
         }
 
         $this->headers[$headerName] = $value;
