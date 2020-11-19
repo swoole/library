@@ -311,6 +311,11 @@ final class Handler
         $this->errCode = $code;
         $this->errMsg = $msg ? $msg : curl_strerror($code);
     }
+    
+    private function hasHeader(string $headerName): bool
+    {
+        return isset($this->headerMap[strtolower($headerName)]);
+    }
 
     private function setHeader(string $headerName, string $value): void
     {
@@ -320,8 +325,13 @@ final class Handler
             unset($this->headers[$this->headerMap[$lowerCaseHeaderName]]);
         }
 
-        $this->headers[$headerName] = $value;
-        $this->headerMap[$lowerCaseHeaderName] = $headerName;
+        if ($value !== '') {
+            $this->headers[$headerName] = $value;
+            $this->headerMap[$lowerCaseHeaderName] = $headerName;
+        } else {
+            // remove empty headers (keep same with raw cURL)
+            unset($this->headerMap[$lowerCaseHeaderName]);
+        }
     }
 
     /**
@@ -491,9 +501,6 @@ final class Handler
                     $header = explode(':', $header, 2);
                     $headerName = $header[0];
                     $headerValue = trim($header[1] ?? '');
-                    if (strlen($headerValue) === 0) {
-                        continue;
-                    }
                     $this->setHeader($headerName, $headerValue);
                 }
                 break;
@@ -697,7 +704,7 @@ final class Handler
                 // POST data
                 if ($this->postData) {
                     if (is_string($this->postData)) {
-                        if (!isset($this->headerMap['content-type'])) {
+                        if (!$this->hasHeader('content-type')) {
                             $this->setHeader('Content-Type', 'application/x-www-form-urlencoded');
                         }
                     } elseif (is_array($this->postData)) {
@@ -717,13 +724,6 @@ final class Handler
             // Notice: setHeaders must be placed last, because headers may be changed by other parts
             // As much as possible to ensure that Host is the first header.
             // See: http://tools.ietf.org/html/rfc7230#section-5.4
-            $headers = $this->headers;
-            foreach ($headers as $headerName => $headerValue) {
-                if ($headerValue === '') {
-                    // remove empty headers (keep same with raw cURL)
-                    unset($headers[$headerName]);
-                }
-            }
             $client->setHeaders($headers);
             /**
              * Execute.
