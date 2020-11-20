@@ -560,7 +560,7 @@ final class Handler
                 break;
             case CURLOPT_COOKIEFILE:
                 if (is_file((string) $value)) {
-                    $this->headers['Cookie'] = file_get_contents($value);
+                    $this->setHeader('Cookie', file_get_contents($value));
                 }
                 break;
             case CURLOPT_CONNECTTIMEOUT:
