@@ -824,7 +824,12 @@ final class Handler
         }
 
         if ($this->writeFunction) {
-            call_user_func($this->writeFunction, $client, $transfer);
+            if (!is_callable($this->writeFunction)) {
+                trigger_error('curl_exec(): Could not call the CURLOPT_WRITEFUNCTION', E_USER_WARNING);
+                $this->setError(CURLE_WRITE_ERROR, 'Failure writing output to destination');
+                return false;
+            }
+            call_user_func($this->writeFunction, $this, $transfer);
             return true;
         }
         if ($this->returnTransfer) {
