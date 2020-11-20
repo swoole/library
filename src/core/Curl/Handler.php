@@ -127,6 +127,8 @@ final class Handler
 
     private $closed = false;
 
+    private $cookieJar = '';
+
     public function __construct(string $url = '')
     {
         if ($url) {
@@ -436,9 +438,9 @@ final class Handler
             case CURLOPT_SSLVERSION:
             case CURLOPT_NOSIGNAL:
             case CURLOPT_FRESH_CONNECT:
-                /*
-                 * From PHP 5.1.3, this option has no effect: the raw output will always be returned when CURLOPT_RETURNTRANSFER is used.
-                 */
+            /*
+             * From PHP 5.1.3, this option has no effect: the raw output will always be returned when CURLOPT_RETURNTRANSFER is used.
+             */
             case CURLOPT_BINARYTRANSFER: /* TODO */
             case CURLOPT_DNS_USE_GLOBAL_CACHE:
             case CURLOPT_DNS_CACHE_TIMEOUT:
@@ -447,6 +449,10 @@ final class Handler
             case CURLOPT_BUFFERSIZE:
             case CURLOPT_SSLCERTTYPE:
             case CURLOPT_SSLKEYTYPE:
+            case CURLOPT_NOPROXY:
+            case CURLOPT_CERTINFO:
+            case CURLOPT_HEADEROPT:
+            case CURLOPT_PROXYHEADER:
                 break;
             /*
              * SSL
@@ -467,6 +473,11 @@ final class Handler
                 break;
             case CURLOPT_CAPATH:
                 $this->clientOptions[Constant::OPTION_SSL_CAPATH] = $value;
+                break;
+            case CURLOPT_KEYPASSWD:
+            case CURLOPT_SSLCERTPASSWD:
+            case CURLOPT_SSLKEYPASSWD:
+                $this->clientOptions[Constant::OPTION_SSL_PASSPHRASE] = $value;
                 break;
             /*
              * Http POST
@@ -543,6 +554,14 @@ final class Handler
              */
             case CURLOPT_COOKIE:
                 $this->setHeader('Cookie', $value);
+                break;
+            case CURLOPT_COOKIEJAR:
+                $this->cookieJar = (string) $value;
+                break;
+            case CURLOPT_COOKIEFILE:
+                if (is_file((string) $value)) {
+                    $this->setHeader('Cookie', file_get_contents($value));
+                }
                 break;
             case CURLOPT_CONNECTTIMEOUT:
                 $this->clientOptions[Constant::OPTION_CONNECT_TIMEOUT] = $value;
@@ -826,6 +845,20 @@ final class Handler
             }
         }
 
+        if ($this->cookieJar && $this->cookieJar !== '') {
+            if ($this->cookieJar === '-') {
+                foreach ((array) $client->set_cookie_headers as $cookie) {
+                    echo $cookie . PHP_EOL;
+                }
+            } else {
+                $cookies = '';
+                foreach ((array) $client->set_cookie_headers as $cookie) {
+                    $cookies .= "{$cookie};";
+                }
+                file_put_contents($this->cookieJar, $cookies);
+            }
+        }
+
         if ($this->writeFunction) {
             if (!is_callable($this->writeFunction)) {
                 trigger_error('curl_exec(): Could not call the CURLOPT_WRITEFUNCTION', E_USER_WARNING);
@@ -835,6 +868,7 @@ final class Handler
             call_user_func($this->writeFunction, $this, $transfer);
             return true;
         }
+
         if ($this->returnTransfer) {
             return $this->transfer = $transfer;
         }
