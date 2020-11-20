@@ -817,7 +817,7 @@ final class Handler
                 $this->setError(CURLE_WRITE_ERROR, 'Failure writing output to destination');
                 return false;
             }
-            call_user_func($this->writeFunction, $client, $transfer);
+            call_user_func($this->writeFunction, $this, $transfer);
             return true;
         }
         if ($this->returnTransfer) {
