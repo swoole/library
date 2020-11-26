@@ -70,6 +70,7 @@ class Helper
         'task_max_request_grace' => true,
         'max_connection' => true,
         'max_conn' => true,
+        'start_session_id' => true,
         'heartbeat_check_interval' => true,
         'heartbeat_idle_time' => true,
         'max_request' => true,
