@@ -10,3 +10,6 @@
 declare(strict_types=1);
 
 define('SWOOLE_LIBRARY', true);
+
+!defined('CURLOPT_HEADEROPT') && define('CURLOPT_HEADEROPT', 229);
+!defined('CURLOPT_PROXYHEADER') && define('CURLOPT_PROXYHEADER', 10228);

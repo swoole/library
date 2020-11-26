@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole\Server;
 
-use Swoole\Exception;
 use Swoole\Server;
 use Swoole\Timer;
 
@@ -147,9 +146,13 @@ class Helper
         'ssl_dhparam' => true,
     ];
 
+    const HELPER_OPTIONS = [
+        'stats_file' => true,
+    ];
+
     public static function checkOptions(array $input_options)
     {
-        $const_options = self::GLOBAL_OPTIONS + self::SERVER_OPTIONS + self::PORT_OPTIONS;
+        $const_options = self::GLOBAL_OPTIONS + self::SERVER_OPTIONS + self::PORT_OPTIONS + self::HELPER_OPTIONS;
 
         foreach ($input_options as $k => $v) {
             if (!array_key_exists(strtolower($k), $const_options)) {
@@ -167,7 +170,7 @@ class Helper
                 $stats = $server->stats();
                 $lines = [];
                 foreach ($stats as $k => $v) {
-                    $lines[] = "$k: $v";
+                    $lines[] = "{$k}: {$v}";
                 }
                 $out = implode("\n", $lines);
                 file_put_contents($server->setting['stats_file'], $out);
@@ -183,7 +186,7 @@ class Helper
         }
     }
 
-    public static function onWorkerStop(Server $server, int $workerId) {
-
+    public static function onWorkerStop(Server $server, int $workerId)
+    {
     }
 }

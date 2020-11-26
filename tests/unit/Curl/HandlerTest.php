@@ -107,4 +107,27 @@ class HandlerTest extends TestCase
             curl_close($ch);
         });
     }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testWriteFunction()
+    {
+        Coroutine\run(function () {
+            $url = 'https://httpbin.org/get';
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $data) {
+                self::assertIsString($data);
+                $body = json_decode($data, true);
+                self::assertSame($body['headers']['Host'], 'httpbin.org');
+                return strlen($data);
+            });
+
+            $res = curl_exec($ch);
+            curl_close($ch);
+            self::assertTrue($res);
+        });
+    }
 }
