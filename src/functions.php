@@ -10,7 +10,7 @@
 declare(strict_types=1);
 
 if (PHP_VERSION_ID < 70200) {
-    throw new RuntimeException("require PHP version 7.2 or later");
+    throw new RuntimeException('require PHP version 7.2 or later');
 }
 
 if (SWOOLE_USE_SHORTNAME) {
