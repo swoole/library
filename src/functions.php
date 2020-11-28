@@ -45,6 +45,50 @@ function swoole_array(array $array = []): Swoole\ArrayObject
     return new Swoole\ArrayObject($array);
 }
 
+function swoole_table(int $size, string $fields): Swoole\Table
+{
+    $_fields = swoole_string($fields)->trim()->split(',');
+
+    $table = new Swoole\Table($size, 0.25);
+
+    foreach ($_fields as $f) {
+        $_f = swoole_string($f)->trim()->split(':');
+        $name = $_f->get(0)->trim()->toString();
+        $type = $_f->get(1)->trim();
+
+        switch ($type) {
+        case 'i':
+        case 'int':
+            $table->column($name, Swoole\Table::TYPE_INT);
+            break;
+        case 'f':
+        case 'float':
+            $table->column($name, Swoole\Table::TYPE_FLOAT);
+            break;
+        case 's':
+        case 'string':
+            if ($_f->count() < 3) {
+                throw new RuntimeException('need to give string length');
+            }
+            $length = intval($_f->get(2)->trim()->toString());
+            if ($length <= 0) {
+                throw new RuntimeException("invalid string length[{$length}]");
+            }
+            $table->column($name, Swoole\Table::TYPE_STRING, $length);
+            break;
+        default:
+            throw new RuntimeException("unknown field type[{$type}]");
+            break;
+        }
+    }
+
+    if (!$table->create()) {
+        throw new RuntimeException('failed to create table');
+    }
+
+    return $table;
+}
+
 function swoole_array_list(...$arrray): Swoole\ArrayObject
 {
     return new Swoole\ArrayObject($arrray);
