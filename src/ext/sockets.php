@@ -202,7 +202,8 @@ function swoole_socket_last_error(Socket $socket = null): int
     return swoole_last_error();
 }
 
-function swoole_socket_set_block(Socket $socket ) {
+function swoole_socket_set_block(Socket $socket)
+{
     if (isset($socket->__ext_sockets_nonblock) and $socket->__ext_sockets_nonblock) {
         $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, $socket->__ext_sockets_timeout);
     }
@@ -210,7 +211,8 @@ function swoole_socket_set_block(Socket $socket ) {
     return true;
 }
 
-function swoole_socket_set_nonblock(Socket $socket ) {
+function swoole_socket_set_nonblock(Socket $socket)
+{
     if (isset($socket->__ext_sockets_nonblock) and $socket->__ext_sockets_nonblock) {
         return true;
     }
