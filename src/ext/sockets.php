@@ -21,22 +21,6 @@ function swoole_socket_connect(Socket $socket, string $address, int $port = 0)
     return $socket->connect($address, $port);
 }
 
-function swoole_socket_write(Socket $socket, string $buffer, int $length = 0): int
-{
-    if ($length > 0 and $length < strlen($buffer)) {
-        $buffer = substr($buffer, 0, $length);
-    }
-    return $socket->send($buffer);
-}
-
-function swoole_socket_send(Socket $socket, string $buf, int $len, int $flags): int
-{
-    if ($flags != 0) {
-        throw new RuntimeException("\$flags[{$flags}] is not supported");
-    }
-    return swoole_socket_write($socket, $buf, $len);
-}
-
 function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_READ)
 {
     if ($type != PHP_BINARY_READ) {
@@ -45,24 +29,78 @@ function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_
     return $socket->recv($length);
 }
 
-function swoole_socket_recv(Socket $socket, &$buf, int $len, int $flags)
+function swoole_socket_write(Socket $socket, string $buffer, int $length = 0): int
+{
+    if ($length > 0 and $length < strlen($buffer)) {
+        $buffer = substr($buffer, 0, $length);
+    }
+    return $socket->send($buffer);
+}
+
+function swoole_socket_send(Socket $socket, string $buffer, int $length, int $flags): int
+{
+    if ($flags != 0) {
+        throw new RuntimeException("\$flags[{$flags}] is not supported");
+    }
+    return swoole_socket_write($socket, $buffer, $length);
+}
+
+function swoole_socket_recv(Socket $socket, &$buffer, int $length, int $flags)
 {
     if ($flags & MSG_OOB) {
         throw new RuntimeException('$flags[MSG_OOB] is not supported');
     }
     if ($flags & MSG_PEEK) {
-        $buf = $socket->peek($len);
+        $buffer = $socket->peek($length);
     }
     $timeout = $flags & MSG_DONTWAIT ? 0.001 : 0;
     if ($flags & MSG_WAITALL) {
-        $buf = $socket->recvAll($len, $timeout);
+        $buffer = $socket->recvAll($length, $timeout);
     } else {
-        $buf = $socket->recv($len, $timeout);
+        $buffer = $socket->recv($length, $timeout);
     }
-    if ($buf == false) {
+    if ($buffer === false) {
         return false;
     }
-    return strlen($buf);
+    return strlen($buffer);
+}
+
+function swoole_socket_sendto(Socket $socket, string $buffer, int $length, int $flags, string $addr, int $port = 0)
+{
+    if ($flags != 0) {
+        throw new RuntimeException("\$flags[{$flags}] is not supported");
+    }
+    if ($socket->type != SOCK_DGRAM) {
+        throw new RuntimeException('only supports dgram type socket');
+    }
+    if ($length > 0 and $length < strlen($buffer)) {
+        $buffer = substr($buffer, 0, $length);
+    }
+    return $socket->sendto($addr, $port, $buffer);
+}
+
+function swoole_socket_recvfrom(Socket $socket, &$buffer, int $length, int $flags, &$name, &$port)
+{
+    if ($flags != 0) {
+        throw new RuntimeException("\$flags[{$flags}] is not supported");
+    }
+    if ($socket->type != SOCK_DGRAM) {
+        throw new RuntimeException('only supports dgram type socket');
+    }
+    $data = $socket->recvfrom($peer);
+    if ($data === false) {
+        return false;
+    }
+    $name = $peer['address'];
+    if (func_num_args() == 6) {
+        $port = $peer['port'];
+    }
+    if ($length < strlen($data)) {
+        $buffer = substr($data, 0, $length);
+    } else {
+        $buffer = $data;
+    }
+    return 100;
 }
 
 function swoole_socket_bind(Socket $socket, string $address, int $port = 0): bool
@@ -128,14 +166,19 @@ function swoole_socket_setopt(Socket $socket, int $level, int $optname, $optval)
     return $socket->setOption($level, $optname, $optval);
 }
 
-function socket_get_option(Socket $socket, int $level, int $optname)
+function swoole_socket_get_option(Socket $socket, int $level, int $optname)
 {
     return $socket->getOption($level, $optname);
 }
 
-function socket_getopt(Socket $socket, int $level, int $optname)
+function swoole_socket_getopt(Socket $socket, int $level, int $optname)
 {
     return $socket->getOption($level, $optname);
+}
+
+function swoole_socket_shutdown(Socket $socket, int $how = 2)
+{
+    $socket->shutdown($how);
 }
 
 function swoole_socket_close(Socket $socket)
