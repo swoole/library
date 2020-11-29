@@ -1,5 +1,4 @@
 <?php
-
 /**
  * This file is part of Swoole.
  *
@@ -7,6 +6,7 @@
  * @contact  team@swoole.com
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
+
 declare(strict_types=1);
 
 use Swoole\Coroutine\Socket;
@@ -32,7 +32,7 @@ function swoole_socket_write(Socket $socket, string $buffer, int $length = 0): i
 function swoole_socket_send(Socket $socket, string $buf, int $len, int $flags): int
 {
     if ($flags != 0) {
-        throw new RuntimeException("\$flags[$flags] is not supported");
+        throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
     return swoole_socket_write($socket, $buf, $len);
 }
@@ -40,7 +40,7 @@ function swoole_socket_send(Socket $socket, string $buf, int $len, int $flags): 
 function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_READ)
 {
     if ($type != PHP_BINARY_READ) {
-        throw new RuntimeException("PHP_NORMAL_READ type is not supported");
+        throw new RuntimeException('PHP_NORMAL_READ type is not supported');
     }
     return $socket->recv($length);
 }
@@ -48,7 +48,7 @@ function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_
 function swoole_socket_recv(Socket $socket, &$buf, int $len, int $flags)
 {
     if ($flags & MSG_OOB) {
-        throw new RuntimeException("\$flags[MSG_OOB] is not supported");
+        throw new RuntimeException('$flags[MSG_OOB] is not supported');
     }
     if ($flags & MSG_PEEK) {
         $buf = $socket->peek($len);
@@ -61,9 +61,8 @@ function swoole_socket_recv(Socket $socket, &$buf, int $len, int $flags)
     }
     if ($buf == false) {
         return false;
-    } else {
-        return strlen($buf);
     }
+    return strlen($buf);
 }
 
 function swoole_socket_bind(Socket $socket, string $address, int $port = 0): bool
