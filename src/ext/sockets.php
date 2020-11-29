@@ -118,6 +118,26 @@ function swoole_socket_getsockname(Socket $socket, &$address, &$port = null)
     return true;
 }
 
+function swoole_socket_set_option(Socket $socket, int $level, int $optname, $optval): bool
+{
+    return $socket->setOption($level, $optname, $optval);
+}
+
+function swoole_socket_setopt(Socket $socket, int $level, int $optname, $optval): bool
+{
+    return $socket->setOption($level, $optname, $optval);
+}
+
+function socket_get_option(Socket $socket, int $level, int $optname)
+{
+    return $socket->getOption($level, $optname);
+}
+
+function socket_getopt(Socket $socket, int $level, int $optname)
+{
+    return $socket->getOption($level, $optname);
+}
+
 function swoole_socket_close(Socket $socket)
 {
     $socket->close();
