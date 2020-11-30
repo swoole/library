@@ -62,6 +62,8 @@ class Helper
         'enable_delay_receive' => true,
         'enable_reuse_port' => true,
         'task_use_object' => true,
+        'task_object' => true,
+        'event_object' => true,
         'task_enable_coroutine' => true,
         'task_worker_num' => true,
         'task_ipc_mode' => true,
