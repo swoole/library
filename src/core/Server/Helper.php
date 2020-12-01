@@ -101,6 +101,8 @@ class Helper
     ];
 
     const PORT_OPTIONS = [
+        'ssl_cert_file' => true,
+        'ssl_key_file' => true,
         'backlog' => true,
         'socket_buffer_size' => true,
         'kernel_socket_recv_buffer_size' => true,
@@ -135,8 +137,6 @@ class Helper
         'package_body_start' => true,
         'package_length_func' => true,
         'package_max_length' => true,
-        'ssl_cert_file' => true,
-        'ssl_key_file' => true,
         'ssl_compress' => true,
         'ssl_protocols' => true,
         'ssl_verify_peer' => true,
@@ -147,6 +147,7 @@ class Helper
         'ssl_ciphers' => true,
         'ssl_ecdh_curve' => true,
         'ssl_dhparam' => true,
+        'ssl_sni_certs' => true,
     ];
 
     const HELPER_OPTIONS = [
