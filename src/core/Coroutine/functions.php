@@ -53,3 +53,67 @@ function map(array $list, callable $fn, float $timeout = -1): array
     $wg->wait($timeout);
     return $list;
 }
+
+function get_debug_print_backtrace($traces, $traces_to_ignore = 1)
+{
+    $ret = array();
+    foreach ($traces as $i => $call) {
+        if ($i < $traces_to_ignore) {
+            continue;
+        }
+
+        $object = '';
+        if (isset($call['class'])) {
+            $object = $call['class'] . $call['type'];
+            if (is_array($call['args'])) {
+                foreach ($call['args'] as &$arg) {
+                    get_arg($arg);
+                }
+            }
+        }
+        $ret[] = '#' . str_pad(strval($i - $traces_to_ignore), 3, ' ')
+            . $object . $call['function'] . '(' . implode(', ', $call['args'])
+            . ') called at [' . $call['file'] . ':' . $call['line'] . ']';
+    }
+
+    return implode("\n", $ret);
+}
+
+function get_arg(&$arg)
+{
+    if (is_object($arg)) {
+        $arr = (array)$arg;
+        $args = array();
+        foreach ($arr as $key => $value) {
+            if (strpos($key, chr(0)) !== false) {
+                $key = '';    // Private variable found
+            }
+            $args[] = '[' . $key . '] => ' . get_arg($value);
+        }
+
+        $arg = get_class($arg) . ' Object (' . implode(',', $args) . ')';
+    }
+}
+
+function deadlock_detect()
+{
+    $all_coroutines = Coroutine::listCoroutines();
+    $count = Coroutine::stats()['coroutine_num'];
+    echo
+    "\n===================================================================",
+    "\n [FATAL ERROR]: all coroutines (count: {$count}) are asleep - deadlock!",
+    "\n===================================================================\n";
+
+    $index = 0;
+    foreach ($all_coroutines as $cid) {
+        echo "\n [Coroutine-$cid]";
+        echo "\n--------------------------------------------------------------------\n";
+        echo get_debug_print_backtrace(Coroutine::getBackTrace($cid));
+        echo "\n\n";
+
+        //limit the number of maximum outputs
+        if ($index > 32) {
+            break;
+        }
+    }
+}
