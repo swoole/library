@@ -13,10 +13,6 @@ namespace Swoole\Coroutine;
 
 use Swoole\Coroutine;
 
-const IGNIRE_ARGS = true;
-const MAX_CALL_STACK = 32;
-const MAX_DETECT_CO = 32;
-
 function batch(array $tasks, float $timeout = -1): array
 {
     $wg = new WaitGroup(count($tasks));
@@ -67,16 +63,21 @@ function deadlock_check()
     "\n [FATAL ERROR]: all coroutines (count: {$count}) are asleep - deadlock!",
     "\n===================================================================\n";
 
-    $index = 0;
-    foreach ($all_coroutines as $cid) {
-        echo "\n [Coroutine-$cid]";
-        echo "\n--------------------------------------------------------------------\n";
-        echo Coroutine::printBackTrace($cid, IGNIRE_ARGS ? DEBUG_BACKTRACE_IGNORE_ARGS : 0, MAX_CALL_STACK);
-        echo "\n";
+    $options = Coroutine::getOptions();
+    if (empty($options['deadlock_check_disable_trace'])) {
+        $index = 0;
+        $limit = empty($options['deadlock_check_limit']) ? 32 : intval($options['deadlock_check_limit']);
+        $depth = empty($options['deadlock_check_depth']) ? 32 : intval($options['deadlock_check_depth']);
+        foreach ($all_coroutines as $cid) {
+            echo "\n [Coroutine-{$cid}]";
+            echo "\n--------------------------------------------------------------------\n";
+            echo Coroutine::printBackTrace($cid, DEBUG_BACKTRACE_IGNORE_ARGS, $depth);
+            echo "\n";
 
-        //limit the number of maximum outputs
-        if ($index > MAX_DETECT_CO) {
-            break;
+            //limit the number of maximum outputs
+            if ($index > $limit) {
+                break;
+            }
         }
     }
 }
