@@ -9,17 +9,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Setup Services
-        run: |
-          docker-compose up -d
-          docker ps -a
-          docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer install -n
-
       - name: Run Coding Style Checks
-        run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/php-cs-fixer fix --dry-run"
-
-      - name: Run Unit Tests
-        run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
+        run: docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.4 php-cs-fixer fix --dry-run
 
       - name: Run Syntax Checks
         run: |
@@ -27,3 +18,15 @@ jobs:
           docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.2 parallel-lint src
           docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.3 parallel-lint src
           docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.4 parallel-lint src
+
+      - name: Setup Services
+        run: |
+          docker-compose up -d
+          docker ps -a
+          docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer install -n
+
+      - name: Run Unit Tests
+        run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
+
+      - name: Stop and Remove Docker Containers
+        run: docker-compose down

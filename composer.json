@@ -20,10 +20,9 @@
         "ext-swoole": ">=4.4"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^2.16",
-        "phpunit/phpunit": "~9.0",
         "ext-curl": "*",
         "ext-sockets": "*",
+        "phpunit/phpunit": "~9.0",
         "swoole/ide-helper": "dev-master"
     },
     "suggest": {
