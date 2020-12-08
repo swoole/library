@@ -915,9 +915,11 @@ final class Handler
                 }
                 $redirectUri['path'] = $path . $location;
             }
-            foreach ((array) $uri as $k => $v) {
-                if (!in_array($k, ['path', 'query'])) {
-                    $redirectUri[$k] = $v;
+            if (is_array($uri)) {
+                foreach ($uri as $k => $v) {
+                    if (!in_array($k, ['path', 'query'])) {
+                        $redirectUri[$k] = $v;
+                    }
                 }
             }
         }
