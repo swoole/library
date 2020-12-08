@@ -36,6 +36,7 @@
             "src/core/Coroutine/functions.php",
             "src/std/exec.php",
             "src/ext/curl.php",
+            "src/ext/sockets.php",
             "src/functions.php",
             "src/alias.php",
             "src/alias_ns.php"
