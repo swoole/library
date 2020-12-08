@@ -89,6 +89,7 @@ return PhpCsFixer\Config::create()
     ->setFinder(
         PhpCsFixer\Finder::create()
             ->exclude(['html', 'vendor'])
+            ->notPath('tests/unit/Coroutine/BarrierTest.php')
             ->in(__DIR__)
     )
     ->setUsingCache(false);
