@@ -58,8 +58,7 @@ function deadlock_check()
 {
     $all_coroutines = Coroutine::listCoroutines();
     $count = Coroutine::stats()['coroutine_num'];
-    echo
-    "\n===================================================================",
+    echo "\n===================================================================",
     "\n [FATAL ERROR]: all coroutines (count: {$count}) are asleep - deadlock!",
     "\n===================================================================\n";
 
