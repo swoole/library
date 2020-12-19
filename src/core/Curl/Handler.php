@@ -340,7 +340,7 @@ final class Handler
             case CURLOPT_FILE:
             case CURLOPT_INFILE:
                 if (!is_resource($value)) {
-                    trigger_error(E_USER_WARNING, 'swoole_curl_setopt(): supplied argument is not a valid File-Handle resource');
+                    trigger_error('swoole_curl_setopt(): supplied argument is not a valid File-Handle resource', E_USER_WARNING);
                     return false;
                 }
                 break;
@@ -426,7 +426,7 @@ final class Handler
              * Ignore options
              */
             case CURLOPT_VERBOSE:
-                // trigger_error(E_USER_WARNING, 'swoole_curl_setopt(): CURLOPT_VERBOSE is not supported');
+                // trigger_error('swoole_curl_setopt(): CURLOPT_VERBOSE is not supported', E_USER_WARNING);
             case CURLOPT_SSLVERSION:
             case CURLOPT_NOSIGNAL:
             case CURLOPT_FRESH_CONNECT:
