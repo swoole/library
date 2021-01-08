@@ -1,6 +1,6 @@
 # Swoole Library
 
-[![Library Status](https://github.com/swoole/library/workflows/Tests/badge.svg)](https://github.com/swoole/library/actions)
+[![Library Status](https://github.com/swoole/library/workflows/Unit%20Tests/badge.svg)](https://github.com/swoole/library/actions)
 [![License](https://img.shields.io/badge/license-apache2-blue.svg)](LICENSE)
 
 Table of Contents
