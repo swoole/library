@@ -9,16 +9,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Run Coding Style Checks
-        run: docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.4 php-cs-fixer fix --dry-run
-
-      - name: Run Syntax Checks
-        run: |
-          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.1 parallel-lint src
-          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.2 parallel-lint src
-          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.3 parallel-lint src
-          docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php7.4 parallel-lint src
-
       - name: Setup Services
         run: |
           docker-compose up -d
