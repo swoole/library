@@ -30,7 +30,7 @@ jobs:
           docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:${{ matrix.swoole }}-php${{ matrix.php }}-dev composer install -n
 
       - name: Run Unit Tests
-        if: ${{ matrix.php != "7.1" }} && ${{ matrix.swoole != "4.5" }}
+        if: ${{ matrix.php != '7.1' }} && ${{ matrix.swoole != '4.5' }}
         run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit --process-isolation"
 
       - name: Stop and Remove Docker Containers
