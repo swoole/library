@@ -138,8 +138,9 @@ EOT,
                  * Unit tests run in the Swoole image, thus we can't get the PHP-FPM version directly when running tests.
                  * Here we we override expected HTTP header "X-Powered-By" with whatever returned from PHP-FPM.
                  */
-                $expectedHeaders['X-Powered-By'] = $response->getHeaders()['X-Powered-By'];
-                self::assertSame($expectedHeaders, $response->getHeaders(), $message);
+                $headers = $response->getHeaders();
+                $expectedHeaders['X-Powered-By'] = $headers['X-Powered-By'];
+                self::assertSame($expectedHeaders, $headers, $message);
             }
         );
     }
