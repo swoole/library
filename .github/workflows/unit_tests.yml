@@ -26,7 +26,7 @@ jobs:
           docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:php${{ matrix.php }}-dev composer install -n
 
       - name: Run Unit Tests
-        run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit --process-isolation"
+        run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
 
       - name: Stop and Remove Docker Containers
         run: docker-compose down
