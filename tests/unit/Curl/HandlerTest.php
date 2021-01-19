@@ -68,11 +68,7 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $ch = curl_init();
-            if (method_exists($this, 'assertMatchesRegularExpression')) {
-                self::assertMatchesRegularExpression('/Object\(\w+\) of type \(curl\)/', (string) $ch);
-            } else {
-                self::assertRegExp('/Object\(\w+\) of type \(curl\)/', (string) $ch);
-            }
+            self::assertRegExp('/Object\(\w+\) of type \(curl\)/', (string) $ch);
         });
     }
 
