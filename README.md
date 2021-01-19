@@ -35,8 +35,8 @@ Just new pull request (and we need unit tests for new features)
 
 ### Branches
 
-+ **master**: For Swoole 4.6. It supports PHP 7.2+.
-+ **4.5.x**: For Swoole 4.5. It supports PHP 7.1 to 7.4 only.
++ **master**: For Swoole 4.6, which supports PHP 7.2+.
++ **4.5.x**: For Swoole 4.5, which supports PHP 7.1+.
 
 ## Dockerized Local Development
 
