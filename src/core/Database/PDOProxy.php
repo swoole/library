@@ -55,9 +55,9 @@ class PDOProxy extends ObjectProxy
                 $errorInfo = $this->__object->errorInfo();
                 /* no more chances or non-IO failures */
                 if (
-                    !in_array($errorInfo[1], static::IO_ERRORS, true) ||
-                    $n === 0 ||
-                    $this->__object->inTransaction()
+                    !in_array($errorInfo[1], static::IO_ERRORS, true)
+                    || $n === 0
+                    || $this->__object->inTransaction()
                 ) {
                     $exception = new PDOException($errorInfo[2], $errorInfo[1]);
                     $exception->errorInfo = $errorInfo;
@@ -67,8 +67,8 @@ class PDOProxy extends ObjectProxy
                 continue;
             }
             if (
-                strcasecmp($name, 'prepare') === 0 ||
-                strcasecmp($name, 'query') === 0
+                strcasecmp($name, 'prepare') === 0
+                || strcasecmp($name, 'query') === 0
             ) {
                 $ret = new PDOStatementProxy($ret, $this);
             }

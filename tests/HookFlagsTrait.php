@@ -15,7 +15,7 @@ use Swoole\Runtime;
 
 trait HookFlagsTrait
 {
-    protected static int $flags;
+    protected static $flags;
 
     public static function setHookFlags(int $flags = SWOOLE_HOOK_ALL): void
     {

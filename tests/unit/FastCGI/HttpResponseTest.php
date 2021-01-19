@@ -37,13 +37,11 @@ class HttpResponseTest extends TestCase
                     'Content-Type' => 'text/html; charset=UTF-8',
                     'Link' => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                 ],
-                <<<EOT
-X-Powered-By: {$this->poweredBy}
+                "X-Powered-By: {$this->poweredBy}
 Content-Type: text/html; charset=UTF-8
-Link: <http://127.0.0.1/wp-json/>; rel="https://api.w.org/"
+Link: <http://127.0.0.1/wp-json/>; rel=\"https://api.w.org/\"
 
-Hello world!
-EOT,
+Hello world!",
                 'default headers from WordPress homepage',
             ],
             [
@@ -54,16 +52,14 @@ EOT,
                     'X-Foo4' => 'Bar4',
                     'X-Foo5' => 'Bar5',
                 ],
-                <<<'EOT'
-X-Foo0: Bar0
+                'X-Foo0: Bar0
 X-Foo1:Bar1
 X-Foo2 Bar2
 X-Foo3:Bar3 
  X-Foo4:Bar4
  X-Foo5:  Bar5 
 
-Hello world!
-EOT,
+Hello world!',
                 'test variations of HTTP headers',
             ],
         ];
@@ -150,41 +146,33 @@ EOT,
             [
                 400,
                 'Bad Request',
-                <<<'EOT'
-Status: 400 Bad Request
+                'Status: 400 Bad Request
 
-Hello world!
-EOT,
+Hello world!',
                 'test HTTP status overridden with reason phrase included',
             ],
             [
                 401,
                 'Unauthorized',
-                <<<'EOT'
-Status: 401
+                'Status: 401
 
-Hello world!
-EOT,
+Hello world!',
                 'test HTTP status overridden without reason phrase included',
             ],
             [
                 402,
                 ' Payment Required',
-                <<<'EOT'
-Status:  402  Payment Required  
+                'Status:  402  Payment Required  
 
-Hello world!
-EOT,
+Hello world!',
                 'test HTTP status overridden with reason phrase and extra spaces included',
             ],
             [
                 403,
                 'Forbidden',
-                <<<'EOT'
-Status:  403  
+                'Status:  403  
 
-Hello world!
-EOT,
+Hello world!',
                 'test HTTP status overridden with extra spaces included, but no reason phrase',
             ],
         ];

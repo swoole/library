@@ -1,5 +1,6 @@
 /.idea
 /.php_cs
+/.phplint-cache
 /.phpunit.result.cache
 /composer.lock
 /html/*
