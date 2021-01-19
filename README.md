@@ -8,7 +8,8 @@ Table of Contents
 
 * [How to Contribute](#how-to-contribute)
    * [Code Requirements](#code-requirements)
-* [Develop](#develop)
+* [Development](#development)
+   * [Branches](#branches)
 * [Dockerized Local Development](#dockerized-local-development)
 * [Examples](#examples)
    * [Examples of Database Connection Pool](#examples-of-database-connection-pool)
@@ -24,14 +25,18 @@ Just new pull request (and we need unit tests for new features)
 
 ### Code Requirements
 
-+ PHP 7.1+
 + [PSR1](https://www.php-fig.org/psr/psr-1/) and [PSR12](https://www.php-fig.org/psr/psr-12/)
 + Strict type
 
-## Develop
+## Development
 
 + [Document](https://wiki.swoole.com/#/library)
 + [Examples](https://github.com/swoole/library/tree/master/examples)
+
+### Branches
+
++ **master**: For Swoole 4.6. It supports PHP 7.2+.
++ **4.5.x**: For Swoole 4.5. It supports PHP 7.1 to 7.4 only.
 
 ## Dockerized Local Development
 
