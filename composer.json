@@ -22,7 +22,7 @@
     "require-dev": {
         "ext-curl": "*",
         "ext-sockets": "*",
-        "phpunit/phpunit": "~9.0",
+        "phpunit/phpunit": "~8.0",
         "swoole/ide-helper": "dev-master"
     },
     "suggest": {
