@@ -20,6 +20,7 @@ use Swoole\Tests\HookFlagsTrait;
  *
  * @internal
  * @coversNothing
+ * @runTestsInSeparateProcesses
  */
 class HandlerTest extends TestCase
 {
