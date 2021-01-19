@@ -3,6 +3,7 @@
 /.phplint-cache
 /.phpunit.result.cache
 /composer.lock
+/Dockerfile.bak
 /html/*
 /phpunit.xml
 /vendor
