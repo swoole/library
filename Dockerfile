@@ -1,4 +1,4 @@
-FROM phpswoole/swoole:4.5-php8.0
+FROM phpswoole/swoole
 
 RUN \
     pecl update-channels        && \
