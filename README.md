@@ -76,7 +76,7 @@ docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/redis/base.ph
 ### Examples of FastCGI Calls
 
 There is a fantastic example showing how to use Swoole as a proxy to serve a WordPress website using PHP-FPM. Just
-open URL _http://127.0.0.1_ in the browser and check what you see there. Source code of the example can be
+open URL _http://<span></span>127.0.0.1_ in the browser and check what you see there. Source code of the example can be
 found [here](https://github.com/swoole/library/blob/master/examples/fastcgi/proxy/wordpress.php).
 
 Here are some more examples to make FastCGI calls to PHP-FPM:
