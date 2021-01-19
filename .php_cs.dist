@@ -85,11 +85,11 @@ return PhpCsFixer\Config::create()
         'standardize_increment' => false,
         'standardize_not_equals' => true,
         'multiline_comment_opening_closing' => true,
+        'lambda_not_used_import' => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
             ->exclude(['html', 'vendor'])
-            ->notPath('tests/unit/Coroutine/BarrierTest.php')
             ->in(__DIR__)
     )
     ->setUsingCache(false);
