@@ -9,9 +9,8 @@ jobs:
       fail-fast: true
       matrix:
         php: ["7.1", "7.2", "7.3", "7.4", "8.0"]
-        swoole: ["4.5"]
 
-    name: Unit Tests Under PHP ${{ matrix.php }} And Swoole ${{ matrix.swoole }}
+    name: Under PHP ${{ matrix.php }}
 
     steps:
       - name: Checkout
@@ -19,12 +18,12 @@ jobs:
 
       - name: Setup Services
         run: |
-          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:${{ matrix.swoole }}-php${{ matrix.php }}/g" ./Dockerfile
+          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:4.5-php${{ matrix.php }}/g" ./Dockerfile
           docker-compose up -d
           docker ps -a
           docker exec -t $(docker ps -qf "name=app") bash -c "php -v"
           docker exec -t $(docker ps -qf "name=app") bash -c "php --ri swoole"
-          docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:${{ matrix.swoole }}-php${{ matrix.php }}-dev composer install -n
+          docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:4.5-php${{ matrix.php }}-dev composer install -n
 
       - name: Run Unit Tests
         run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
