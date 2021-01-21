@@ -24,7 +24,7 @@ function swoole_socket_connect(Socket $socket, string $address, int $port = 0)
 function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_READ)
 {
     if ($type != PHP_BINARY_READ) {
-        throw new RuntimeException('PHP_NORMAL_READ type is not supported');
+        return $socket->recvLine($length);
     }
     return $socket->recv($length);
 }
