@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Co;
 
+use Swoole\Coroutine;
+
 if (SWOOLE_USE_SHORTNAME) {
     function run(callable $fn, ...$args)
     {
@@ -19,6 +21,11 @@ if (SWOOLE_USE_SHORTNAME) {
 
     function go(callable $fn, ...$args)
     {
-        return \Swoole\Coroutine::create($fn, ...$args);
+        return Coroutine::create($fn, ...$args);
+    }
+
+    function defer(callable $fn)
+    {
+        Coroutine::defer($fn);
     }
 }

@@ -29,6 +29,11 @@ function go(callable $fn, ...$args)
     Coroutine::create($fn, ...$args);
 }
 
+function defer(callable $fn)
+{
+    Coroutine::defer($fn);
+}
+
 function batch(array $tasks, float $timeout = -1): array
 {
     $wg = new WaitGroup(count($tasks));
