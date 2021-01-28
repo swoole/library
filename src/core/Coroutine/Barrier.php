@@ -45,9 +45,6 @@ class Barrier
     }
 
     /**
-     * @param Barrier $barrier
-     * @param float|int $timeout
-     *
      * @throws Exception
      */
     public static function wait(Barrier &$barrier, float $timeout = -1)
@@ -57,7 +54,7 @@ class Barrier
         }
         $cid = Coroutine::getCid();
         $barrier->cid = $cid;
-        if ($timeout > 0 && ($timeout_ms = (int)($timeout * 1000)) > 0) {
+        if ($timeout > 0 && ($timeout_ms = (int) ($timeout * 1000)) > 0) {
             $barrier->timer = Timer::after($timeout_ms, function () use ($cid) {
                 self::$cancel_list[$cid] = true;
                 Coroutine::resume($cid);
