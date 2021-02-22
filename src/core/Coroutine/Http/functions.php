@@ -14,6 +14,7 @@ namespace Swoole\Coroutine\Http;
 use Swoole\Coroutine\Http\Client\Exception;
 
 /**
+ * @param mixed $data
  * @throws Exception
  * @return mixed
  */
@@ -51,6 +52,7 @@ function request(string $url, string $method, $data = null, array $options = nul
 }
 
 /**
+ * @param mixed $data
  * @throws Exception
  * @return Client|false|mixed
  */
