@@ -23,6 +23,9 @@ use Swoole\Coroutine\Http\Client\Exception;
 function request($url, $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
 {
     $info = parse_url($url);
+    if (empty($info['scheme'])) {
+        throw new Exception('The URL given is illegal');
+    }
     if ($info['scheme'] == 'http') {
         $client = new Client($info['host'], swoole_array_default_value($info, 'port', 80), false);
     } elseif ($info['scheme'] == 'https') {
@@ -43,7 +46,7 @@ function request($url, $method, $data = null, array $options = null, array $head
     if (is_array($cookies)) {
         $client->setCookies($options);
     }
-    $request_url = $info['path'];
+    $request_url = swoole_array_default_value($info, 'path', '/');
     if (!empty($info['query'])) {
         $request_url .= '?' . $info['query'];
     }
