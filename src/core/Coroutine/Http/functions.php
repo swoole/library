@@ -43,7 +43,11 @@ function request($url, $method, $data = null, array $options = null, array $head
     if (is_array($cookies)) {
         $client->setCookies($options);
     }
-    if ($client->get($info['path'] . '?' . $info['query'])) {
+    $request_url = $info['path'];
+    if (!empty($info['query'])) {
+        $request_url .= '?' . $info['query'];
+    }
+    if ($client->execute($request_url)) {
         return $client;
     }
     return false;
