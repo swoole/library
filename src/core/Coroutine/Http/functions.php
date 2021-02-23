@@ -41,7 +41,7 @@ function request(string $url, string $method, $data = null, array $options = nul
     if (is_array($cookies)) {
         $client->setCookies($options);
     }
-    $request_url = $info['path'];
+    $request_url = swoole_array_default_value($info, 'path', '/');
     if (!empty($info['query'])) {
         $request_url .= '?' . $info['query'];
     }
