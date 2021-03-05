@@ -27,9 +27,9 @@ function request($url, $method, $data = null, array $options = null, array $head
         throw new Exception('The URL given is illegal');
     }
     if ($info['scheme'] == 'http') {
-        $client = new Client($info['host'], swoole_array_default_value($info, 'port', 0), false);
+        $client = new Client($info['host'], swoole_array_default_value($info, 'port', 80), false);
     } elseif ($info['scheme'] == 'https') {
-        $client = new Client($info['host'], swoole_array_default_value($info, 'port', 0), true);
+        $client = new Client($info['host'], swoole_array_default_value($info, 'port', 443), true);
     } else {
         throw new Exception('unknown scheme "' . $info['scheme'] . '"');
     }

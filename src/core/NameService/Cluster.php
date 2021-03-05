@@ -13,7 +13,7 @@ class Cluster
 
     public function pop(bool $with_port)
     {
-        if ($this->nodes) {
+        if (empty($this->nodes)) {
             return false;
         }
         $index = array_rand($this->nodes, 1);
