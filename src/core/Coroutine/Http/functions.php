@@ -14,13 +14,11 @@ namespace Swoole\Coroutine\Http;
 use Swoole\Coroutine\Http\Client\Exception;
 
 /**
- * @param $url
- * @param $data
- * @param mixed $method
+ * @param mixed $data
  * @throws Exception
  * @return mixed
  */
-function request($url, $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
+function request(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
 {
     $info = parse_url($url);
     if (empty($info['scheme'])) {
@@ -57,22 +55,20 @@ function request($url, $method, $data = null, array $options = null, array $head
 }
 
 /**
- * @param $url
- * @param $data
+ * @param mixed $data
  * @throws Exception
  * @return Client|false|mixed
  */
-function post($url, $data, array $options = null, array $headers = null, array $cookies = null)
+function post(string $url, $data, array $options = null, array $headers = null, array $cookies = null)
 {
     return request($url, 'POST', $data, $options, $headers, $cookies);
 }
 
 /**
- * @param $url
  * @throws Exception
  * @return Client|false|mixed
  */
-function get($url, array $options = null, array $headers = null, array $cookies = null)
+function get(string $url, array $options = null, array $headers = null, array $cookies = null)
 {
     return request($url, 'GET', null, $options, $headers, $cookies);
 }
