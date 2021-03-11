@@ -33,6 +33,7 @@ class WaitGroupTest extends TestCase
                     $wg->done();
                 });
             }
+            $this->assertEquals($N, $wg->count());
             $wg->wait();
             $et = microtime(true);
 
