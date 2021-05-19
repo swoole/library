@@ -54,45 +54,15 @@ class Constant
     public const EVENT_ERROR = 'error';
 
     /* {{{ OPTION */
-    public const OPTION_DEBUG_MODE = 'debug_mode';
+    public const OPTION_ENABLE_SIGNALFD = 'enable_signalfd';
 
-    public const OPTION_TRACE_FLAGS = 'trace_flags';
-
-    public const OPTION_LOG_FILE = 'log_file';
-
-    public const OPTION_LOG_LEVEL = 'log_level';
-
-    public const OPTION_LOG_DATE_FORMAT = 'log_date_format';
-
-    public const OPTION_LOG_DATE_WITH_MICROSECONDS = 'log_date_with_microseconds';
-
-    public const OPTION_LOG_ROTATION = 'log_rotation';
-
-    public const OPTION_DISPLAY_ERRORS = 'display_errors';
-
-    public const OPTION_DNS_SERVER = 'dns_server';
-
-    public const OPTION_SOCKET_DNS_TIMEOUT = 'socket_dns_timeout';
-
-    public const OPTION_SOCKET_CONNECT_TIMEOUT = 'socket_connect_timeout';
-
-    public const OPTION_SOCKET_WRITE_TIMEOUT = 'socket_write_timeout';
-
-    public const OPTION_SOCKET_SEND_TIMEOUT = 'socket_send_timeout';
-
-    public const OPTION_SOCKET_READ_TIMEOUT = 'socket_read_timeout';
-
-    public const OPTION_SOCKET_RECV_TIMEOUT = 'socket_recv_timeout';
+    public const OPTION_DNS_CACHE_REFRESH_TIME = 'dns_cache_refresh_time';
 
     public const OPTION_SOCKET_BUFFER_SIZE = 'socket_buffer_size';
 
-    public const OPTION_SOCKET_TIMEOUT = 'socket_timeout';
+    public const OPTION_SOCKET_SEND_TIMEOUT = 'socket_send_timeout';
 
-    public const OPTION_ENABLE_SIGNALFD = 'enable_signalfd';
-
-    public const OPTION_WAIT_SIGNAL = 'wait_signal';
-
-    public const OPTION_DNS_CACHE_REFRESH_TIME = 'dns_cache_refresh_time';
+    public const OPTION_LOG_LEVEL = 'log_level';
 
     public const OPTION_THREAD_NUM = 'thread_num';
 
@@ -100,13 +70,19 @@ class Constant
 
     public const OPTION_MAX_THREAD_NUM = 'max_thread_num';
 
+    public const OPTION_DISPLAY_ERRORS = 'display_errors';
+
     public const OPTION_SOCKET_DONTWAIT = 'socket_dontwait';
 
     public const OPTION_DNS_LOOKUP_RANDOM = 'dns_lookup_random';
 
+    public const OPTION_DNS_SERVER = 'dns_server';
+
     public const OPTION_USE_ASYNC_RESOLVER = 'use_async_resolver';
 
     public const OPTION_ENABLE_COROUTINE = 'enable_coroutine';
+
+    public const OPTION_ENABLE_REUSE_PORT = 'enable_reuse_port';
 
     public const OPTION_SSL_METHOD = 'ssl_method';
 
@@ -200,6 +176,16 @@ class Constant
 
     public const OPTION_STACK_SIZE = 'stack_size';
 
+    public const OPTION_SOCKET_CONNECT_TIMEOUT = 'socket_connect_timeout';
+
+    public const OPTION_SOCKET_TIMEOUT = 'socket_timeout';
+
+    public const OPTION_SOCKET_READ_TIMEOUT = 'socket_read_timeout';
+
+    public const OPTION_SOCKET_WRITE_TIMEOUT = 'socket_write_timeout';
+
+    public const OPTION_TRACE_FLAGS = 'trace_flags';
+
     public const OPTION_DNS_CACHE_EXPIRE = 'dns_cache_expire';
 
     public const OPTION_DNS_CACHE_CAPACITY = 'dns_cache_capacity';
@@ -215,8 +201,6 @@ class Constant
     public const OPTION_RECONNECT = 'reconnect';
 
     public const OPTION_DEFER = 'defer';
-
-    public const OPTION_LOWERCASE_HEADER = 'lowercase_header';
 
     public const OPTION_KEEP_ALIVE = 'keep_alive';
 
@@ -266,6 +250,8 @@ class Constant
 
     public const OPTION_DAEMONIZE = 'daemonize';
 
+    public const OPTION_DEBUG_MODE = 'debug_mode';
+
     public const OPTION_PID_FILE = 'pid_file';
 
     public const OPTION_REACTOR_NUM = 'reactor_num';
@@ -275,8 +261,6 @@ class Constant
     public const OPTION_WORKER_NUM = 'worker_num';
 
     public const OPTION_MAX_WAIT_TIME = 'max_wait_time';
-
-    public const OPTION_MAX_QUEUED_BYTES = 'max_queued_bytes';
 
     public const OPTION_MAX_CORO_NUM = 'max_coro_num';
 
@@ -288,13 +272,13 @@ class Constant
 
     public const OPTION_DISPATCH_FUNC = 'dispatch_func';
 
+    public const OPTION_LOG_FILE = 'log_file';
+
     public const OPTION_DISCARD_TIMEOUT_REQUEST = 'discard_timeout_request';
 
     public const OPTION_ENABLE_UNSAFE_EVENT = 'enable_unsafe_event';
 
     public const OPTION_ENABLE_DELAY_RECEIVE = 'enable_delay_receive';
-
-    public const OPTION_ENABLE_REUSE_PORT = 'enable_reuse_port';
 
     public const OPTION_TASK_USE_OBJECT = 'task_use_object';
 
@@ -332,17 +316,9 @@ class Constant
 
     public const OPTION_DOCUMENT_ROOT = 'document_root';
 
-    public const OPTION_HTTP_AUTOINDEX = 'http_autoindex';
-
-    public const OPTION_HTTP_INDEX_FILES = 'http_index_files';
-
     public const OPTION_STATIC_HANDLER_LOCATIONS = 'static_handler_locations';
 
-    public const OPTION_INPUT_BUFFER_SIZE = 'input_buffer_size';
-
     public const OPTION_BUFFER_INPUT_SIZE = 'buffer_input_size';
-
-    public const OPTION_OUTPUT_BUFFER_SIZE = 'output_buffer_size';
 
     public const OPTION_BUFFER_OUTPUT_SIZE = 'buffer_output_size';
 
@@ -376,8 +352,6 @@ class Constant
 
     public const OPTION_TCP_KEEPCOUNT = 'tcp_keepcount';
 
-    public const OPTION_TCP_USER_TIMEOUT = 'tcp_user_timeout';
-
     public const OPTION_TCP_FASTOPEN = 'tcp_fastopen';
 
     public const OPTION_PACKAGE_BODY_START = 'package_body_start';
@@ -393,8 +367,6 @@ class Constant
     public const OPTION_SSL_DHPARAM = 'ssl_dhparam';
 
     public const OPTION_OPEN_SSL = 'open_ssl';
-
-    public const OPTION_OPEN_FASTCGI_PROTOCOL = 'open_fastcgi_protocol';
 
     /* }}} OPTION */
 }
