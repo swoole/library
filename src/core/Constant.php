@@ -13,43 +13,56 @@ namespace Swoole;
 
 class Constant
 {
-    public const EVENT_RECEIVE = 'receive';
+    /* {{{ EVENT */
+    public const EVENT_START = 'start';
 
-    public const EVENT_CONNECT = 'connect';
+    public const EVENT_SHUTDOWN = 'shutdown';
 
-    public const EVENT_CLOSE = 'close';
+    public const EVENT_WORKERSTART = 'workerStart';
 
-    public const EVENT_PACKET = 'packet';
+    public const EVENT_WORKERSTOP = 'workerStop';
 
-    public const EVENT_REQUEST = 'request';
+    public const EVENT_BEFORERELOAD = 'beforeReload';
 
-    public const EVENT_MESSAGE = 'message';
-
-    public const EVENT_OPEN = 'open';
-
-    public const EVENT_HANDSHAKE = 'handshake';
+    public const EVENT_AFTERRELOAD = 'afterReload';
 
     public const EVENT_TASK = 'task';
 
     public const EVENT_FINISH = 'finish';
 
-    public const EVENT_START = 'start';
+    public const EVENT_WORKEREXIT = 'workerExit';
 
-    public const EVENT_SHUTDOWN = 'shutdown';
+    public const EVENT_WORKERERROR = 'workerError';
 
-    public const EVENT_WORKER_START = 'workerStart';
+    public const EVENT_MANAGERSTART = 'managerStart';
 
-    public const EVENT_WORKER_EXIT = 'workerExit';
+    public const EVENT_MANAGERSTOP = 'managerStop';
 
-    public const EVENT_WORKER_ERROR = 'workerError';
+    public const EVENT_PIPEMESSAGE = 'pipeMessage';
 
-    public const EVENT_WORKER_STOP = 'workerStop';
+    public const EVENT_CONNECT = 'connect';
 
-    public const EVENT_PIPE_MESSAGE = 'pipeMessage';
+    public const EVENT_RECEIVE = 'receive';
 
-    public const EVENT_MANAGER_START = 'managerStart';
+    public const EVENT_CLOSE = 'close';
 
-    public const EVENT_MANAGER_STOP = 'managerStop';
+    public const EVENT_PACKET = 'packet';
+
+    public const EVENT_BUFFERFULL = 'bufferFull';
+
+    public const EVENT_BUFFEREMPTY = 'bufferEmpty';
+
+    public const EVENT_REQUEST = 'request';
+
+    public const EVENT_HANDSHAKE = 'handShake';
+
+    public const EVENT_OPEN = 'open';
+
+    public const EVENT_MESSAGE = 'message';
+
+    public const EVENT_DISCONNECT = 'disconnect';
+
+    /* }}} EVENT */
 
     public const EVENT_ERROR = 'error';
 
