@@ -18,27 +18,27 @@ class Constant
 
     public const EVENT_SHUTDOWN = 'shutdown';
 
-    public const EVENT_WORKERSTART = 'workerStart';
+    public const EVENT_WORKER_START = 'workerStart';
 
-    public const EVENT_WORKERSTOP = 'workerStop';
+    public const EVENT_WORKER_STOP = 'workerStop';
 
-    public const EVENT_BEFORERELOAD = 'beforeReload';
+    public const EVENT_BEFORE_RELOAD = 'beforeReload';
 
-    public const EVENT_AFTERRELOAD = 'afterReload';
+    public const EVENT_AFTER_RELOAD = 'afterReload';
 
     public const EVENT_TASK = 'task';
 
     public const EVENT_FINISH = 'finish';
 
-    public const EVENT_WORKEREXIT = 'workerExit';
+    public const EVENT_WORKER_EXIT = 'workerExit';
 
-    public const EVENT_WORKERERROR = 'workerError';
+    public const EVENT_WORKER_ERROR = 'workerError';
 
-    public const EVENT_MANAGERSTART = 'managerStart';
+    public const EVENT_MANAGER_START = 'managerStart';
 
-    public const EVENT_MANAGERSTOP = 'managerStop';
+    public const EVENT_MANAGER_STOP = 'managerStop';
 
-    public const EVENT_PIPEMESSAGE = 'pipeMessage';
+    public const EVENT_PIPE_MESSAGE = 'pipeMessage';
 
     public const EVENT_CONNECT = 'connect';
 
@@ -48,13 +48,13 @@ class Constant
 
     public const EVENT_PACKET = 'packet';
 
-    public const EVENT_BUFFERFULL = 'bufferFull';
+    public const EVENT_BUFFER_FULL = 'bufferFull';
 
-    public const EVENT_BUFFEREMPTY = 'bufferEmpty';
+    public const EVENT_BUFFER_EMPTY = 'bufferEmpty';
 
     public const EVENT_REQUEST = 'request';
 
-    public const EVENT_HANDSHAKE = 'handShake';
+    public const EVENT_HAND_SHAKE = 'handShake';
 
     public const EVENT_OPEN = 'open';
 
