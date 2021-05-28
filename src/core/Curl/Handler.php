@@ -223,7 +223,7 @@ final class Handler
             if (!$this->hasHeader('Host')) {
                 $this->setHeader('Host', $host);
             }
-            $this->urlInfo['host'] = $host = $this->resolve[$host][$port] ?: $host;
+            $this->urlInfo['host'] = $host = $this->resolve[$host][$port] ?? null ?: $host;
         }
         $this->client = new Client($host, $port, $urlInfo['scheme'] === 'https');
     }
@@ -428,7 +428,7 @@ final class Handler
                 break;
             case CURLOPT_RESOLVE:
                 foreach ((array) $value as $resolve) {
-                    $tmpResolve = explode(':', $resolve);
+                    $tmpResolve = explode(':', $resolve, 3);
                     $host = $tmpResolve[0] ?? '';
                     $port = $tmpResolve[1] ?? 0;
                     $ip = $tmpResolve[2] ?? '';
