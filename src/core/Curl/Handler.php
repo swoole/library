@@ -217,7 +217,15 @@ final class Handler
         if ($urlInfo === null) {
             $urlInfo = $this->urlInfo;
         }
-        $this->client = new Client($urlInfo['host'], $urlInfo['port'], $urlInfo['scheme'] === 'https');
+        $host = $urlInfo['host'];
+        $port = $urlInfo['port'];
+        if (isset($this->resolve[$host])) {
+            if (!$this->hasHeader('Host')) {
+                $this->setHeader('Host', $host);
+            }
+            $this->urlInfo['host'] = $host = $this->resolve[$host][$port] ?: $host;
+        }
+        $this->client = new Client($host, $port, $urlInfo['scheme'] === 'https');
     }
 
     private function getUrl(): string
@@ -425,14 +433,6 @@ final class Handler
                     $port = $tmpResolve[1] ?? 0;
                     $ip = $tmpResolve[2] ?? '';
                     $this->resolve[$host][$port] = $ip;
-                }
-                $host = $this->urlInfo['host'];
-                $port = $this->urlInfo['port'];
-                if (isset($this->resolve[$host])) {
-                    if (!$this->hasHeader('Host')) {
-                        $this->setHeader('Host', $host);
-                    }
-                    $this->urlInfo['host'] = $this->resolve[$host][$port] ?: $host;
                 }
                 break;
             case CURLOPT_IPRESOLVE:
