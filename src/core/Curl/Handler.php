@@ -303,7 +303,7 @@ final class Handler
     private function setError($code, $msg = ''): void
     {
         $this->errCode = $code;
-        $this->errMsg = $msg ? $msg : curl_strerror($code);
+        $this->errMsg = $msg ?: curl_strerror($code);
     }
 
     private function hasHeader(string $headerName): bool
@@ -445,6 +445,7 @@ final class Handler
             case CURLOPT_CERTINFO:
             case CURLOPT_HEADEROPT:
             case CURLOPT_PROXYHEADER:
+            case CURLOPT_RESOLVE:
                 break;
             /*
              * SSL

@@ -13,3 +13,4 @@ define('SWOOLE_LIBRARY', true);
 
 !defined('CURLOPT_HEADEROPT') && define('CURLOPT_HEADEROPT', 229);
 !defined('CURLOPT_PROXYHEADER') && define('CURLOPT_PROXYHEADER', 10228);
+!defined('CURLOPT_RESOLVE') && define('CURLOPT_RESOLVE', 10203);
