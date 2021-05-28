@@ -131,4 +131,29 @@ class HandlerTest extends TestCase
             self::assertTrue($res);
         });
     }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testResolve()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = Coroutine::gethostbyname($host);
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}"]);
+
+            $data = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            curl_close($ch);
+            $body = json_decode($data, true);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            self::assertEquals($body['url'], $url);
+            self::assertEquals($ip, $httpPrimaryIp);
+        });
+    }
 }

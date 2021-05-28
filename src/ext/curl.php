@@ -63,6 +63,8 @@ function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
                 return $info['redirect_time'];
             case CURLINFO_HEADER_SIZE:
                 return $info['header_size'];
+            case CURLINFO_PRIMARY_IP:
+                return $info['primary_ip'];
             default:
                 return null;
         }

@@ -129,6 +129,8 @@ final class Handler
 
     private $cookieJar = '';
 
+    private $resolve = [];
+
     public function __construct(string $url = '')
     {
         if ($url) {
@@ -266,6 +268,10 @@ final class Handler
         if ($scheme !== 'http' and $scheme !== 'https') {
             $this->setError(CURLE_UNSUPPORTED_PROTOCOL, "Protocol \"{$scheme}\" not supported or disabled in libcurl");
             return false;
+        }
+        if ($this->info['primary_ip'] !== '') {
+            /* keep same with cURL, primary_ip has the highest priority */
+            $urlInfo['host'] = $this->info['primary_ip'];
         }
         $host = $urlInfo['host'];
         if ($this->info['primary_port'] !== 0) {
@@ -412,6 +418,23 @@ final class Handler
                 $this->nobody = boolval($value);
                 $this->method = 'HEAD';
                 break;
+            case CURLOPT_RESOLVE:
+                foreach ((array) $value as $resolve) {
+                    $tmpResolve = explode(':', $resolve);
+                    $host = $tmpResolve[0] ?? '';
+                    $port = $tmpResolve[1] ?? 0;
+                    $ip = $tmpResolve[2] ?? '';
+                    $this->resolve[$host][$port] = $ip;
+                }
+                $host = $this->urlInfo['host'];
+                $port = $this->urlInfo['port'];
+                if (isset($this->resolve[$host])) {
+                    if (!$this->hasHeader('Host')) {
+                        $this->setHeader('Host', $host);
+                    }
+                    $this->urlInfo['host'] = $this->resolve[$host][$port] ?: $host;
+                }
+                break;
             case CURLOPT_IPRESOLVE:
                 if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V4) {
                     throw new Swoole\Curl\Exception(
@@ -445,7 +468,6 @@ final class Handler
             case CURLOPT_CERTINFO:
             case CURLOPT_HEADEROPT:
             case CURLOPT_PROXYHEADER:
-            case CURLOPT_RESOLVE:
                 break;
             /*
              * SSL
@@ -798,6 +820,10 @@ final class Handler
         $this->info['speed_download'] = 1 / $this->info['total_time'] * $this->info['size_download'];
         if (isset($redirectBeginTime)) {
             $this->info['redirect_time'] = microtime(true) - $redirectBeginTime;
+        }
+
+        if (filter_var($this->urlInfo['host'], FILTER_VALIDATE_IP)) {
+            $this->info['primary_ip'] = $this->urlInfo['host'];
         }
 
         $headerContent = '';
