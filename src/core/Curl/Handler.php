@@ -428,9 +428,9 @@ final class Handler
                 break;
             case CURLOPT_RESOLVE:
                 foreach ((array) $value as $resolve) {
-                    if (substr($resolve,0,1) === '+') {
+                    if (substr($resolve, 0, 1) === '+') {
                         // TODO: [+]HOST:PORT:ADDRESS
-                        $resolve = substr($resolve,1);
+                        $resolve = substr($resolve, 1);
                     }
                     $tmpResolve = explode(':', $resolve, 3);
                     $host = $tmpResolve[0] ?? '';
