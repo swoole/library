@@ -54,7 +54,7 @@ class Constant
 
     public const EVENT_REQUEST = 'request';
 
-    public const EVENT_HAND_SHAKE = 'handShake';
+    public const EVENT_HANDSHAKE = 'handshake';
 
     public const EVENT_OPEN = 'open';
 
