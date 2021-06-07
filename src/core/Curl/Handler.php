@@ -277,10 +277,6 @@ final class Handler
             $this->setError(CURLE_UNSUPPORTED_PROTOCOL, "Protocol \"{$scheme}\" not supported or disabled in libcurl");
             return false;
         }
-        if ($this->info['primary_ip'] !== '') {
-            /* keep same with cURL, primary_ip has the highest priority */
-            $urlInfo['host'] = $this->info['primary_ip'];
-        }
         $host = $urlInfo['host'];
         if ($this->info['primary_port'] !== 0) {
             /* keep same with cURL, primary_port has the highest priority */
