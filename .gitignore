@@ -7,3 +7,6 @@
 /html/*
 /phpunit.xml
 /vendor
+.settings
+.buildpath
+.project

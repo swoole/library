@@ -125,25 +125,52 @@ class PDOStatementProxy extends ObjectProxy
 
     /**
      * Reference: https://www.php.net/manual/en/pdostatement.setfetchmode.php
+     *
+     * ALT approaches:
+     *   - setFetchMode(int $mode, $colno_class_object = null, array $constructorArgs = [])
+     *     - 2nd parameter can not be type-hinted to pass coding style check
+     *   - creating separate methods for each mode is too verbose
+     *     - setFetchMode
+     *     - setFetchModeByColumn
+     *     - setFetchModeByClass
+     *     - setFetchModeByObject
      */
-    public function setFetchMode(int $mode, $colno_class_object = null, array $ctorarfg = []): bool
+    public function setFetchMode(int $mode, ...$args): bool
     {
         if ($mode == PDO::FETCH_COLUMN) {
-            $colno = (int) $colno_class_object;
-            return $this->__object->setFetchMode($mode, $colno);
+            if (empty($args)) {
+                throw new \Exception("2nd parameter \"colno\" is missing");
+            }
+            list($colno) = $args;
+            return $this->__object->setFetchMode($mode, (int)$colno);
         }
 
         if ($mode == PDO::FETCH_CLASS) {
-            $class = $colno_class_object;
+            if (count($args) >= 2) {
+                list($class, $constructorArgs) = $args;
+                if (!is_null($constructorArgs) && !is_array($constructorArgs)) {
+                    throw new \Exception("3rd parameter \"constructArgs\" must be NULL or Array");
+                }
+            }
+            elseif (count($args) == 1) {
+                list($class) = $args;
+                $constructorArgs = NULL; // NULL|array
+            }
+            else {
+                throw new \Exception("2nd parameter \"class\" is missing");
+            }
             if (empty($class) || !class_exists($class)) {
                 throw new \Exception("2nd parameter must be valid class for setFetchMode(FETCH_CLASS, class, constructorArgs)");
             }
-            $this->setFetchModeContext = [$mode, $class, $ctorarfg];
-            return $this->__object->setFetchMode($mode, $class, $ctorarfg);
+            $this->setFetchModeContext = [$mode, $class, $constructorArgs];
+            return $this->__object->setFetchMode($mode, $class, $constructorArgs);
         }
 
         if ($mode == PDO::FETCH_INTO) {
-            $object = $colno_class_object;
+            if (empty($args)) {
+                throw new \Exception("2nd parameter \"object\" is missing");
+            }
+            list($object) = $args;
             if (! is_object($object)) {
                 throw new \Exception("2nd parameter must be object for setFetchMode(FETCH_INTO, object)");
             }
