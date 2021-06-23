@@ -142,7 +142,7 @@ class PDOStatementProxy extends ObjectProxy
         }
 
         if ($mode == PDO::FETCH_INTO) {
-        	$object = $classNameObject;
+            $object = $classNameObject;
             return $this->__object->setFetchMode($mode, $object);
         }
 
