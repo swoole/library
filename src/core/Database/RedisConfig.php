@@ -37,6 +37,9 @@ class RedisConfig
     /** @var int */
     protected $dbIndex = 0;
 
+    /** @var bool */
+    protected $persistent = false;
+
     public function getHost()
     {
         return $this->host;
@@ -122,6 +125,17 @@ class RedisConfig
     public function withDbIndex(int $dbIndex): self
     {
         $this->dbIndex = $dbIndex;
+        return $this;
+    }
+
+    public function getPersistent(): bool
+    {
+        return $this->persistent;
+    }
+
+    public function withPersistent(bool $persistent): self
+    {
+        $this->persistent = $persistent;
         return $this;
     }
 }

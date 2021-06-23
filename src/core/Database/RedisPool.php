@@ -44,7 +44,11 @@ class RedisPool extends ConnectionPool
             if ($this->config->getReadTimeout() !== 0.0) {
                 $arguments[] = $this->config->getReadTimeout();
             }
-            $redis->connect(...$arguments);
+            if ($this->config->getPersistent()) {
+                $redis->pconnect(...$arguments);
+            } else {
+                $redis->connect(...$arguments);
+            }
             if ($this->config->getAuth()) {
                 $redis->auth($this->config->getAuth());
             }
