@@ -126,23 +126,27 @@ class PDOStatementProxy extends ObjectProxy
     /**
      * Reference: https://www.php.net/manual/en/pdostatement.setfetchmode.php
      */
-    public function setFetchMode(int $mode, $classNameObject = null, array $ctorarfg = []): bool
+    public function setFetchMode(int $mode, $colno_class_object = null, array $ctorarfg = []): bool
     {
         if ($mode == PDO::FETCH_COLUMN) {
-            $colno = $classNameObject;
+            $colno = (int) $colno_class_object;
             return $this->__object->setFetchMode($mode, $colno);
         }
 
         if ($mode == PDO::FETCH_CLASS) {
-            $this->setFetchModeContext = [$mode, $classNameObject, $ctorarfg];
-            if (!isset($classNameObject)) {
-                return $this->__object->setFetchMode($mode);
+            $class = $colno_class_object;
+            if (empty($class) || !class_exists($class)) {
+                throw new \Exception("2nd parameter must be valid class for setFetchMode(FETCH_CLASS, class, constructorArgs)");
             }
-            return $this->__object->setFetchMode($mode, $classNameObject, $ctorarfg);
+            $this->setFetchModeContext = [$mode, $class, $ctorarfg];
+            return $this->__object->setFetchMode($mode, $class, $ctorarfg);
         }
 
         if ($mode == PDO::FETCH_INTO) {
-            $object = $classNameObject;
+            $object = $colno_class_object;
+            if (! is_object($object)) {
+                throw new \Exception("2nd parameter must be object for setFetchMode(FETCH_INTO, object)");
+            }
             return $this->__object->setFetchMode($mode, $object);
         }
 
