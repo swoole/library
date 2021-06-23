@@ -142,6 +142,7 @@ class PDOStatementProxy extends ObjectProxy
                 throw new \Exception("2nd parameter \"colno\" is missing");
             }
             list($colno) = $args;
+            $this->setFetchModeContext = [$mode, (int)$colno];
             return $this->__object->setFetchMode($mode, (int)$colno);
         }
 
@@ -174,6 +175,7 @@ class PDOStatementProxy extends ObjectProxy
             if (! is_object($object)) {
                 throw new \Exception("2nd parameter must be object for setFetchMode(FETCH_INTO, object)");
             }
+            $this->setFetchModeContext = [$mode, $object];
             return $this->__object->setFetchMode($mode, $object);
         }
 
