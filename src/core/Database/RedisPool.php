@@ -46,7 +46,8 @@ class RedisPool extends ConnectionPool
             }
             if ($this->config->getPersistent()) {
                 $redis->pconnect(...$arguments);
-            } else {
+            }
+            if (!$this->config->getPersistent()) {
                 $redis->connect(...$arguments);
             }
             if ($this->config->getAuth()) {
