@@ -127,9 +127,9 @@ class StringObject
     /**
      * @return static
      */
-    public function repeat(int $n): self
+    public function repeat(int $times): self
     {
-        return new static(str_repeat($this->string, $n));
+        return new static(str_repeat($this->string, $times));
     }
 
     /**
@@ -194,7 +194,7 @@ class StringObject
      */
     public function chunkSplit(int $chunkLength = 76, string $chunkEnd = ''): self
     {
-        return new static(chunk_split($this->string, ...func_get_args()));
+        return new static(chunk_split($this->string, $chunkLength, $chunkEnd));
     }
 
     public function chunk(int $splitLength = 1): ArrayObject
