@@ -133,6 +133,7 @@ class StringObject
     }
 
     /**
+     * @param mixed $str
      * @return static
      */
     public function append($str): self
