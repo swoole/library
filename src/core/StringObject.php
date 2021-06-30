@@ -119,7 +119,7 @@ class StringObject
     /**
      * @return static
      */
-    public function substr(int $offset, ?int $length = null): self
+    public function substr(int $offset, ?int $length = null)
     {
         return new static(substr($this->string, ...func_get_args()));
     }
@@ -194,7 +194,7 @@ class StringObject
      */
     public function chunkSplit(int $chunkLength = 76, string $chunkEnd = ''): self
     {
-        return new static(chunk_split($this->string, $chunkLength, $chunkEnd));
+        return new static(chunk_split($this->string, ...func_get_args()));
     }
 
     public function chunk(int $splitLength = 1): ArrayObject
