@@ -88,6 +88,16 @@ class FunctionTest extends TestCase
         });
     }
 
+    public function testGo()
+    {
+        run(function () {
+            $cid = go(function () {
+                System::sleep(0.001);
+            });
+            $this->assertTrue(is_int($cid) and $cid > 0);
+        });
+    }
+
     public function testParallel()
     {
         run(function () {

@@ -65,6 +65,8 @@ function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
                 return $info['header_size'];
             case CURLINFO_PRIMARY_IP:
                 return $info['primary_ip'];
+            case CURLINFO_PRIVATE:
+                return $info['private'];
             default:
                 return null;
         }

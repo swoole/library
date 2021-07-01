@@ -179,4 +179,24 @@ class HandlerTest extends TestCase
             self::assertSame('', $httpPrimaryIp);
         });
     }
+
+    public function testOptPrivate()
+    {
+        Coroutine\run(function () {
+            $url = 'https://httpbin.org/get';
+            $private = 'swoole';
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_PRIVATE, $private);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: httpbin.org']);
+            $body = curl_exec($ch);
+            $body = json_decode($body, true);
+            $get_private = curl_getinfo($ch, CURLINFO_PRIVATE);
+            self::assertEquals($private, $get_private);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            curl_close($ch);
+        });
+    }
 }

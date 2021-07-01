@@ -59,6 +59,7 @@ final class Handler
         'protocol' => 0,
         'ssl_verifyresult' => 0,
         'scheme' => '',
+        'private' => '',
     ];
 
     private $withHeaderOut = false;
@@ -450,6 +451,9 @@ final class Handler
                 break;
             case CURLOPT_TCP_NODELAY:
                 $this->clientOptions[Constant::OPTION_OPEN_TCP_NODELAY] = boolval($value);
+                break;
+            case CURLOPT_PRIVATE:
+                $this->info['private'] = $value;
                 break;
             /*
              * Ignore options
