@@ -123,9 +123,9 @@ class PDOStatementProxy extends ObjectProxy
         return $this->__object->setAttribute($attribute, $value);
     }
 
-    public function setFetchMode(int $mode): bool
+    public function setFetchMode(int $mode, ...$args): bool
     {
-        $this->setFetchModeContext = func_get_args();
+        $this->setFetchModeContext = [$mode, ...$args];
         return $this->__object->setFetchMode(...$this->setFetchModeContext);
     }
 
