@@ -156,4 +156,27 @@ class HandlerTest extends TestCase
             self::assertEquals($ip, $httpPrimaryIp);
         });
     }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testInvalidResolve()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = '127.0.0.1'; // An incorrect IP in use.
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}"]);
+
+            $body = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            curl_close($ch);
+            self::assertFalse($body);
+            self::assertSame('', $httpPrimaryIp);
+        });
+    }
 }

@@ -424,7 +424,8 @@ final class Handler
                 break;
             case CURLOPT_RESOLVE:
                 foreach ((array) $value as $resolve) {
-                    if (substr($resolve, 0, 1) === '+') {
+                    $flag = substr($resolve, 0, 1);
+                    if ($flag === '+' || $flag === '-') {
                         // TODO: [+]HOST:PORT:ADDRESS
                         $resolve = substr($resolve, 1);
                     }
@@ -432,8 +433,12 @@ final class Handler
                     $host = $tmpResolve[0] ?? '';
                     $port = $tmpResolve[1] ?? 0;
                     $ip = $tmpResolve[2] ?? '';
-                    // TODO: HOST:PORT:ADDRESS[,ADDRESS]...
-                    $this->resolve[$host][$port] = explode(',', $ip)[0];
+                    if ($flag === '-') {
+                        unset($this->resolve[$host][$port]);
+                    } else {
+                        // TODO: HOST:PORT:ADDRESS[,ADDRESS]...
+                        $this->resolve[$host][$port] = explode(',', $ip)[0];
+                    }
                 }
                 break;
             case CURLOPT_IPRESOLVE:
