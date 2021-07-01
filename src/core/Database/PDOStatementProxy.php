@@ -123,18 +123,6 @@ class PDOStatementProxy extends ObjectProxy
         return $this->__object->setAttribute($attribute, $value);
     }
 
-    /**
-     * Reference: https://www.php.net/manual/en/pdostatement.setfetchmode.php
-     *
-     * ALT approaches:
-     *   - setFetchMode(int $mode, $colno_class_object = null, array $constructorArgs = [])
-     *     - 2nd parameter can not be type-hinted to pass coding style check
-     *   - creating separate methods for each mode is too verbose
-     *     - setFetchMode
-     *     - setFetchModeByColumn
-     *     - setFetchModeByClass
-     *     - setFetchModeByObject
-     */
     public function setFetchMode(int $mode): bool
     {
         $this->setFetchModeContext = func_get_args();
