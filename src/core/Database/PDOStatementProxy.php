@@ -135,50 +135,10 @@ class PDOStatementProxy extends ObjectProxy
      *     - setFetchModeByClass
      *     - setFetchModeByObject
      */
-    public function setFetchMode(int $mode, ...$args): bool
+    public function setFetchMode(int $mode): bool
     {
-        if ($mode == PDO::FETCH_COLUMN) {
-            if (empty($args)) {
-                throw new \Exception('2nd parameter "colno" is missing');
-            }
-            [$colno] = $args;
-            $this->setFetchModeContext = [$mode, (int) $colno];
-            return $this->__object->setFetchMode($mode, (int) $colno);
-        }
-
-        if ($mode == PDO::FETCH_CLASS) {
-            if (count($args) >= 2) {
-                [$class, $constructorArgs] = $args;
-                if (!is_null($constructorArgs) && !is_array($constructorArgs)) {
-                    throw new \Exception('3rd parameter "constructArgs" must be NULL or Array');
-                }
-            } elseif (count($args) == 1) {
-                [$class] = $args;
-                $constructorArgs = null; // NULL|array
-            } else {
-                throw new \Exception('2nd parameter "class" is missing');
-            }
-            if (empty($class) || !class_exists($class)) {
-                throw new \Exception('2nd parameter must be valid class for setFetchMode(FETCH_CLASS, class, constructorArgs)');
-            }
-            $this->setFetchModeContext = [$mode, $class, $constructorArgs];
-            return $this->__object->setFetchMode($mode, $class, $constructorArgs);
-        }
-
-        if ($mode == PDO::FETCH_INTO) {
-            if (empty($args)) {
-                throw new \Exception('2nd parameter "object" is missing');
-            }
-            [$object] = $args;
-            if (!is_object($object)) {
-                throw new \Exception('2nd parameter must be object for setFetchMode(FETCH_INTO, object)');
-            }
-            $this->setFetchModeContext = [$mode, $object];
-            return $this->__object->setFetchMode($mode, $object);
-        }
-
-        $this->setFetchModeContext = [$mode];
-        return $this->__object->setFetchMode($mode);
+        $this->setFetchModeContext = func_get_args();
+        return $this->__object->setFetchMode(...$this->setFetchModeContext);
     }
 
     public function bindParam($parameter, &$variable, $data_type = PDO::PARAM_STR, $length = null, $driver_options = null): bool
