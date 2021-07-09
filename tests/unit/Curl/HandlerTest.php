@@ -253,7 +253,7 @@ class HandlerTest extends TestCase
     /**
      * @covers \Swoole\Curl\Handler::execute()
      */
-    public function testInvalidResolve4()
+    public function testResolve3()
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -265,10 +265,11 @@ class HandlerTest extends TestCase
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "{$host}:443:127.0.0.1", "-{$host}:443:127.0.0.1"]);
 
-            $body = curl_exec($ch);
+            $data = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            curl_close($ch);
-            self::assertFalse($body);
+            $body = json_decode($data, true);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            self::assertEquals($body['url'], $url);
             self::assertSame('', $httpPrimaryIp);
         });
     }
