@@ -237,6 +237,10 @@ class Constant
 
     public const OPTION_WEBSOCKET_MASK = 'websocket_mask';
 
+    public const OPTION_HTTP_COMPRESSION = 'http_compression';
+
+    public const OPTION_BODY_DECOMPRESSION = 'body_decompression';
+
     public const OPTION_WEBSOCKET_COMPRESSION = 'websocket_compression';
 
     public const OPTION_HTTP_PARSE_COOKIE = 'http_parse_cookie';
@@ -244,8 +248,6 @@ class Constant
     public const OPTION_HTTP_PARSE_POST = 'http_parse_post';
 
     public const OPTION_HTTP_PARSE_FILES = 'http_parse_files';
-
-    public const OPTION_HTTP_COMPRESSION = 'http_compression';
 
     public const OPTION_HTTP_COMPRESSION_LEVEL = 'http_compression_level';
 
