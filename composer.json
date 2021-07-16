@@ -17,14 +17,14 @@
     },
     "require": {
         "php": ">=7.2",
-        "ext-swoole": ">=4.6",
-        "friendsofphp/php-cs-fixer": "^2.18"
+        "ext-swoole": ">=4.6"
     },
     "require-dev": {
         "ext-curl": "*",
         "ext-sockets": "*",
         "phpunit/phpunit": "~8.0",
-        "swoole/ide-helper": "dev-master"
+        "swoole/ide-helper": "~4.6",
+        "friendsofphp/php-cs-fixer": "^2.18"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",

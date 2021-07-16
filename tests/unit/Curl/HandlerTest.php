@@ -135,6 +135,145 @@ class HandlerTest extends TestCase
     /**
      * @covers \Swoole\Curl\Handler::execute()
      */
+    public function testResolve()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = Coroutine::gethostbyname($host);
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}"]);
+
+            $data = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            curl_close($ch);
+            $body = json_decode($data, true);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            self::assertEquals($body['url'], $url);
+            self::assertEquals($ip, $httpPrimaryIp);
+        });
+    }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testInvalidResolve()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = '127.0.0.1'; // An incorrect IP in use.
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}"]);
+
+            $body = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            curl_close($ch);
+            self::assertFalse($body);
+            self::assertSame('', $httpPrimaryIp);
+        });
+    }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testResolve2()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = Coroutine::gethostbyname($host);
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:127.0.0.1", "{$host}:443:{$ip}"]);
+
+            $data = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            $body = json_decode($data, true);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            self::assertEquals($body['url'], $url);
+            self::assertEquals($ip, $httpPrimaryIp);
+        });
+    }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testInvalidResolve2()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = Coroutine::gethostbyname($host);
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "+{$host}:443:127.0.0.1"]);
+
+            $body = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            curl_close($ch);
+            self::assertFalse($body);
+            self::assertSame('', $httpPrimaryIp);
+        });
+    }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testInvalidResolve3()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = Coroutine::gethostbyname($host);
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "{$host}:443:127.0.0.1"]);
+
+            $body = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            curl_close($ch);
+            self::assertFalse($body);
+            self::assertSame('', $httpPrimaryIp);
+        });
+    }
+
+    /**
+     * @covers \Swoole\Curl\Handler::execute()
+     */
+    public function testResolve3()
+    {
+        Coroutine\run(function () {
+            $host = 'httpbin.org';
+            $url = 'https://httpbin.org/get';
+            $ip = Coroutine::gethostbyname($host);
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "{$host}:443:127.0.0.1", "-{$host}:443:127.0.0.1"]);
+
+            $data = curl_exec($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+            $body = json_decode($data, true);
+            self::assertSame($body['headers']['Host'], 'httpbin.org');
+            self::assertEquals($body['url'], $url);
+            self::assertSame('', $httpPrimaryIp);
+        });
+    }
+
     public function testOptPrivate()
     {
         Coroutine\run(function () {
