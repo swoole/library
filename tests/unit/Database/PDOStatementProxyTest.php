@@ -90,4 +90,18 @@ class PDOStatementProxyTest extends DatabaseTestCase
             self::assertEquals($expected, $stmt->fetchAll(), $message);
         });
     }
+
+    /**
+     * @covers \Swoole\Database\PDOStatementProxy::bindParam()
+     */
+    public function testBindParam()
+    {
+        Coroutine\run(function () {
+            $stmt = $this->getPdoPool()->get()->prepare('SHOW TABLES like ?');
+            $table = 'NON_EXISTING_TABLE_NAME';
+            $stmt->bindParam(1, $table, PDO::PARAM_STR);
+            $stmt->execute();
+            self::assertIsArray($stmt->fetchAll());
+        });
+    }
 }
