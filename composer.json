@@ -41,7 +41,8 @@
             "src/ext/sockets.php",
             "src/functions.php",
             "src/alias.php",
-            "src/alias_ns.php"
+            "src/alias_ns.php",
+            "src/vendor_init.php"
         ],
         "psr-4": {
             "Swoole\\": "src/core"
