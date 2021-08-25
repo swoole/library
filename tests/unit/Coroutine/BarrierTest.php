@@ -36,14 +36,9 @@ class BarrierTest extends TestCase
                 });
             }
             Barrier::wait($barrier);
-            $et = microtime(true);
 
-            $this->assertEquals($N, $count, 'All four child coroutines have finished execution; the counter is increased to 4.');
-            $this->assertThat(
-                $et - $st,
-                $this->logicalAnd($this->greaterThan(0.50), $this->lessThan(0.55)),
-                'It takes barely over 0.5 second to finish execution of the four child coroutines.'
-            );
+            self::assertEquals(microtime(true), $st + 0.525, 'It takes about 0.50 to 0.55 second to finish execution of the four child coroutines.', 0.025);
+            self::assertEquals($N, $count, 'All four child coroutines have finished execution; the counter is increased to 4.');
         });
     }
 

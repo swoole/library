@@ -32,12 +32,11 @@ class WaitGroupTest extends TestCase
                 });
             }
             $this->assertEquals($N, $wg->count(), 'Four active coroutines in sleeping state (not yet finished execution).');
-            $wg->wait();
-            $this->assertEquals(0, $wg->count(), 'All four coroutines have finished execution.');
 
-            $et = microtime(true);
-            $this->assertGreaterThan(0.5, $et - $st, 'The four coroutines take more than 0.5 second in total to execute.');
-            $this->assertLessThan(0.55, $et - $st, 'The four coroutines take less than 0.55 second in total to execute.');
+            $wg->wait();
+
+            self::assertEquals(microtime(true), $st + 0.525, 'The four coroutines take about 0.50 to 0.55 second in total to finish.', 0.025);
+            $this->assertEquals(0, $wg->count(), 'All four coroutines have finished execution.');
         });
     }
 }
