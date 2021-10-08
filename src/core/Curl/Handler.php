@@ -134,6 +134,8 @@ final class Handler
 
     private $resolve = [];
 
+    private $unix_socket_path = '';
+
     public function __construct(string $url = '')
     {
         if ($url) {
@@ -227,6 +229,14 @@ final class Handler
                 $this->setHeader('Host', $host);
             }
             $this->urlInfo['host'] = $host = $this->resolve[$host][$port] ?? null ?: $host;
+        }
+        if ($this->unix_socket_path) {
+            $host = $this->unix_socket_path;
+            $port = 0;
+            if (stripos($host, 'unix:/') !== 0) {
+                $host = "unix:/{$host}";
+            }
+            $this->setHeader('Host', '127.0.0.1');
         }
         $this->client = new Client($host, $port, $urlInfo['scheme'] === 'https');
     }
@@ -420,6 +430,9 @@ final class Handler
                 break;
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
+                break;
+            case CURLOPT_UNIX_SOCKET_PATH:
+                $this->unix_socket_path = $value;
                 break;
             case CURLOPT_NOBODY:
                 $this->nobody = boolval($value);
