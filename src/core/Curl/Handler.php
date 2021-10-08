@@ -677,7 +677,7 @@ final class Handler
         if (!$this->client) {
             $this->create();
         }
-        do {
+        while (true) {
             $client = $this->client;
             /*
              * Http Proxy
@@ -827,7 +827,7 @@ final class Handler
             } else {
                 break;
             }
-        } while (true);
+        }
         $this->info['total_time'] = microtime(true) - $timeBegin;
         $this->info['http_code'] = $client->statusCode;
         $this->info['content_type'] = $client->headers['content-type'] ?? '';

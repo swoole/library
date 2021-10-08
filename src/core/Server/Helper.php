@@ -17,9 +17,9 @@ use function Swoole\Coroutine\go;
 
 class Helper
 {
-    const STATS_TIMER_INTERVAL_TIME = 1000;
+    public const STATS_TIMER_INTERVAL_TIME = 1000;
 
-    const GLOBAL_OPTIONS = [
+    public const GLOBAL_OPTIONS = [
         'debug_mode' => true,
         'trace_flags' => true,
         'log_file' => true,
@@ -39,7 +39,7 @@ class Helper
         'socket_timeout' => true,
     ];
 
-    const SERVER_OPTIONS = [
+    public const SERVER_OPTIONS = [
         'chroot' => true,
         'user' => true,
         'group' => true,
@@ -102,7 +102,7 @@ class Helper
         'message_queue_key' => true,
     ];
 
-    const PORT_OPTIONS = [
+    public const PORT_OPTIONS = [
         'ssl_cert_file' => true,
         'ssl_key_file' => true,
         'backlog' => true,
@@ -152,7 +152,7 @@ class Helper
         'ssl_sni_certs' => true,
     ];
 
-    const HELPER_OPTIONS = [
+    public const HELPER_OPTIONS = [
         'stats_file' => true,
         'stats_timer_interval' => true,
         'admin_server' => true,
