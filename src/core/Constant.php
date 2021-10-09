@@ -16,6 +16,8 @@ class Constant
     /* {{{ EVENT */
     public const EVENT_START = 'start';
 
+    public const EVENT_BEFORE_SHUTDOWN = 'beforeShutdown';
+
     public const EVENT_SHUTDOWN = 'shutdown';
 
     public const EVENT_WORKER_START = 'workerStart';
@@ -428,6 +430,14 @@ class Constant
     public const OPTION_OPEN_SSL = 'open_ssl';
 
     public const OPTION_OPEN_FASTCGI_PROTOCOL = 'open_fastcgi_protocol';
+
+    public const OPTION_EXIT_CONDITION = 'exit_condition';
+
+    public const OPTION_DEADLOCK_CHECK_DISABLE_TRACE = 'deadlock_check_disable_trace';
+
+    public const OPTION_DEADLOCK_CHECK_LIMIT = 'deadlock_check_limit';
+
+    public const OPTION_DEADLOCK_CHECK_DEPTH = 'deadlock_check_depth';
 
     /* }}} OPTION */
 }
