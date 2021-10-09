@@ -439,7 +439,12 @@ final class Handler
                 /* ignored temporarily */
                 break;
             case CURLOPT_UNIX_SOCKET_PATH:
-                $this->unix_socket_path = $value;
+                $realpath = realpath((string) $value);
+                if (file_exists($realpath)) {
+                    $this->unix_socket_path = $realpath;
+                } else {
+                    $this->setError(CURLE_COULDNT_CONNECT);
+                }
                 break;
             case CURLOPT_NOBODY:
                 $this->nobody = boolval($value);
@@ -862,7 +867,7 @@ final class Handler
         }
 
         if ($this->unix_socket_path) {
-            $this->info['primary_ip'] = realpath($this->unix_socket_path);
+            $this->info['primary_ip'] = $this->unix_socket_path;
             $this->info['primary_port'] = $this->urlInfo['port'];
         }
 
