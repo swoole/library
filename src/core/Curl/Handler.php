@@ -236,7 +236,6 @@ final class Handler
             if (stripos($host, 'unix:/') !== 0) {
                 $host = "unix:/{$host}";
             }
-            $this->setHeader('Host', '127.0.0.1');
         }
         $this->client = new Client($host, $port, $urlInfo['scheme'] === 'https');
     }
@@ -263,11 +262,20 @@ final class Handler
             $this->setError(CURLE_URL_MALFORMAT, 'No URL set!');
             return false;
         }
-        if (strpos($url, '://') === false) {
+        if (strpos($url, '://') === false && $this->unix_socket_path === '') {
             $url = 'http://' . $url;
         }
         if ($setInfo) {
             $urlInfo = parse_url($url);
+            if ($this->unix_socket_path) {
+                if (empty($urlInfo['host'])) {
+                    [, $host] = explode('/', $urlInfo['path'] ?? '');
+                    $urlInfo['host'] = $host;
+                }
+                if (!$this->hasHeader('Host')) {
+                    $this->setHeader('Host', $urlInfo['host']);
+                }
+            }
             if (!is_array($urlInfo)) {
                 $this->setError(CURLE_URL_MALFORMAT, "URL[{$url}] using bad/illegal format");
                 return false;
@@ -852,6 +860,11 @@ final class Handler
 
         if (filter_var($this->urlInfo['host'], FILTER_VALIDATE_IP)) {
             $this->info['primary_ip'] = $this->urlInfo['host'];
+        }
+
+        if ($this->unix_socket_path) {
+            $this->info['primary_ip'] = realpath($this->unix_socket_path);
+            $this->info['primary_port'] = $this->urlInfo['port'];
         }
 
         $headerContent = '';
