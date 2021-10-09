@@ -34,15 +34,15 @@ class Admin
      * (gdb) p sizeof(zend_object)
      * $4 = 56
      */
-    const SIZE_OF_ZVAL = 16;
+    public const SIZE_OF_ZVAL = 16;
 
-    const SIZE_OF_ZEND_STRING = 32;
+    public const SIZE_OF_ZEND_STRING = 32;
 
-    const SIZE_OF_ZEND_OBJECT = 56;
+    public const SIZE_OF_ZEND_OBJECT = 56;
 
-    const SIZE_OF_ZEND_ARRAY = 56;
+    public const SIZE_OF_ZEND_ARRAY = 56;
 
-    const DASHBOARD_DIR = '/opt/swoole/dashboard';
+    public const DASHBOARD_DIR = '/opt/swoole/dashboard';
 
     public static function init(Server $server)
     {
