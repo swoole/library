@@ -440,7 +440,7 @@ final class Handler
                 break;
             case CURLOPT_UNIX_SOCKET_PATH:
                 $realpath = realpath((string) $value);
-                if (file_exists($realpath)) {
+                if ($realpath) {
                     $this->unix_socket_path = $realpath;
                 } else {
                     $this->setError(CURLE_COULDNT_CONNECT);
