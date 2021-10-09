@@ -271,7 +271,7 @@ final class Handler
                 if (empty($urlInfo['host']) && !empty($urlInfo['path'])) {
                     $urlInfo['host'] = explode('/', $urlInfo['path'])[1] ?? null;
                 }
-                if (!$this->hasHeader('Host') && $urlInfo['host']) {
+                if (!$this->hasHeader('Host') && !empty($urlInfo['host'])) {
                     $this->setHeader('Host', $urlInfo['host']);
                 }
             }
