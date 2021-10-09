@@ -268,11 +268,10 @@ final class Handler
         if ($setInfo) {
             $urlInfo = parse_url($url);
             if ($this->unix_socket_path) {
-                if (empty($urlInfo['host'])) {
-                    [, $host] = explode('/', $urlInfo['path'] ?? '');
-                    $urlInfo['host'] = $host;
+                if (empty($urlInfo['host']) && !empty($urlInfo['path'])) {
+                    $urlInfo['host'] = explode('/', $urlInfo['path'])[1] ?? null;
                 }
-                if (!$this->hasHeader('Host')) {
+                if (!$this->hasHeader('Host') && $urlInfo['host']) {
                     $this->setHeader('Host', $urlInfo['host']);
                 }
             }
