@@ -355,7 +355,7 @@ class Admin
     {
         $admin_server_uri = swoole_string($server->setting['admin_server']);
         if ($admin_server_uri->startsWith('unix:/')) {
-            $admin_server = new Coroutine\Http\Server($admin_server_uri->toString());
+            return swoole_error_log(SWOOLE_LOG_ERROR, "admin_server[{$server->setting['admin_server']}] is not supported");
         } else {
             [$host, $port] = $admin_server_uri->split(':', 2)->toArray();
             $admin_server = new Coroutine\Http\Server($host, intval($port));
@@ -414,7 +414,7 @@ class Admin
             }
 
             $resp->header('Access-Control-Allow-Origin', '*');
-            $resp->header('Access-Control-Allow-Methods', 'GET,  OPTIONS');
+            $resp->header('Access-Control-Allow-Methods', 'GET, OPTIONS');
             $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
 
             $result = $server->command($cmd, intval($process_id), intval($process_type), $data, false);
