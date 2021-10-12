@@ -52,6 +52,23 @@ class Admin
             SWOOLE_SERVER_COMMAND_TASK_WORKER;
 
         $server->addCommand(
+            'server_reload',
+            $accepted_process_types,
+            function ($server, $msg) {
+                $server->reload();
+                return self::json('Operation succeeded');
+            }
+        );
+
+        $server->addCommand(
+            'server_shutdown',
+            $accepted_process_types,
+            function ($server, $msg) {
+                $server->shutdown();
+            }
+        );
+
+        $server->addCommand(
             'coroutine_stats',
             $accepted_process_types,
             function ($server, $msg) {
