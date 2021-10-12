@@ -449,6 +449,11 @@ class Admin
                     }
                     $sh = 'tar zxvf ' . $tmp_file . ' -C ' . $dir;
                     System::exec($sh);
+                    $remote_addr = $req->server['remote_addr'];
+                    $server_port = $req->server['server_port'];
+                    $f = $dir . '/dist/js/app.js';
+                    $baseURL = 'baseURL:"http://' . $remote_addr . ':' . $server_port . '/"';
+                    file_put_contents($f, str_replace('baseURL:"http://127.0.0.1:9502/"', $baseURL, file_get_contents($f)));
                 }
             }
 
