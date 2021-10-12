@@ -423,7 +423,7 @@ class Admin
                     }
                     $tmp_file = '/tmp/swoole_dashborad.' . SWOOLE_VERSION . '.tar.gz';
                     file_put_contents($tmp_file, $download_request->getBody());
-                    if (is_file($tmp_file) or filesize($tmp_file) == 0) {
+                    if (!is_file($tmp_file) or filesize($tmp_file) === 0) {
                         $resp->end("write [{$tmp_file}] failed");
                         return;
                     }
