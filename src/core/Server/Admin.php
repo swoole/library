@@ -356,10 +356,10 @@ class Admin
         $admin_server_uri = swoole_string($server->setting['admin_server']);
         if ($admin_server_uri->startsWith('unix:/')) {
             return swoole_error_log(SWOOLE_LOG_ERROR, "admin_server[{$server->setting['admin_server']}] is not supported");
-        } else {
-            [$host, $port] = $admin_server_uri->split(':', 2)->toArray();
-            $admin_server = new Coroutine\Http\Server($host, intval($port));
         }
+        [$host, $port] = $admin_server_uri->split(':', 2)->toArray();
+        $admin_server = new Coroutine\Http\Server($host, intval($port));
+
         $admin_server->handle('/api', function (Request $req, Response $resp) use ($server) {
             $path_array = swoole_string($req->server['request_uri'])->trim('/')->split('/');
             if ($path_array->count() < 2 or $path_array->count() > 3) {
