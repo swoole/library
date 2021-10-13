@@ -428,42 +428,7 @@ class Admin
             }
         });
         $admin_server->handle('/', function (Request $req, Response $resp) use ($server) {
-            if ($req->server['request_uri'] == '/' or $req->server['request_uri'] == '/index.html') {
-                $dir = self::DASHBOARD_DIR . '/' . SWOOLE_VERSION;
-                $index_file = $dir . '/dist/index.html';
-                if (!is_file($index_file)) {
-                    $url = 'https://business.swoole.com/static/swoole_dashboard/' . SWOOLE_VERSION . '.tar.gz';
-                    $download_request = Coroutine\Http\get($url);
-                    if (!$download_request or $download_request->getStatusCode() != '200') {
-                        $resp->end("download [{$url}] failed");
-                        return;
-                    }
-                    $tmp_file = '/tmp/swoole_dashborad.' . SWOOLE_VERSION . '.tar.gz';
-                    file_put_contents($tmp_file, $download_request->getBody());
-                    if (!is_file($tmp_file) or filesize($tmp_file) === 0) {
-                        $resp->end("write [{$tmp_file}] failed");
-                        return;
-                    }
-                    if (!is_dir($dir)) {
-                        mkdir($dir, 0777, true);
-                    }
-                    $sh = 'tar zxvf ' . $tmp_file . ' -C ' . $dir;
-                    System::exec($sh);
-                    $remote_addr = $req->server['remote_addr'];
-                    $server_port = $req->server['server_port'];
-                    $f = $dir . '/dist/js/app.js';
-                    $baseURL = 'baseURL:"http://' . $remote_addr . ':' . $server_port . '/"';
-                    file_put_contents($f, str_replace('baseURL:"http://127.0.0.1:9502/"', $baseURL, file_get_contents($f)));
-                }
-            }
-
-            $file = self::DASHBOARD_DIR . '/' . SWOOLE_VERSION . '/dist/' . ($req->server['request_uri'] == '/' ? 'index.html' : $req->server['request_uri']);
-            if (!is_file($file)) {
-                $resp->status(404);
-                $resp->end('file ' . $file . ' not found');
-            } else {
-                $resp->sendfile($file);
-            }
+            $resp->status(404);
         });
         $server->admin_server = $admin_server;
         $admin_server->start();
