@@ -15,7 +15,6 @@ use Reflection;
 use ReflectionClass;
 use ReflectionExtension;
 use Swoole\Coroutine;
-use Swoole\Coroutine\System;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Server;
