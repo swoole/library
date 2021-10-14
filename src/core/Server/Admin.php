@@ -701,6 +701,8 @@ class Admin
         foreach ($params as $param) {
             $type = $optional = $default = '';
 
+            $paramName = $param->getName();
+
             if ($param->hasType()) {
                 /** @var \ReflectionNamedType|\ReflectionUnionType $getType */
                 $getType = $param->getType();
@@ -744,9 +746,17 @@ class Admin
             $isVariadic = $param->isVariadic() ? '...' : '';
 
             $option = "{$optional}{$type} {$isPassedByReference}{$isVariadic}";
-            $param = "\${$param->getName()}{$default}";
-            $param_value = $option !== ' ' ? "{$option}{$param}" : $param;
-            $list[] = $param_value;
+            $param = "\${$paramName}{$default}";
+
+            $list[] = [
+                'optional' => $optional,
+                'type' => $type,
+                'is_passed_by_reference' => $isPassedByReference,
+                'is_variadic' => $isVariadic,
+                'name' => $paramName,
+                'default' => $default,
+                'full' => $option !== ' ' ? "{$option}{$param}" : $param,
+            ];
         }
         $result['params'] = $list;
 
