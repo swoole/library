@@ -62,10 +62,10 @@
         "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix",
         "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
         "post-install-cmd" : [
-            "rm -rf ./vendor/swoole/ide-helper/output/swoole_library"
+            "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
         ],
         "post-update-cmd" : [
-            "rm -rf ./vendor/swoole/ide-helper/output/swoole_library"
+            "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
         ]
     }
 }

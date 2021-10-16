@@ -439,5 +439,11 @@ class Constant
 
     public const OPTION_DEADLOCK_CHECK_DEPTH = 'deadlock_check_depth';
 
+    public const OPTION_STATS_FILE = 'stats_file';
+
+    public const OPTION_STATS_TIMER_INTERVAL = 'stats_timer_interval';
+
+    public const OPTION_ADMIN_SERVER = 'admin_server';
+
     /* }}} OPTION */
 }
