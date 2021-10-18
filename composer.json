@@ -22,6 +22,7 @@
     "require-dev": {
         "ext-curl": "*",
         "ext-sockets": "*",
+        "ext-json": "*",
         "phpunit/phpunit": "~8.0",
         "swoole/ide-helper": "~4.6",
         "friendsofphp/php-cs-fixer": "^3.0"
