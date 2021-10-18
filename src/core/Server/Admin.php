@@ -445,7 +445,7 @@ class Admin
             }
 
             $resp->header('Access-Control-Allow-Origin', '*');
-            $resp->header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+            $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
             $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
 
             $result = $server->command($cmd, intval($process_id), intval($process_type), $data, false);
@@ -801,7 +801,7 @@ class Admin
         }
 
         $json = json_decode($msg, true);
-        if (!$json || !isset($json['object_id']) || empty($json['object_id']) || !isset($json['object_hash']) || empty($json['object_hash'])) {
+        if (empty($json) || empty($json['object_id']) || empty($json['object_hash'])) {
             return self::json(['error' => 'Params Error!'], 4004);
         }
 
