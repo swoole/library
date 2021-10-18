@@ -497,7 +497,7 @@ class Admin
         $info = [
             'id' => $server->getWorkerId(),
             'pid' => $server->getWorkerPid(),
-            'gc_status' => gc_status(),
+            'gc_status' => function_exists('gc_status') ? gc_status() : [],
             'memory_usage' => memory_get_usage(),
             'memory_real_usage' => memory_get_usage(true),
             'process_status' => self::getProcessStatus(),
