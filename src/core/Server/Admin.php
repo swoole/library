@@ -392,7 +392,7 @@ class Admin
                         if ($package['root']['name'] === '__root__' && isset($list['__root__'])) {
                             $key_name = "__root__{$key}";
                         }
-                        $package['root']['install_path'] = realpath($package['root']['install_path']);
+                        $package['root']['install_path'] = !empty($package['root']['install_path']) ? realpath($package['root']['install_path']) : '';
                         $list[$key_name] = $package;
                     }
                     break;
