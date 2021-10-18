@@ -448,7 +448,7 @@ class Admin
             $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
             $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
 
-            $result = $server->command($cmd, intval($process_id), intval($process_type), $data, false);
+            $result = $server->command($cmd, $process_id, intval($process_type), $data, false);
             if (!$result) {
                 $resp->end(json_encode([
                     'code' => swoole_last_error(),
