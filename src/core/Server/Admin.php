@@ -18,6 +18,7 @@ use Swoole\Coroutine;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Server;
+use Swoole\StringObject;
 use Swoole\Timer;
 
 class Admin
@@ -41,7 +42,25 @@ class Admin
 
     public const SIZE_OF_ZEND_ARRAY = 56;
 
-    public const DASHBOARD_DIR = '/opt/swoole/dashboard';
+    private static $map = [
+        'reactor' => SWOOLE_SERVER_COMMAND_REACTOR_THREAD,
+        'reactor_thread' => SWOOLE_SERVER_COMMAND_REACTOR_THREAD,
+        'worker' => SWOOLE_SERVER_COMMAND_EVENT_WORKER,
+        'event_worker' => SWOOLE_SERVER_COMMAND_EVENT_WORKER,
+        'task' => SWOOLE_SERVER_COMMAND_TASK_WORKER,
+        'task_worker' => SWOOLE_SERVER_COMMAND_TASK_WORKER,
+    ];
+
+    private static $allMap = [
+        'all',
+        'all_reactor',
+        'all_reactor_thread',
+        'all_worker',
+        'all_event_worker',
+        'all_task',
+        'all_task_worker',
+        'specific',
+    ];
 
     public static function init(Server $server)
     {
@@ -161,15 +180,14 @@ class Admin
         );
         $server->addCommand('get_declared_classes', $accepted_process_types, [__CLASS__, 'handlerGetDeclaredClasses']);
 
-        if (PHP_VERSION_ID > 70300) {
-            $server->addCommand(
-                'gc_status',
-                $accepted_process_types,
-                function ($server, $msg) {
-                    return self::json(gc_status());
-                }
-            );
-        }
+        $server->addCommand(
+            'gc_status',
+            $accepted_process_types,
+            function ($server, $msg) {
+                $status = function_exists('gc_status') ? gc_status() : [];
+                return self::json($status);
+            }
+        );
 
         if (extension_loaded('opcache')) {
             $server->addCommand(
@@ -399,7 +417,29 @@ class Admin
                 return;
             }
 
+            $resp->header('Access-Control-Allow-Origin', '*');
+            $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
+
+            if ($req->getMethod() == 'GET') {
+                $data = $req->get;
+            } else {
+                $data = $req->post;
+            }
+
             $cmd = $path_array->get(1)->toString();
+
+            if ($cmd === 'multi') {
+                $body = json_decode($req->getContent(), true);
+                if (empty($body) || !is_array($body) || $req->getMethod() != 'POST') {
+                    goto _bad_process;
+                }
+
+                $result = self::handlerMulti($server, $body);
+                $resp->end(json_encode($result, JSON_INVALID_UTF8_IGNORE));
+                return;
+            }
+
             if ($path_array->count() == 2) {
                 $process = swoole_string('master');
             } else {
@@ -412,6 +452,15 @@ class Admin
             } elseif ($process->startsWith('manager')) {
                 $process_type = SWOOLE_SERVER_COMMAND_MANAGER;
                 $process_id = 0;
+            } elseif ($process->startsWith('all') || $process->equals('specific')) {
+                if (!in_array($process->toString(), self::$allMap)) {
+                    goto _bad_process;
+                }
+
+                $result = self::handlerGetAll($server, $process, $cmd, $data);
+
+                $resp->end(self::json($result));
+                return;
             } else {
                 $array = $process->split('-');
                 if ($array->count() != 2) {
@@ -421,34 +470,15 @@ class Admin
                     return;
                 }
 
-                static $map = [
-                    'reactor' => SWOOLE_SERVER_COMMAND_REACTOR_THREAD,
-                    'reactor_thread' => SWOOLE_SERVER_COMMAND_REACTOR_THREAD,
-                    'worker' => SWOOLE_SERVER_COMMAND_EVENT_WORKER,
-                    'event_worker' => SWOOLE_SERVER_COMMAND_EVENT_WORKER,
-                    'task' => SWOOLE_SERVER_COMMAND_TASK_WORKER,
-                    'task_worker' => SWOOLE_SERVER_COMMAND_TASK_WORKER,
-                ];
-
-                if (!isset($map[$array->get(0)->toString()])) {
+                if (!isset(self::$map[$array->get(0)->toString()])) {
                     goto _bad_process;
                 }
 
-                $process_type = $map[$array->get(0)->toString()];
+                $process_type = self::$map[$array->get(0)->toString()];
                 $process_id = intval($array->get(1)->toString());
             }
 
-            if ($req->getMethod() == 'GET') {
-                $data = $req->get;
-            } else {
-                $data = $req->post;
-            }
-
-            $resp->header('Access-Control-Allow-Origin', '*');
-            $resp->header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
-
-            $result = $server->command($cmd, intval($process_id), intval($process_type), $data, false);
+            $result = $server->command($cmd, $process_id, intval($process_type), $data, false);
             if (!$result) {
                 $resp->end(json_encode([
                     'code' => swoole_last_error(),
@@ -497,7 +527,7 @@ class Admin
         $info = [
             'id' => $server->getWorkerId(),
             'pid' => $server->getWorkerPid(),
-            'gc_status' => gc_status(),
+            'gc_status' => function_exists('gc_status') ? gc_status() : [],
             'memory_usage' => memory_get_usage(),
             'memory_real_usage' => memory_get_usage(true),
             'process_status' => self::getProcessStatus(),
@@ -801,7 +831,7 @@ class Admin
         }
 
         $json = json_decode($msg, true);
-        if (!$json || !isset($json['object_id']) || empty($json['object_id']) || !isset($json['object_hash']) || empty($json['object_hash'])) {
+        if (empty($json) || empty($json['object_id']) || empty($json['object_hash'])) {
             return self::json(['error' => 'Params Error!'], 4004);
         }
 
@@ -961,6 +991,160 @@ class Admin
             'value' => var_export($value, true),
         ];
         return self::json($result);
+    }
+
+    private static function handlerMulti(Server $server, array $list)
+    {
+        $returnList = [];
+        foreach ($list as $key => $content) {
+            $path_array = swoole_string($content['path'])->trim('/')->split('/');
+            $cmd = $path_array->get(1)->toString();
+
+            if ($path_array->count() == 2) {
+                $process = swoole_string('master');
+            } else {
+                $process = $path_array->get(2);
+            }
+
+            $data = [];
+            $url_query = parse_url($process->toString(), PHP_URL_QUERY) ?? [];
+            if (!empty($url_query)) {
+                parse_str($url_query, $data);
+            }
+            $data = array_merge($data, $content['post'] ?? []);
+
+            if ($process->startsWith('master')) {
+                $process_type = SWOOLE_SERVER_COMMAND_MASTER;
+                $process_id = 0;
+            } elseif ($process->startsWith('manager')) {
+                $process_type = SWOOLE_SERVER_COMMAND_MANAGER;
+                $process_id = 0;
+            } elseif ($process->startsWith('all') || $process->startsWith('specific')) {
+                if (!in_array($process->toString(), self::$allMap) && !$process->startsWith('specific')) {
+                    $returnList[$key] = json_decode('{}');
+                    continue;
+                }
+
+                $result = self::handlerGetAll($server, $process, $cmd, $data);
+
+                $returnList[$key] = ['code' => 0, 'data' => $result];
+                continue;
+            } else {
+                $array = $process->split('-');
+
+                if ($array->count() != 2 || !isset(self::$map[$array->get(0)->toString()])) {
+                    $returnList[$key] = json_decode('{}');
+                    continue;
+                }
+
+                $process_type = self::$map[$array->get(0)->toString()];
+                $process_id = intval($array->get(1)->toString());
+            }
+
+            $returnList[$key] = $server->command($cmd, $process_id, intval($process_type), $data, true);
+        }
+
+        return $returnList;
+    }
+
+    private static function handlerGetAll(Server $server, StringObject $process, $cmd, $data, bool $json_decode = true)
+    {
+        if ($process->equals('all')) {
+            $result = self::handlerGetMaster($cmd, $data, $server, $json_decode) +
+                self::handlerGetManager($cmd, $data, $server, $json_decode) +
+                self::handlerGetAllWorker($cmd, $data, $server, $json_decode) +
+                self::handlerGetAllTaskWorker($cmd, $data, $server, $json_decode);
+        } elseif ($process->startsWith('all_reactor')) {
+            $result = self::handlerGetAllReactor($cmd, $data, $server, $json_decode);
+        } elseif ($process->equals('all_worker') || $process->equals('all_event_worker')) {
+            $result = self::handlerGetAllWorker($cmd, $data, $server, $json_decode);
+        } elseif ($process->startsWith('all_task')) {
+            $result = self::handlerGetAllTaskWorker($cmd, $data, $server, $json_decode);
+        } else {
+            // specific
+            $result = [];
+            if (!empty($data['workers']) && is_array($data['workers'])) {
+                foreach ($data['workers'] as $name) {
+                    $process = swoole_string($name);
+                    if ($process->startsWith('master')) {
+                        $result += self::handlerGetMaster($cmd, $data, $server, $json_decode);
+                    } elseif ($process->startsWith('manager')) {
+                        $result += self::handlerGetManager($cmd, $data, $server, $json_decode);
+                    } else {
+                        $array = $process->split('-');
+                        if ($array->count() != 2 || !isset(self::$map[$array->get(0)->toString()])) {
+                            $result[$name] = $json_decode ? json_decode('{}') : $json_decode;
+                        } else {
+                            $process_type = self::$map[$array->get(0)->toString()];
+                            $process_id = intval($array->get(1)->toString());
+                            $result[$name] = $server->command($cmd, $process_id, $process_type, $data, $json_decode);
+                        }
+                    }
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private static function handlerGetMaster($cmd, $data, Server $server, bool $json_decode = false)
+    {
+        $list['master'] = $server->command($cmd, 0, SWOOLE_SERVER_COMMAND_MASTER, $data, $json_decode);
+        return $list;
+    }
+
+    private static function handlerGetManager($cmd, $data, Server $server, bool $json_decode = false)
+    {
+        $list['manager'] = $server->command($cmd, 0, SWOOLE_SERVER_COMMAND_MANAGER, $data, $json_decode);
+        return $list;
+    }
+
+    private static function handlerGetAllReactor($cmd, $data, Server $server, bool $json_decode = false)
+    {
+        $list = [];
+        if ($server->mode === SWOOLE_BASE) {
+            return $list;
+        }
+        $process_type = SWOOLE_SERVER_COMMAND_REACTOR_THREAD;
+        if (empty($server->setting['reactor_num'])) {
+            if (empty($server->setting['worker_num'])) {
+                $cpu_num = swoole_cpu_num();
+                $reactor_num = $cpu_num >= 8 ? 8 : $cpu_num;
+            } else {
+                $reactor_num = $server->setting['worker_num'];
+            }
+        } else {
+            $reactor_num = $server->setting['reactor_num'];
+        }
+        for ($process_id = 0; $process_id < $reactor_num; $process_id++) {
+            $list["reactor-{$process_id}"] = $server->command($cmd, $process_id, $process_type, $data, $json_decode);
+        }
+        return $list;
+    }
+
+    private static function handlerGetAllWorker($cmd, $data, Server $server, bool $json_decode = false)
+    {
+        $process_type = SWOOLE_SERVER_COMMAND_EVENT_WORKER;
+        $worker_num = empty($server->setting['worker_num']) ? swoole_cpu_num() : $server->setting['worker_num'];
+        $list = [];
+        for ($process_id = 0; $process_id < $worker_num; $process_id++) {
+            $list["worker-{$process_id}"] = $server->command($cmd, $process_id, $process_type, $data, $json_decode);
+        }
+        return $list;
+    }
+
+    private static function handlerGetAllTaskWorker($cmd, $data, Server $server, bool $json_decode = false)
+    {
+        $process_type = SWOOLE_SERVER_COMMAND_TASK_WORKER;
+        $list = [];
+        if (empty($server->setting['task_worker_num'])) {
+            return $list;
+        }
+        $task_worker_num = $server->setting['task_worker_num'];
+        for ($process_id = 0; $process_id < $task_worker_num; $process_id++) {
+            $list["task_worker-{$process_id}"] = $server->command($cmd, $process_id, $process_type, $data, $json_decode);
+        }
+        return $list;
     }
 
     private static function getProcessCpuUsage($pid)
