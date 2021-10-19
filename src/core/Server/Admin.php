@@ -62,6 +62,12 @@ class Admin
         'specific',
     ];
 
+    private static $postMethodMap = [
+        'server_reload',
+        'server_shutdown',
+        'close_session',
+    ];
+
     public static function init(Server $server)
     {
         $accepted_process_types = SWOOLE_SERVER_COMMAND_MASTER |
@@ -423,17 +429,25 @@ class Admin
             $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
             $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
 
-            if ($req->getMethod() == 'GET') {
+            $method = $req->getMethod();
+
+            $cmd = $path_array->get(1)->toString();
+
+            if (in_array($cmd, self::$postMethodMap) && $method != 'POST') {
+                $resp->status(403);
+                $resp->end(self::json('Bad request method', 4003));
+                return;
+            }
+
+            if ($method == 'GET') {
                 $data = $req->get;
             } else {
                 $data = $req->post;
             }
 
-            $cmd = $path_array->get(1)->toString();
-
             if ($cmd === 'multi') {
                 $body = json_decode($req->getContent(), true);
-                if (empty($body) || !is_array($body) || $req->getMethod() != 'POST') {
+                if (empty($body) || !is_array($body) || $method != 'POST') {
                     goto _bad_process;
                 }
 
