@@ -371,29 +371,31 @@ class Admin
             'get_composer_packages',
             $accepted_process_types,
             function (Server $server, $msg) {
-                $list = [];
-                if (class_exists(\Composer\InstalledVersions::class)) {
-                    foreach (['getAllRawData', 'getRawData'] as $method) {
-                        if (method_exists(\Composer\InstalledVersions::class, $method)) {
-                            if ($method === 'getAllRawData') {
-                                $raw_data = \Composer\InstalledVersions::$method();
-                                array_shift($raw_data);
-                            } else {
-                                $raw_data[] = \Composer\InstalledVersions::$method();
-                            }
-                            foreach ($raw_data as $key => $package) {
-                                $key_name = $package['root']['name'];
-                                if ($package['root']['name'] === '__root__' && isset($list['__root__'])) {
-                                    $key_name = "__root__{$key}";
-                                }
-                                $package['root']['install_path'] = realpath($package['root']['install_path']);
-                                $list[$key_name] = $package;
-                            }
-                            break;
-                        }
-                    }
-                } else {
+                if (!class_exists(\Composer\InstalledVersions::class)) {
                     return self::json('require composer 2.0', 4003);
+                }
+
+                $list = [];
+                foreach (['getAllRawData', 'getRawData'] as $method) {
+                    if (!method_exists(\Composer\InstalledVersions::class, $method)) {
+                        continue;
+                    }
+
+                    $raw_data[] = \Composer\InstalledVersions::$method();
+                    if ($method === 'getAllRawData') {
+                        $raw_data = \Composer\InstalledVersions::$method();
+                        array_shift($raw_data);
+                    }
+
+                    foreach ($raw_data as $key => $package) {
+                        $key_name = $package['root']['name'];
+                        if ($package['root']['name'] === '__root__' && isset($list['__root__'])) {
+                            $key_name = "__root__{$key}";
+                        }
+                        $package['root']['install_path'] = realpath($package['root']['install_path']);
+                        $list[$key_name] = $package;
+                    }
+                    break;
                 }
                 return self::json($list);
             }
