@@ -23,22 +23,20 @@ class WaitGroupTest extends TestCase
     {
         run(function () {
             $wg = new WaitGroup(4);
-            $count = 0;
             $N = 4;
             $st = microtime(true);
             foreach (range(1, $N) as $i) {
-                \Swoole\Coroutine::create(function () use ($wg, &$count) {
+                \Swoole\Coroutine::create(function () use ($wg) {
                     System::sleep(0.5);
-                    $count++;
                     $wg->done();
                 });
             }
-            $wg->wait();
-            $et = microtime(true);
+            $this->assertEquals($N, $wg->count(), 'Four active coroutines in sleeping state (not yet finished execution).');
 
-            $this->assertEquals($count, $N);
-            $this->assertLessThan($et - $st, 0.5);
-            $this->assertGreaterThan($et - $st, 0.55);
+            $wg->wait();
+
+            self::assertEquals(microtime(true), $st + 0.525, 'The four coroutines take about 0.50 to 0.55 second in total to finish.', 0.025);
+            $this->assertEquals(0, $wg->count(), 'All four coroutines have finished execution.');
         });
     }
 }

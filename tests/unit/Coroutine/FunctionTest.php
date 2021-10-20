@@ -42,10 +42,8 @@ class FunctionTest extends TestCase
                 },
             ], 0.1);
             Runtime::setHookFlags(0);
-            $end = microtime(true);
+            self::assertEquals(microtime(true), $start + 0.11, 'Tasks in the batch take about 0.10 to 0.12 second in total to finish.', 0.01);
             $this->assertEquals(count($results), 4);
-            $this->assertGreaterThan(0.1, $end - $start);
-            $this->assertLessThan(0.12, $end - $start);
 
             $this->assertEquals($results['gethostbyname'], gethostbyname('localhost'));
             $this->assertEquals($results['file_get_contents'], file_get_contents(__FILE__));
@@ -88,6 +86,16 @@ class FunctionTest extends TestCase
         });
     }
 
+    public function testGo()
+    {
+        run(function () {
+            $cid = go(function () {
+                System::sleep(0.001);
+            });
+            $this->assertTrue(is_int($cid) and $cid > 0);
+        });
+    }
+
     public function testParallel()
     {
         run(function () {
@@ -115,11 +123,8 @@ class FunctionTest extends TestCase
                 System::sleep(0.2);
                 return $i * 2;
             });
-            $end = microtime(true);
-
+            self::assertEquals(microtime(true), $start + 0.21, 'The method call to map() takes about 0.20 to 0.22 second in total to finish.', 0.01);
             $this->assertSameSize($results, $list);
-            $this->assertGreaterThan(0.2, $end - $start);
-            $this->assertLessThan(0.22, $end - $start);
             $this->assertSame([2, 4, 6, 8], $results);
         });
     }

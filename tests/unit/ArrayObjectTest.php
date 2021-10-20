@@ -581,4 +581,10 @@ class ArrayObjectTest extends TestCase
     {
         $this->assertEquals($this->data_4->lastKey(), 'c');
     }
+
+    public function testGetOr()
+    {
+        $this->assertNull($this->data->getOr('undefined_key'));
+        $this->assertSame('default_value', $this->data->getOr('undefined_key', 'default_value'));
+    }
 }

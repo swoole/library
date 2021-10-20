@@ -8,7 +8,7 @@ This file is part of Swoole.
 @license  https://github.com/swoole/library/blob/master/LICENSE
 EOF;
 
-return PhpCsFixer\Config::create()
+return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)
     ->setRules([
         '@PSR2' => true,
@@ -16,7 +16,7 @@ return PhpCsFixer\Config::create()
         '@DoctrineAnnotation' => true,
         '@PhpCsFixer' => true,
         'header_comment' => [
-            'commentType' => 'PHPDoc',
+            'comment_type' => 'PHPDoc',
             'header' => $header,
             'separate' => 'bottom',
             'location' => 'after_open',
@@ -81,7 +81,7 @@ return PhpCsFixer\Config::create()
         'phpdoc_separation' => false,
         'phpdoc_summary' => false,
         'single_quote' => true,
-        'increment_style' => null,
+        'increment_style' => [],
         'standardize_increment' => false,
         'standardize_not_equals' => true,
         'multiline_comment_opening_closing' => true,

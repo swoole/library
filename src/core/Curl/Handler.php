@@ -59,6 +59,7 @@ final class Handler
         'protocol' => 0,
         'ssl_verifyresult' => 0,
         'scheme' => '',
+        'private' => '',
     ];
 
     private $withHeaderOut = false;
@@ -106,6 +107,8 @@ final class Handler
     /** @var callable */
     private $writeFunction;
 
+    private $noProgress = true;
+
     /** @var callable */
     private $progressFunction;
 
@@ -128,6 +131,10 @@ final class Handler
     private $closed = false;
 
     private $cookieJar = '';
+
+    private $resolve = [];
+
+    private $unix_socket_path = '';
 
     public function __construct(string $url = '')
     {
@@ -215,7 +222,22 @@ final class Handler
         if ($urlInfo === null) {
             $urlInfo = $this->urlInfo;
         }
-        $this->client = new Client($urlInfo['host'], $urlInfo['port'], $urlInfo['scheme'] === 'https');
+        $host = $urlInfo['host'];
+        $port = $urlInfo['port'];
+        if (isset($this->resolve[$host])) {
+            if (!$this->hasHeader('Host')) {
+                $this->setHeader('Host', $host);
+            }
+            $this->urlInfo['host'] = $host = $this->resolve[$host][$port] ?? null ?: $host;
+        }
+        if ($this->unix_socket_path) {
+            $host = $this->unix_socket_path;
+            $port = 0;
+            if (stripos($host, 'unix:/') !== 0) {
+                $host = "unix:/{$host}";
+            }
+        }
+        $this->client = new Client($host, $port, $urlInfo['scheme'] === 'https');
     }
 
     private function getUrl(): string
@@ -240,11 +262,19 @@ final class Handler
             $this->setError(CURLE_URL_MALFORMAT, 'No URL set!');
             return false;
         }
-        if (strpos($url, '://') === false) {
+        if (strpos($url, '://') === false && $this->unix_socket_path === '') {
             $url = 'http://' . $url;
         }
         if ($setInfo) {
             $urlInfo = parse_url($url);
+            if ($this->unix_socket_path) {
+                if (empty($urlInfo['host']) && !empty($urlInfo['path'])) {
+                    $urlInfo['host'] = explode('/', $urlInfo['path'])[1] ?? null;
+                }
+                if (!$this->hasHeader('Host') && !empty($urlInfo['host'])) {
+                    $this->setHeader('Host', $urlInfo['host']);
+                }
+            }
             if (!is_array($urlInfo)) {
                 $this->setError(CURLE_URL_MALFORMAT, "URL[{$url}] using bad/illegal format");
                 return false;
@@ -303,7 +333,7 @@ final class Handler
     private function setError($code, $msg = ''): void
     {
         $this->errCode = $code;
-        $this->errMsg = $msg ? $msg : curl_strerror($code);
+        $this->errMsg = $msg ?: curl_strerror($code);
     }
 
     private function hasHeader(string $headerName): bool
@@ -408,9 +438,36 @@ final class Handler
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
                 break;
+            case CURLOPT_UNIX_SOCKET_PATH:
+                $realpath = realpath((string) $value);
+                if ($realpath) {
+                    $this->unix_socket_path = $realpath;
+                } else {
+                    $this->setError(CURLE_COULDNT_CONNECT);
+                }
+                break;
             case CURLOPT_NOBODY:
                 $this->nobody = boolval($value);
                 $this->method = 'HEAD';
+                break;
+            case CURLOPT_RESOLVE:
+                foreach ((array) $value as $resolve) {
+                    $flag = substr($resolve, 0, 1);
+                    if ($flag === '+' || $flag === '-') {
+                        // TODO: [+]HOST:PORT:ADDRESS
+                        $resolve = substr($resolve, 1);
+                    }
+                    $tmpResolve = explode(':', $resolve, 3);
+                    $host = $tmpResolve[0] ?? '';
+                    $port = $tmpResolve[1] ?? 0;
+                    $ip = $tmpResolve[2] ?? '';
+                    if ($flag === '-') {
+                        unset($this->resolve[$host][$port]);
+                    } else {
+                        // TODO: HOST:PORT:ADDRESS[,ADDRESS]...
+                        $this->resolve[$host][$port] = explode(',', $ip)[0];
+                    }
+                }
                 break;
             case CURLOPT_IPRESOLVE:
                 if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V4) {
@@ -421,6 +478,9 @@ final class Handler
                 break;
             case CURLOPT_TCP_NODELAY:
                 $this->clientOptions[Constant::OPTION_OPEN_TCP_NODELAY] = boolval($value);
+                break;
+            case CURLOPT_PRIVATE:
+                $this->info['private'] = $value;
                 break;
             /*
              * Ignore options
@@ -582,6 +642,9 @@ final class Handler
             case CURLOPT_WRITEFUNCTION:
                 $this->writeFunction = $value;
                 break;
+            case CURLOPT_NOPROGRESS:
+                $this->noProgress = $value;
+                break;
             case CURLOPT_PROGRESSFUNCTION:
                 $this->progressFunction = $value;
                 break;
@@ -639,7 +702,7 @@ final class Handler
         if (!$this->client) {
             $this->create();
         }
-        do {
+        while (true) {
             $client = $this->client;
             /*
              * Http Proxy
@@ -789,7 +852,7 @@ final class Handler
             } else {
                 break;
             }
-        } while (true);
+        }
         $this->info['total_time'] = microtime(true) - $timeBegin;
         $this->info['http_code'] = $client->statusCode;
         $this->info['content_type'] = $client->headers['content-type'] ?? '';
@@ -797,6 +860,15 @@ final class Handler
         $this->info['speed_download'] = 1 / $this->info['total_time'] * $this->info['size_download'];
         if (isset($redirectBeginTime)) {
             $this->info['redirect_time'] = microtime(true) - $redirectBeginTime;
+        }
+
+        if (filter_var($this->urlInfo['host'], FILTER_VALIDATE_IP)) {
+            $this->info['primary_ip'] = $this->urlInfo['host'];
+        }
+
+        if ($this->unix_socket_path) {
+            $this->info['primary_ip'] = $this->unix_socket_path;
+            $this->info['primary_port'] = $this->urlInfo['port'];
         }
 
         $headerContent = '';
