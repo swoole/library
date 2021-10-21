@@ -62,6 +62,12 @@ class Admin
         'specific',
     ];
 
+    private static $postMethodMap = [
+        'server_reload',
+        'server_shutdown',
+        'close_session',
+    ];
+
     public static function init(Server $server)
     {
         $accepted_process_types = SWOOLE_SERVER_COMMAND_MASTER |
@@ -423,17 +429,25 @@ class Admin
             $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
             $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
 
-            if ($req->getMethod() == 'GET') {
+            $method = $req->getMethod();
+
+            $cmd = $path_array->get(1)->toString();
+
+            if (in_array($cmd, self::$postMethodMap) && $method != 'POST') {
+                $resp->status(403);
+                $resp->end(self::json('Bad request method', 4003));
+                return;
+            }
+
+            if ($method == 'GET') {
                 $data = $req->get;
             } else {
                 $data = $req->post;
             }
 
-            $cmd = $path_array->get(1)->toString();
-
             if ($cmd === 'multi') {
                 $body = json_decode($req->getContent(), true);
-                if (empty($body) || !is_array($body) || $req->getMethod() != 'POST') {
+                if (empty($body) || !is_array($body) || $method != 'POST') {
                     goto _bad_process;
                 }
 
@@ -502,7 +516,7 @@ class Admin
      * @param $msg
      * @return false|string
      */
-    public static function handlerGetResources($server, $msg)
+    private static function handlerGetResources($server, $msg)
     {
         $resources = get_resources();
         $list = [];
@@ -524,7 +538,7 @@ class Admin
      * @param $msg
      * @return false|string
      */
-    public static function handlerGetWorkerInfo($server, $msg)
+    private static function handlerGetWorkerInfo($server, $msg)
     {
         $info = [
             'id' => $server->getWorkerId(),
@@ -547,7 +561,7 @@ class Admin
      * @param $msg
      * @return false|string
      */
-    public static function handlerCloseSession($server, $msg)
+    private static function handlerCloseSession($server, $msg)
     {
         $json = json_decode($msg, true);
         if (empty($json['session_id'])) {
@@ -564,7 +578,7 @@ class Admin
      * @param $msg
      * @return false|string
      */
-    public static function handlerGetTimerList($server, $msg)
+    private static function handlerGetTimerList($server, $msg)
     {
         $list = [];
         foreach (Timer::list() as $timer_id) {
@@ -582,7 +596,7 @@ class Admin
      * @param $msg
      * @return false|string
      */
-    public static function handlerGetCoroutineList($server, $msg)
+    private static function handlerGetCoroutineList($server, $msg)
     {
         $list = [];
         foreach (Coroutine::list() as $cid) {
@@ -597,7 +611,7 @@ class Admin
         return self::json($list);
     }
 
-    public static function handlerGetObjects($server, $msg)
+    private static function handlerGetObjects($server, $msg)
     {
         if (!function_exists('swoole_get_objects')) {
             return self::json(['require ext-swoole_plus'], 5000);
@@ -622,7 +636,7 @@ class Admin
         return self::json($list);
     }
 
-    public static function handlerGetClassInfo($server, $msg)
+    private static function handlerGetClassInfo($server, $msg)
     {
         $json = json_decode($msg, true);
         if (empty($json['class_name'])) {
@@ -739,7 +753,7 @@ class Admin
         return self::json($data);
     }
 
-    public static function handlerGetFunctionInfo($server, $msg)
+    private static function handlerGetFunctionInfo($server, $msg)
     {
         $json = json_decode($msg, true);
         if (!$json || empty($json['function_name'])) {
@@ -826,7 +840,7 @@ class Admin
         return self::json($result);
     }
 
-    public static function handlerGetObjectByHandle($server, $msg)
+    private static function handlerGetObjectByHandle($server, $msg)
     {
         if (!function_exists('swoole_get_object_by_handle')) {
             return self::json(['require ext-swoole_plus'], 5000);
@@ -850,7 +864,7 @@ class Admin
         return self::json(var_export($object, true));
     }
 
-    public static function handlerGetVersionInfo($server, $msg)
+    private static function handlerGetVersionInfo($server, $msg)
     {
         $ip_arr = swoole_get_local_ip();
         $host = [];
@@ -871,7 +885,7 @@ class Admin
         return self::json($data);
     }
 
-    public static function handlerGetDefinedFunctions($server, $msg)
+    private static function handlerGetDefinedFunctions($server, $msg)
     {
         $functions = get_defined_functions();
         $arr = [];
@@ -892,7 +906,7 @@ class Admin
         return self::json($arr);
     }
 
-    public static function handlerGetDeclaredClasses($server, $msg)
+    private static function handlerGetDeclaredClasses($server, $msg)
     {
         $classes = get_declared_classes();
         $arr = [];
@@ -911,7 +925,7 @@ class Admin
         return self::json($arr);
     }
 
-    public static function handlerGetServerMemoryUsage($server, $msg)
+    private static function handlerGetServerMemoryUsage($server, $msg)
     {
         $total = 0;
 
@@ -940,7 +954,7 @@ class Admin
         return self::json($result);
     }
 
-    public static function handlerGetServerCpuUsage($server, $msg)
+    private static function handlerGetServerCpuUsage($server, $msg)
     {
         $total = 0;
 
@@ -963,7 +977,7 @@ class Admin
         return self::json($result);
     }
 
-    public static function handlerGetStaticPropertyValue($server, $msg)
+    private static function handlerGetStaticPropertyValue($server, $msg)
     {
         $json = json_decode($msg, true);
         if (empty($json['class_name'])) {
