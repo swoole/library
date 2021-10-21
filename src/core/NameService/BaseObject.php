@@ -8,7 +8,7 @@ abstract class BaseObject
 
     abstract public function resolve(string $name);
 
-    abstract public function join(string $name, string $ip, int $port): bool;
+    abstract public function join(string $name, string $ip, int $port, array $options = []): bool;
 
     abstract public function leave(string $name, string $ip, int $port): bool;
 
