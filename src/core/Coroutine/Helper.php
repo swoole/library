@@ -11,12 +11,11 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
-
 use Swoole\NameService\BaseObject;
 
 class Helper
 {
-    static function nameResolve($name, $resolver_list)
+    public static function nameResolve($name, $resolver_list)
     {
         foreach ($resolver_list as $resolver) {
             if (!($resolver instanceof BaseObject)) {

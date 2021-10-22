@@ -9,14 +9,15 @@ class Redis extends BaseObject
     private $redis_port;
     private $prefix;
 
-    public function __construct($host, $port, $prefix = 'swoole:nameserver:')
+    public function __construct($host, $port, $prefix = 'swoole:service:')
     {
         $this->redis_host = $host;
         $this->redis_port = $port;
         $this->prefix = $prefix;
     }
 
-    protected function connect() {
+    protected function connect()
+    {
         $redis = new \redis;
         if ($redis->connect($this->redis_host, $this->redis_port) === false) {
             return false;
@@ -24,7 +25,7 @@ class Redis extends BaseObject
         return $redis;
     }
 
-    public function join(string $name, string $ip, int $port): bool
+    public function join(string $name, string $ip, int $port, array $options = []): bool
     {
         if (($redis = $this->connect()) === false) {
             return false;
@@ -46,15 +47,20 @@ class Redis extends BaseObject
         return true;
     }
 
-    public function resolve(string $name)
+    public function resolve(string $name): ?Cluster
     {
         if (($redis = $this->connect()) === false) {
-            return false;
+            return null;
         }
         $members = $redis->sMembers($this->prefix . $name);
-        if ($members === false) {
-            return false;
+        if (empty($members)) {
+            return null;
         }
-        return new Cluster($members);
+        $cluster = new Cluster();
+        foreach ($members as $m) {
+            [$host, $port] = explode(':', $m);
+            $cluster->add($host, $port);
+        }
+        return $cluster;
     }
 }

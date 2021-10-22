@@ -71,21 +71,17 @@ class Consul extends BaseObject
         return $r and $r->getStatusCode() === 200;
     }
 
-    public function resolve(string $name)
+    public function resolve(string $name): ?Cluster
     {
         $r = Coroutine\Http\get($this->server . '/v1/catalog/service/' . $this->prefix . $name);
-        if ($r and $r->getStatusCode() === 200) {
-            $list = json_decode($r->getBody());
-            $result = [];
-            foreach ($list as $li) {
-                $result[] = [
-                    'host' => $li->ServiceAddress,
-                    'port' => $li->ServicePort,
-                    'data' => $li,
-                ];
-            }
-            return $result;
+        if (!$r or $r->getStatusCode() !== 200) {
+            return null;
         }
-        return false;
+        $list = json_decode($r->getBody());
+        $cluster = new Cluster();
+        foreach ($list as $li) {
+            $cluster->add($li->ServiceAddress, $li->ServicePort, $li->ServiceWeights->Passing);
+        }
+        return $cluster;
     }
 }

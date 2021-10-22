@@ -16,15 +16,10 @@ class Nacos extends BaseObject
     private $server;
     private $prefix;
 
-    public function __construct($server, $service_prefix = 'swoole_service_')
+    public function __construct($server, $prefix = 'swoole_service_')
     {
         $this->server = $server;
-        $this->prefix = $service_prefix;
-    }
-
-    private function getServiceId(string $name, string $ip, int $port): string
-    {
-        return $this->prefix . $name . "_{$ip}:{$port}";
+        $this->prefix = $prefix;
     }
 
     public function join(string $name, string $ip, int $port, array $options = []): bool
@@ -32,7 +27,7 @@ class Nacos extends BaseObject
         $params['port'] = $port;
         $params['ip'] = $ip;
         $params['healthy'] = 'true';
-        $params['weight'] = $options['weight'] ?? 1.0;
+        $params['weight'] = $options['weight'] ?? 100;
         $params['encoding'] = $options['encoding'] ?? 'utf-8';
         $params['namespaceId'] = $options['namespaceId'] ?? 'public';
         $params['serviceName'] = $this->prefix . $name;
@@ -51,24 +46,19 @@ class Nacos extends BaseObject
         return $r and $r->getStatusCode() === 200;
     }
 
-    public function resolve(string $name)
+    public function resolve(string $name): ?Cluster
     {
         $params['serviceName'] = $this->prefix . $name;
 
         $r = Coroutine\Http\get($this->server . '/nacos/v1/ns/instance/list?' . http_build_query($params));
         if (!$r or $r->getStatusCode() !== 200) {
-            return false;
+            return null;
         }
-        $nodes = [];
         $result = json_decode($r->getBody());
+        $cluster = new Cluster();
         foreach ($result->hosts as $node) {
-            $nodes[] = [
-                'host' => $node->ip,
-                'port' => $node->port,
-                'weight' => $node->weight,
-                'data' => $node,
-            ];
+            $cluster->add($node->ip, $node->port, $node->weight);
         }
-        return $nodes;
+        return $cluster;
     }
 }
