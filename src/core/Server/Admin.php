@@ -756,23 +756,41 @@ class Admin
     public static function handlerGetFunctionInfo($server, $msg)
     {
         $json = json_decode($msg, true);
-        if (!$json || empty($json['function_name'])) {
+
+        $class_name = $json['class_name'] ?? '';
+        $function_name = $json['function_name'] ?? '';
+
+        if (!$json || empty($function_name)) {
             return self::json('require function_name', 4004);
         }
-        if (!function_exists($json['function_name'])) {
-            return self::json("{$json['function_name']} not exists", 4004);
+
+        $is_static = false;
+        if (!empty($class_name)) {
+            if (!class_exists($class_name)) {
+                return self::json("{$class_name} not exists", 4004);
+            }
+            if (!method_exists($class_name, $function_name)) {
+                return self::json("{$class_name}\\{$function_name} not exists", 4004);
+            }
+            $ref = new \ReflectionMethod($class_name, $function_name);
+            $is_static = $ref->isStatic();
+        } else {
+            if (!function_exists($function_name)) {
+                return self::json("{$function_name} not exists", 4004);
+            }
+            $ref = new \ReflectionFunction($function_name);
         }
-        $function = new \ReflectionFunction($json['function_name']);
 
         $result = [
-            'filename' => $function->getFileName(),
-            'line' => $function->getStartLine() ?? '',
-            'num' => $function->getNumberOfParameters(),
-            'user_defined' => $function->isUserDefined(),
-            'extension' => $function->getExtensionName(),
+            'filename' => $ref->getFileName(),
+            'line' => $ref->getStartLine() ?? '',
+            'num' => $ref->getNumberOfParameters(),
+            'user_defined' => $ref->isUserDefined(),
+            'extension' => $ref->getExtensionName(),
+            'is_static' => $is_static,
         ];
 
-        $params = $function->getParameters();
+        $params = $ref->getParameters();
 
         $list = [];
         foreach ($params as $param) {
