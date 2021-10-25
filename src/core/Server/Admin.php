@@ -1005,21 +1005,15 @@ class Admin
             return self::json(['error' => 'require property_name!'], 4004);
         }
 
-        $class_name = $json['class_name'];
-        $property_name = $json['property_name'];
+        $className = $json['class_name'];
+        $propertyName = $json['property_name'];
 
-        $refClass = new ReflectionClass($class_name);
-        if (!$refClass) {
-            return self::json("class[{$class_name}] not exists", 4004);
+        if (!class_exists($className)) {
+            return self::json("class[{$className}] not exists", 4004);
         }
 
-        $property = $refClass->getProperty($property_name);
-        if (!$property) {
-            return self::json("property[{$property_name}] not exists", 4004);
-        }
-
-        $property->setAccessible(true);
-        $value = $property->getValue($property_name);
+        $reflection = new ReflectionClass($className);
+        $value = $reflection->getStaticPropertyValue($propertyName, []);
 
         $result = [
             'value' => var_export($value, true),
