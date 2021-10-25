@@ -639,15 +639,25 @@ class Admin
     public static function handlerGetClassInfo($server, $msg)
     {
         $json = json_decode($msg, true);
-        if (empty($json['class_name'])) {
-            return self::json(['error' => 'require class_name'], 4004);
+        if (empty($json['class_name']) && empty($json['interface_name'])) {
+            return self::json(['error' => 'require class_name or interface_name'], 4004);
         }
 
-        if (!class_exists($json['class_name'], false)) {
-            return self::json("{$json['class_name']} not exists", 4003);
+        if (!empty($json['class_name'])) {
+            if (!class_exists($json['class_name'], false)) {
+                return self::json("{$json['class_name']} not exists", 4003);
+            }
+            $name = $json['class_name'];
         }
 
-        $class = new ReflectionClass($json['class_name']);
+        if (!empty($json['interface_name'])) {
+            if (!interface_exists($json['interface_name'], false)) {
+                return self::json("{$json['interface_name']} not exists", 4003);
+            }
+            $name = $json['interface_name'];
+        }
+
+        $class = new ReflectionClass($name);
 
         $filename = $class->getFileName();
 
@@ -766,7 +776,7 @@ class Admin
 
         $isStatic = false;
         if (!empty($className)) {
-            if (!class_exists($className)) {
+            if (!class_exists($className) && !interface_exists($className)) {
                 return self::json("{$className} not exists", 4004);
             }
             if (!method_exists($className, $functionName)) {
@@ -930,7 +940,7 @@ class Admin
         $arr = [];
         if ($classes) {
             foreach ($classes as $classes_name) {
-                $function = new \ReflectionClass($classes_name);
+                $function = new ReflectionClass($classes_name);
                 $filename = $function->getFileName();
                 $line = $function->getStartLine();
                 $arr[] = [
