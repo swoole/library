@@ -14,6 +14,8 @@ namespace Swoole\Server;
 use Reflection;
 use ReflectionClass;
 use ReflectionExtension;
+use ReflectionFunction;
+use ReflectionMethod;
 use Swoole\Coroutine;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -133,10 +135,7 @@ class Admin
         $server->addCommand(
             'server_setting',
             $accepted_process_types,
-            function ($server, $msg) {
-                /**
-                 * @var Server $server
-                 */
+            function (Server $server, $msg) {
                 $setting = $server->setting;
                 $setting['mode'] = $server->mode;
                 $setting['host'] = $server->host;
@@ -256,7 +255,7 @@ class Admin
                 $extensions = get_loaded_extensions();
                 $list = [];
                 foreach ($extensions as $key => $extension) {
-                    $ext = new \ReflectionExtension($extension);
+                    $ext = new ReflectionExtension($extension);
                     $list[$key] = [
                         'id' => ++$key,
                         'name' => $extension,
@@ -720,7 +719,7 @@ class Admin
             foreach ($data as $k => $v) {
                 $name = $v->getName();
                 $line = $v->getStartLine();
-                $modifiers = \Reflection::getModifierNames($v->getModifiers());
+                $modifiers = Reflection::getModifierNames($v->getModifiers());
                 if ($v->isStatic()) {
                     $static[] = [
                         'name' => $name,
@@ -782,13 +781,13 @@ class Admin
             if (!method_exists($className, $functionName)) {
                 return self::json("{$className}->{$functionName} not exists", 4004);
             }
-            $ref = new \ReflectionMethod($className, $functionName);
+            $ref = new ReflectionMethod($className, $functionName);
             $isStatic = $ref->isStatic();
         } else {
             if (!function_exists($functionName)) {
                 return self::json("{$functionName} not exists", 4004);
             }
-            $ref = new \ReflectionFunction($functionName);
+            $ref = new ReflectionFunction($functionName);
         }
 
         $result = [
@@ -921,7 +920,7 @@ class Admin
             $arr['internal'] = $functions['internal'];
 
             foreach ($functions['user'] as $function_name) {
-                $function = new \ReflectionFunction($function_name);
+                $function = new ReflectionFunction($function_name);
                 $filename = $function->getFileName();
                 $line = $function->getStartLine();
                 $arr['user'][] = [
