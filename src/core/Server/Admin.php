@@ -405,6 +405,8 @@ class Admin
                 return self::json($list);
             }
         );
+
+        $server->addCommand('multi', $accepted_process_types, function (Server $server, $msg) {});
     }
 
     public static function start(Server $server)
