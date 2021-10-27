@@ -53,7 +53,7 @@ class Admin
         'task_worker' => SWOOLE_SERVER_COMMAND_TASK_WORKER,
     ];
 
-    private static $allMap = [
+    private static $allList = [
         'all',
         'all_reactor',
         'all_reactor_thread',
@@ -64,7 +64,7 @@ class Admin
         'specific',
     ];
 
-    private static $postMethodMap = [
+    private static $postMethodList = [
         'server_reload',
         'server_shutdown',
         'close_session',
@@ -432,7 +432,7 @@ class Admin
 
             $cmd = $path_array->get(1)->toString();
 
-            if (in_array($cmd, self::$postMethodMap) && $method != 'POST') {
+            if (in_array($cmd, self::$postMethodList) && $method != 'POST') {
                 $resp->status(403);
                 $resp->end(self::json('Bad request method', 4003));
                 return;
@@ -468,7 +468,7 @@ class Admin
                 $process_type = SWOOLE_SERVER_COMMAND_MANAGER;
                 $process_id = 0;
             } elseif ($process->startsWith('all') || $process->equals('specific')) {
-                if (!in_array($process->toString(), self::$allMap)) {
+                if (!in_array($process->toString(), self::$allList)) {
                     goto _bad_process;
                 }
 
@@ -1057,7 +1057,7 @@ class Admin
                 $process_type = SWOOLE_SERVER_COMMAND_MANAGER;
                 $process_id = 0;
             } elseif ($process->startsWith('all') || $process->startsWith('specific')) {
-                if (!in_array($process->toString(), self::$allMap) && !$process->startsWith('specific')) {
+                if (!in_array($process->toString(), self::$allList) && !$process->startsWith('specific')) {
                     $return_list[$key] = json_decode('{}');
                     continue;
                 }
