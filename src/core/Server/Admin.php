@@ -643,7 +643,7 @@ class Admin
         }
 
         if (!empty($json['class_name'])) {
-            if (!class_exists($json['class_name'], false)) {
+            if (!class_exists($json['class_name'], false) && !interface_exists($json['class_name'], false)) {
                 return self::json("{$json['class_name']} not exists", 4003);
             }
             $name = $json['class_name'];
