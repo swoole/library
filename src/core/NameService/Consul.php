@@ -11,7 +11,7 @@ namespace Swoole\NameService;
 
 use Swoole\Coroutine;
 
-class Consul extends BaseObject
+class Consul extends Resolver
 {
     private $server;
     private $prefix;
@@ -71,7 +71,7 @@ class Consul extends BaseObject
         return $r and $r->getStatusCode() === 200;
     }
 
-    public function resolve(string $name): ?Cluster
+    public function getCluster(string $name): ?Cluster
     {
         $r = Coroutine\Http\get($this->server . '/v1/catalog/service/' . $this->prefix . $name);
         if (!$r or $r->getStatusCode() !== 200) {

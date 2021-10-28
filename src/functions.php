@@ -30,6 +30,26 @@ if (SWOOLE_USE_SHORTNAME) {
     }
 }
 
+function swoole_library_set_options(array $options)
+{
+    $GLOBALS['swoole_library_options'] = $options;
+}
+
+function swoole_library_get_options(array $options)
+{
+    return $GLOBALS['swoole_library_options'];
+}
+
+function swoole_library_set_option(string $key, mixed $value)
+{
+    $GLOBALS['swoole_library_options'][$key] = $value;
+}
+
+function swoole_library_get_option(string $key)
+{
+    return isset($GLOBALS['swoole_library_options']) ? $GLOBALS['swoole_library_options'][$key] : null;
+}
+
 function swoole_string(string $string = ''): Swoole\StringObject
 {
     return new Swoole\StringObject($string);

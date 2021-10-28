@@ -11,7 +11,7 @@ namespace Swoole\NameService;
 
 use Swoole\Coroutine;
 
-class Nacos extends BaseObject
+class Nacos extends Resolver
 {
     private $server;
     private $prefix;
@@ -46,7 +46,7 @@ class Nacos extends BaseObject
         return $r and $r->getStatusCode() === 200;
     }
 
-    public function resolve(string $name): ?Cluster
+    public function getCluster(string $name): ?Cluster
     {
         $params['serviceName'] = $this->prefix . $name;
 

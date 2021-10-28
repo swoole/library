@@ -3,7 +3,7 @@
 
 namespace Swoole\NameService;
 
-class Redis extends BaseObject
+class Redis extends Resolver
 {
     private $redis_host;
     private $redis_port;
@@ -47,7 +47,7 @@ class Redis extends BaseObject
         return true;
     }
 
-    public function resolve(string $name): ?Cluster
+    public function getCluster(string $name): ?Cluster
     {
         if (($redis = $this->connect()) === false) {
             return null;

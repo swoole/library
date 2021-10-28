@@ -6,7 +6,7 @@ use Swoole\Exception;
 
 class Cluster
 {
-    private $nodes = [];
+    private array $nodes = [];
 
     public function add(string $host, int $port, int $weight = 100): void
     {
@@ -31,5 +31,10 @@ class Cluster
         $node = $this->nodes[$index];
         unset($this->nodes[$index]);
         return $node;
+    }
+
+    public function count(): int
+    {
+        return count($this->nodes);
     }
 }

@@ -14,11 +14,30 @@ namespace Swoole\Coroutine\Http;
 use Swoole\Coroutine\Http\Client\Exception;
 
 /**
- * @param mixed $data
+ * @param string $url
+ * @param string $method
+ * @param null $data
+ * @param array|null $options
+ * @param array|null $headers
+ * @param array|null $cookies
+ * @return false|ClientProxy
  * @throws Exception
- * @return mixed
  */
 function request(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
+{
+    if (swoole_library_get_option('http_client_driver') == 'curl') {
+        return request_with_curl($url, $method, $data, $options, $headers, $cookies);
+    } else {
+        return request_with_http_client($url, $method, $data, $options, $headers, $cookies);
+    }
+}
+
+/**
+ * @param mixed $data
+ * @return ClientProxy|false
+ * @throws Exception
+ */
+function request_with_http_client(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
 {
     $info = parse_url($url);
     if (empty($info['scheme'])) {
@@ -49,10 +68,61 @@ function request(string $url, string $method, $data = null, array $options = nul
         $request_url .= '?' . $info['query'];
     }
     if ($client->execute($request_url)) {
-        return $client;
+        return new ClientProxy($client->getBody(), $client->getStatusCode(), $client->getHeaders(), $client->getCookies());
     }
     return false;
 }
+
+/**
+ * @param mixed $data
+ * @return void
+ * @throws Exception
+ */
+function request_with_curl(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
+{
+    $ch = curl_init($url);
+    if (empty($ch)) {
+        throw new Exception('failed to curl_init');
+    }
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
+    $responseHeaders = $responseCookies = [];
+    curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $header) use (&$responseHeaders) {
+        $len = strlen($header);
+        $header = explode(':', $header, 2);
+        if (count($header) < 2) {
+            return $len;
+        }
+        $headerKey = strtolower(trim($header[0]));
+        if ($headerKey == 'set-cookie') {
+            [$k, $v] = explode('=', $header[1]);
+            $responseCookies[$k] = $v;
+        } else {
+            $responseHeaders[$headerKey][] = trim($header[1]);
+        }
+        return $len;
+    });
+    if ($data) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    }
+    if ($headers) {
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    }
+    if ($cookies) {
+        $cookie_str = '';
+        foreach ($cookies as $k => $v) {
+            $cookie_str .= "$k=$v; ";
+        }
+        curl_setopt($ch, CURLOPT_COOKIE, $cookie_str);
+    }
+    $body = curl_exec($ch);
+    if ($body) {
+        return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
+    } else {
+        return false;
+    }
+}
+
 
 /**
  * @param mixed $data
