@@ -18,14 +18,6 @@ abstract class Resolver
         return $this;
     }
 
-    function resolve(string $name): ?Cluster
-    {
-        if ($this->hasFilter() and ($this->getFilter())($name) !== true) {
-            return null;
-        }
-        return $this->getCluster($name);
-    }
-
     public function getFilter()
     {
         return $this->filter_fn;
@@ -34,5 +26,21 @@ abstract class Resolver
     public function hasFilter(): bool
     {
         return !empty($this->filter_fn);
+    }
+
+    /**
+     * return string: final result, non-empty string must be a valid IP address,
+     * and an empty string indicates name lookup failed, and lookup operation will not continue.
+     * return Cluster: has multiple nodes and failover is possible
+     * return false or null: try another name resolver
+     * @param string $name
+     * @return Cluster|null|false|string
+     */
+    function resolve(string $name)
+    {
+        if ($this->hasFilter() and ($this->getFilter())($name) !== true) {
+            return null;
+        }
+        return $this->getCluster($name);
     }
 }

@@ -6,7 +6,10 @@ use Swoole\Exception;
 
 class Cluster
 {
-    private array $nodes = [];
+    /**
+     * @var array $nodes
+     */
+    private $nodes = [];
 
     public function add(string $host, int $port, int $weight = 100): void
     {
