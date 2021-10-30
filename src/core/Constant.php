@@ -155,6 +155,8 @@ class Constant
 
     public const OPTION_SSL_VERIFY_DEPTH = 'ssl_verify_depth';
 
+    public const OPTION_SSL_CIPHERS = 'ssl_ciphers';
+
     public const OPTION_OPEN_EOF_CHECK = 'open_eof_check';
 
     public const OPTION_OPEN_EOF_SPLIT = 'open_eof_split';
@@ -212,6 +214,10 @@ class Constant
     public const OPTION_WRITE_TIMEOUT = 'write_timeout';
 
     public const OPTION_SSL_DISABLE_COMPRESSION = 'ssl_disable_compression';
+
+    public const OPTION_SSL_ECDH_CURVE = 'ssl_ecdh_curve';
+
+    public const OPTION_SSL_GREASE = 'ssl_grease';
 
     public const OPTION_MAX_CORO_NUM = 'max_coro_num';
 
@@ -418,10 +424,6 @@ class Constant
     public const OPTION_SSL_CLIENT_CERT_FILE = 'ssl_client_cert_file';
 
     public const OPTION_SSL_PREFER_SERVER_CIPHERS = 'ssl_prefer_server_ciphers';
-
-    public const OPTION_SSL_CIPHERS = 'ssl_ciphers';
-
-    public const OPTION_SSL_ECDH_CURVE = 'ssl_ecdh_curve';
 
     public const OPTION_SSL_DHPARAM = 'ssl_dhparam';
 

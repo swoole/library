@@ -14,6 +14,8 @@ namespace Swoole\Server;
 use Reflection;
 use ReflectionClass;
 use ReflectionExtension;
+use ReflectionFunction;
+use ReflectionMethod;
 use Swoole\Coroutine;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -51,7 +53,7 @@ class Admin
         'task_worker' => SWOOLE_SERVER_COMMAND_TASK_WORKER,
     ];
 
-    private static $allMap = [
+    private static $allList = [
         'all',
         'all_reactor',
         'all_reactor_thread',
@@ -62,7 +64,7 @@ class Admin
         'specific',
     ];
 
-    private static $postMethodMap = [
+    private static $postMethodList = [
         'server_reload',
         'server_shutdown',
         'close_session',
@@ -133,10 +135,7 @@ class Admin
         $server->addCommand(
             'server_setting',
             $accepted_process_types,
-            function ($server, $msg) {
-                /**
-                 * @var Server $server
-                 */
+            function (Server $server, $msg) {
                 $setting = $server->setting;
                 $setting['mode'] = $server->mode;
                 $setting['host'] = $server->host;
@@ -256,7 +255,7 @@ class Admin
                 $extensions = get_loaded_extensions();
                 $list = [];
                 foreach ($extensions as $key => $extension) {
-                    $ext = new \ReflectionExtension($extension);
+                    $ext = new ReflectionExtension($extension);
                     $list[$key] = [
                         'id' => ++$key,
                         'name' => $extension,
@@ -433,7 +432,7 @@ class Admin
 
             $cmd = $path_array->get(1)->toString();
 
-            if (in_array($cmd, self::$postMethodMap) && $method != 'POST') {
+            if (in_array($cmd, self::$postMethodList) && $method != 'POST') {
                 $resp->status(403);
                 $resp->end(self::json('Bad request method', 4003));
                 return;
@@ -469,7 +468,7 @@ class Admin
                 $process_type = SWOOLE_SERVER_COMMAND_MANAGER;
                 $process_id = 0;
             } elseif ($process->startsWith('all') || $process->equals('specific')) {
-                if (!in_array($process->toString(), self::$allMap)) {
+                if (!in_array($process->toString(), self::$allList)) {
                     goto _bad_process;
                 }
 
@@ -639,15 +638,25 @@ class Admin
     public static function handlerGetClassInfo($server, $msg)
     {
         $json = json_decode($msg, true);
-        if (empty($json['class_name'])) {
-            return self::json(['error' => 'require class_name'], 4004);
+        if (empty($json['class_name']) && empty($json['interface_name'])) {
+            return self::json(['error' => 'require class_name or interface_name'], 4004);
         }
 
-        if (!class_exists($json['class_name'], false)) {
-            return self::json("{$json['class_name']} not exists", 4003);
+        if (!empty($json['class_name'])) {
+            if (!class_exists($json['class_name'], false) && !interface_exists($json['class_name'], false)) {
+                return self::json("{$json['class_name']} not exists", 4003);
+            }
+            $name = $json['class_name'];
         }
 
-        $class = new ReflectionClass($json['class_name']);
+        if (!empty($json['interface_name'])) {
+            if (!interface_exists($json['interface_name'], false)) {
+                return self::json("{$json['interface_name']} not exists", 4003);
+            }
+            $name = $json['interface_name'];
+        }
+
+        $class = new ReflectionClass($name);
 
         $filename = $class->getFileName();
 
@@ -672,26 +681,26 @@ class Admin
 
         $getTmpProperties = function ($class, $data) {
             $static = [];
-            $no_static = [];
-            $reflProp = $class->getDefaultProperties();
+            $noStatic = [];
+            $defaultProperties = $class->getDefaultProperties();
             foreach ($data as $k => $v) {
                 $name = $v->getName();
                 $modifiers = Reflection::getModifierNames($v->getModifiers());
                 if ($v->isStatic()) {
                     $static[] = [
                         'name' => $name,
-                        'value' => $reflProp[$name],
+                        'value' => $defaultProperties[$name],
                         'modifiers' => implode(' ', $modifiers),
                     ];
                 } else {
-                    $no_static[] = [
+                    $noStatic[] = [
                         'name' => $name,
-                        'value' => $reflProp[$name],
+                        'value' => $defaultProperties[$name],
                         'modifiers' => implode(' ', $modifiers),
                     ];
                 }
             }
-            return ['static' => $static, 'no_static' => $no_static];
+            return ['static' => $static, 'no_static' => $noStatic];
         };
 
         if ($tmpProperties) {
@@ -706,11 +715,11 @@ class Admin
 
         $getTmpMethods = function ($data) {
             $static = [];
-            $no_static = [];
+            $noStatic = [];
             foreach ($data as $k => $v) {
                 $name = $v->getName();
                 $line = $v->getStartLine();
-                $modifiers = \Reflection::getModifierNames($v->getModifiers());
+                $modifiers = Reflection::getModifierNames($v->getModifiers());
                 if ($v->isStatic()) {
                     $static[] = [
                         'name' => $name,
@@ -718,14 +727,14 @@ class Admin
                         'modifiers' => implode(' ', $modifiers),
                     ];
                 } else {
-                    $no_static[] = [
+                    $noStatic[] = [
                         'name' => $name,
                         'line' => $line ?: '',
                         'modifiers' => implode(' ', $modifiers),
                     ];
                 }
             }
-            return ['static' => $static, 'no_static' => $no_static];
+            return ['static' => $static, 'no_static' => $noStatic];
         };
 
         if ($tmpStaticMethods) {
@@ -738,7 +747,7 @@ class Admin
         $parentClass = $tmpParentClass ? $tmpParentClass->getName() : '';
 
         $tmpInterface = $class->getInterfaceNames();
-        $interface = $tmpInterface ? $tmpInterface : [];
+        $interface = $tmpInterface ?? [];
 
         $data = [
             'filename' => $filename,
@@ -756,23 +765,41 @@ class Admin
     public static function handlerGetFunctionInfo($server, $msg)
     {
         $json = json_decode($msg, true);
-        if (!$json || empty($json['function_name'])) {
+
+        $className = $json['class_name'] ?? '';
+        $functionName = $json['function_name'] ?? '';
+
+        if (empty($json) || empty($functionName)) {
             return self::json('require function_name', 4004);
         }
-        if (!function_exists($json['function_name'])) {
-            return self::json("{$json['function_name']} not exists", 4004);
+
+        $isStatic = false;
+        if (!empty($className)) {
+            if (!class_exists($className) && !interface_exists($className)) {
+                return self::json("{$className} not exists", 4004);
+            }
+            if (!method_exists($className, $functionName)) {
+                return self::json("{$className}->{$functionName} not exists", 4004);
+            }
+            $ref = new ReflectionMethod($className, $functionName);
+            $isStatic = $ref->isStatic();
+        } else {
+            if (!function_exists($functionName)) {
+                return self::json("{$functionName} not exists", 4004);
+            }
+            $ref = new ReflectionFunction($functionName);
         }
-        $function = new \ReflectionFunction($json['function_name']);
 
         $result = [
-            'filename' => $function->getFileName(),
-            'line' => $function->getStartLine() ?? '',
-            'num' => $function->getNumberOfParameters(),
-            'user_defined' => $function->isUserDefined(),
-            'extension' => $function->getExtensionName(),
+            'filename' => $ref->getFileName(),
+            'line' => $ref->getStartLine() ?? '',
+            'num' => $ref->getNumberOfParameters(),
+            'user_defined' => $ref->isUserDefined(),
+            'extension' => $ref->getExtensionName(),
+            'is_static' => $isStatic,
         ];
 
-        $params = $function->getParameters();
+        $params = $ref->getParameters();
 
         $list = [];
         foreach ($params as $param) {
@@ -781,16 +808,16 @@ class Admin
             $paramName = $param->getName();
 
             if ($param->hasType()) {
-                /** @var \ReflectionNamedType|\ReflectionUnionType $getType */
-                $getType = $param->getType();
-                if ($getType instanceof \ReflectionUnionType) {
+                /** @var \ReflectionNamedType|\ReflectionUnionType $reflection */
+                $reflection = $param->getType();
+                if ($reflection instanceof \ReflectionUnionType) {
                     $unionType = [];
-                    foreach ($getType->getTypes() as $objType) {
+                    foreach ($reflection->getTypes() as $objType) {
                         $unionType[] = $objType->getName();
                     }
                     $type = implode('|', $unionType);
                 } else {
-                    $type = $getType->getName();
+                    $type = $reflection->getName();
                 }
             }
 
@@ -893,7 +920,7 @@ class Admin
             $arr['internal'] = $functions['internal'];
 
             foreach ($functions['user'] as $function_name) {
-                $function = new \ReflectionFunction($function_name);
+                $function = new ReflectionFunction($function_name);
                 $filename = $function->getFileName();
                 $line = $function->getStartLine();
                 $arr['user'][] = [
@@ -912,7 +939,7 @@ class Admin
         $arr = [];
         if ($classes) {
             foreach ($classes as $classes_name) {
-                $function = new \ReflectionClass($classes_name);
+                $function = new ReflectionClass($classes_name);
                 $filename = $function->getFileName();
                 $line = $function->getStartLine();
                 $arr[] = [
@@ -987,21 +1014,15 @@ class Admin
             return self::json(['error' => 'require property_name!'], 4004);
         }
 
-        $class_name = $json['class_name'];
-        $property_name = $json['property_name'];
+        $className = $json['class_name'];
+        $propertyName = $json['property_name'];
 
-        $refClass = new ReflectionClass($class_name);
-        if (!$refClass) {
-            return self::json("class[{$class_name}] not exists", 4004);
+        if (!class_exists($className)) {
+            return self::json("class[{$className}] not exists", 4004);
         }
 
-        $property = $refClass->getProperty($property_name);
-        if (!$property) {
-            return self::json("property[{$property_name}] not exists", 4004);
-        }
-
-        $property->setAccessible(true);
-        $value = $property->getValue($property_name);
+        $reflection = new ReflectionClass($className);
+        $value = $reflection->getStaticPropertyValue($propertyName, []);
 
         $result = [
             'value' => var_export($value, true),
@@ -1011,7 +1032,7 @@ class Admin
 
     private static function handlerMulti(Server $server, array $list)
     {
-        $returnList = [];
+        $return_list = [];
         foreach ($list as $key => $content) {
             $path_array = swoole_string($content['path'])->trim('/')->split('/');
             $cmd = $path_array->get(1)->toString();
@@ -1036,20 +1057,20 @@ class Admin
                 $process_type = SWOOLE_SERVER_COMMAND_MANAGER;
                 $process_id = 0;
             } elseif ($process->startsWith('all') || $process->startsWith('specific')) {
-                if (!in_array($process->toString(), self::$allMap) && !$process->startsWith('specific')) {
-                    $returnList[$key] = json_decode('{}');
+                if (!in_array($process->toString(), self::$allList) && !$process->startsWith('specific')) {
+                    $return_list[$key] = json_decode('{}');
                     continue;
                 }
 
                 $result = self::handlerGetAll($server, $process, $cmd, $data);
 
-                $returnList[$key] = ['code' => 0, 'data' => $result];
+                $return_list[$key] = ['code' => 0, 'data' => $result];
                 continue;
             } else {
                 $array = $process->split('-');
 
                 if ($array->count() != 2 || !isset(self::$map[$array->get(0)->toString()])) {
-                    $returnList[$key] = json_decode('{}');
+                    $return_list[$key] = json_decode('{}');
                     continue;
                 }
 
@@ -1057,10 +1078,10 @@ class Admin
                 $process_id = intval($array->get(1)->toString());
             }
 
-            $returnList[$key] = $server->command($cmd, $process_id, intval($process_type), $data, true);
+            $return_list[$key] = $server->command($cmd, $process_id, intval($process_type), $data, true);
         }
 
-        return $returnList;
+        return $return_list;
     }
 
     private static function handlerGetAll(Server $server, StringObject $process, $cmd, $data, bool $json_decode = true)
