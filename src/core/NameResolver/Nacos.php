@@ -7,7 +7,7 @@
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
 
-namespace Swoole\NameService;
+namespace Swoole\NameResolver;
 
 use Swoole\Coroutine;
 

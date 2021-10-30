@@ -16,7 +16,7 @@ use function Swoole\Coroutine\run;
 const SERVICE_NAME = 'test_service';
 
 run(function () {
-    $c = new \Swoole\NameService\Nacos('http://127.0.0.1:8848');
+    $c = new \Swoole\NameResolver\Nacos('http://127.0.0.1:8848');
     var_dump($c->join(SERVICE_NAME, '127.0.0.1', 9502));
     var_dump($c->join(SERVICE_NAME, '127.0.0.1', 9501));
 

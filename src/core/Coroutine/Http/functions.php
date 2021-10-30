@@ -82,8 +82,12 @@ function request_with_http_client(
         $request_url .= '?' . $info['query'];
     }
     if ($client->execute($request_url)) {
-        return new ClientProxy($client->getBody(), $client->getStatusCode(), $client->getHeaders(),
-            $client->getCookies());
+        return new ClientProxy(
+            $client->getBody(),
+            $client->getStatusCode(),
+            $client->getHeaders(),
+            $client->getCookies()
+        );
     }
     return false;
 }

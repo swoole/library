@@ -18,7 +18,7 @@ class ClientProxy
     private $headers;
     private $cookies;
 
-    function __construct($body, $statusCode, $headers, $cookies)
+    public function __construct($body, $statusCode, $headers, $cookies)
     {
         $this->body = $body;
         $this->statusCode = $statusCode;
@@ -26,22 +26,22 @@ class ClientProxy
         $this->cookies = $cookies;
     }
 
-    function getBody()
+    public function getBody()
     {
         return $this->body;
     }
 
-    function getStatusCode()
+    public function getStatusCode()
     {
         return $this->statusCode;
     }
 
-    function getHeaders()
+    public function getHeaders()
     {
         return $this->headers;
     }
 
-    function getCookies()
+    public function getCookies()
     {
         return $this->cookies;
     }

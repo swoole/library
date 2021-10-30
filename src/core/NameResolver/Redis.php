@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Swoole\NameService;
+namespace Swoole\NameResolver;
 
 class Redis extends Resolver
 {

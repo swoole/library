@@ -1,6 +1,6 @@
 <?php
 
-namespace Swoole\NameService;
+namespace Swoole\NameResolver;
 
 abstract class Resolver
 {
@@ -36,7 +36,7 @@ abstract class Resolver
      * @param string $name
      * @return Cluster|null|false|string
      */
-    function resolve(string $name)
+    public function resolve(string $name)
     {
         if ($this->hasFilter() and ($this->getFilter())($name) !== true) {
             return null;
