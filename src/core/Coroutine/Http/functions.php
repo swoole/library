@@ -23,10 +23,18 @@ use Swoole\Coroutine\Http\Client\Exception;
  * @return false|ClientProxy
  * @throws Exception
  */
-function request(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
-{
+function request(
+    string $url,
+    string $method,
+    $data = null,
+    array $options = null,
+    array $headers = null,
+    array $cookies = null
+) {
     if (swoole_library_get_option('http_client_driver') == 'curl') {
         return request_with_curl($url, $method, $data, $options, $headers, $cookies);
+    } elseif (swoole_library_get_option('http_client_driver') == 'stream') {
+        return request_with_stream($url, $method, $data, $options, $headers, $cookies);
     } else {
         return request_with_http_client($url, $method, $data, $options, $headers, $cookies);
     }
@@ -37,8 +45,14 @@ function request(string $url, string $method, $data = null, array $options = nul
  * @return ClientProxy|false
  * @throws Exception
  */
-function request_with_http_client(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
-{
+function request_with_http_client(
+    string $url,
+    string $method,
+    $data = null,
+    array $options = null,
+    array $headers = null,
+    array $cookies = null
+) {
     $info = parse_url($url);
     if (empty($info['scheme'])) {
         throw new Exception('The URL given is illegal [no scheme]');
@@ -68,18 +82,25 @@ function request_with_http_client(string $url, string $method, $data = null, arr
         $request_url .= '?' . $info['query'];
     }
     if ($client->execute($request_url)) {
-        return new ClientProxy($client->getBody(), $client->getStatusCode(), $client->getHeaders(), $client->getCookies());
+        return new ClientProxy($client->getBody(), $client->getStatusCode(), $client->getHeaders(),
+            $client->getCookies());
     }
     return false;
 }
 
 /**
  * @param mixed $data
- * @return void
+ * @return ClientProxy|false
  * @throws Exception
  */
-function request_with_curl(string $url, string $method, $data = null, array $options = null, array $headers = null, array $cookies = null)
-{
+function request_with_curl(
+    string $url,
+    string $method,
+    $data = null,
+    array $options = null,
+    array $headers = null,
+    array $cookies = null
+) {
     $ch = curl_init($url);
     if (empty($ch)) {
         throw new Exception('failed to curl_init');
@@ -87,7 +108,7 @@ function request_with_curl(string $url, string $method, $data = null, array $opt
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
     $responseHeaders = $responseCookies = [];
-    curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $header) use (&$responseHeaders) {
+    curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $header) use (&$responseHeaders, &$responseCookies) {
         $len = strlen($header);
         $header = explode(':', $header, 2);
         if (count($header) < 2) {
@@ -115,6 +136,22 @@ function request_with_curl(string $url, string $method, $data = null, array $opt
         }
         curl_setopt($ch, CURLOPT_COOKIE, $cookie_str);
     }
+    if (isset($options['timeout'])) {
+        if (is_float($options['timeout'])) {
+            curl_setopt($ch, CURLOPT_TIMEOUT_MS, intval($options['timeout'] * 1000));
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, intval($options['timeout'] * 1000));
+        } else {
+            curl_setopt($ch, CURLOPT_TIMEOUT, intval($options['timeout']));
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, intval($options['timeout']));
+        }
+    }
+    if (isset($options['connect_timeout'])) {
+        if (is_float($options['connect_timeout'])) {
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, intval($options['connect_timeout'] * 1000));
+        } else {
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, intval($options['connect_timeout']));
+        }
+    }
     $body = curl_exec($ch);
     if ($body) {
         return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
@@ -123,11 +160,55 @@ function request_with_curl(string $url, string $method, $data = null, array $opt
     }
 }
 
+/**
+ * @param mixed $data
+ * @return ClientProxy|false
+ */
+function request_with_stream(
+    string $url,
+    string $method,
+    $data = null,
+    array $options = null,
+    array $headers = null,
+    array $cookies = null
+) {
+    $stream_options = array(
+        'http' => array(
+            'method' => $method,
+        )
+    );
+    $headerStr = '';
+    if ($headers) {
+        foreach ($headers as $k => $v) {
+            $headerStr .= "$k: $v\r\n";
+        }
+    }
+    if ($cookies) {
+        foreach ($cookies as $k => $v) {
+            $headerStr .= "Cookie: $k=$v\r\n";
+        }
+    }
+    if ($headerStr) {
+        $stream_options['http']['header'] = $headerStr;
+    }
+    if (isset($options['timeout'])) {
+        $stream_options['http']['timeout'] = intval($options['timeout']);
+    }
+    if ($data) {
+        $stream_options['http']['content'] = is_array($data) ? http_build_query($data) : strval($data);
+    }
+    $body = file_get_contents($url, false, stream_context_create($stream_options));
+    if ($body) {
+        return new ClientProxy($body, 200, [], []);
+    } else {
+        return false;
+    }
+}
 
 /**
  * @param mixed $data
- * @throws Exception
  * @return Client|false|mixed
+ * @throws Exception
  */
 function post(string $url, $data, array $options = null, array $headers = null, array $cookies = null)
 {
@@ -135,8 +216,8 @@ function post(string $url, $data, array $options = null, array $headers = null, 
 }
 
 /**
- * @throws Exception
  * @return Client|false|mixed
+ * @throws Exception
  */
 function get(string $url, array $options = null, array $headers = null, array $cookies = null)
 {
