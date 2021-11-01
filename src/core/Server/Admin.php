@@ -70,6 +70,8 @@ class Admin
         'close_session',
     ];
 
+    private static $accessToken = '';
+
     public static function init(Server $server)
     {
         $accepted_process_types = SWOOLE_SERVER_COMMAND_MASTER |
@@ -407,13 +409,26 @@ class Admin
         );
     }
 
+    public static function getAccessToken(): string
+    {
+        return self::$accessToken;
+    }
+
     public static function start(Server $server)
     {
         $admin_server_uri = swoole_string($server->setting['admin_server']);
         if ($admin_server_uri->startsWith('unix:/')) {
             return swoole_error_log(SWOOLE_LOG_ERROR, "admin_server[{$server->setting['admin_server']}] is not supported");
         }
-        [$host, $port] = $admin_server_uri->split(':', 2)->toArray();
+
+        if ($admin_server_uri->contains('@')) {
+            [$access_name, $access_secret] = $admin_server_uri->split('@', 2)->get(0)->split(':', 2)->toArray();
+            self::$accessToken = sha1($access_name . $access_secret);
+            [$host, $port] = $admin_server_uri->split('@', 2)->get(1)->split(':', 2)->toArray();
+        } else {
+            [$host, $port] = $admin_server_uri->split(':', 2)->toArray();
+        }
+
         $admin_server = new Coroutine\Http\Server($host, intval($port));
 
         $admin_server->handle('/api', function (Request $req, Response $resp) use ($server) {
@@ -426,7 +441,7 @@ class Admin
 
             $resp->header('Access-Control-Allow-Origin', '*');
             $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN');
+            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN, X-DASHBOARD-ACCESS-TOKEN');
 
             $method = $req->getMethod();
 
