@@ -439,11 +439,26 @@ class Admin
                 return;
             }
 
+            $resp->header('Server', 'swoole-admin-server');
             $resp->header('Access-Control-Allow-Origin', '*');
             $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN, X-DASHBOARD-ACCESS-TOKEN');
+            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN, X-ADMIN-SERVER-ACCESS-TOKEN');
 
             $method = $req->getMethod();
+
+            if ($method === 'OPTIONS') {
+                return $resp->end();
+            }
+
+            $token = self::getAccessToken();
+            if (!empty($token)) {
+                $token_header = $req->header['x-admin-server-access-token'] ?? '';
+                if ($token_header !== $token) {
+                    $resp->status(403);
+                    $resp->end(self::json('Bad access token', 4003));
+                    return;
+                }
+            }
 
             $cmd = $path_array->get(1)->toString();
 
