@@ -10,8 +10,9 @@
 namespace Swoole\NameResolver;
 
 use Swoole\Coroutine;
+use Swoole\NameResolver;
 
-class Consul extends Resolver
+class Consul extends NameResolver
 {
     private $server;
     private $prefix;
@@ -78,6 +79,9 @@ class Consul extends Resolver
             return null;
         }
         $list = json_decode($r->getBody());
+        if (empty($list)) {
+            return null;
+        }
         $cluster = new Cluster();
         foreach ($list as $li) {
             $cluster->add($li->ServiceAddress, $li->ServicePort, $li->ServiceWeights->Passing);

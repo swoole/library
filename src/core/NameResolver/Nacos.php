@@ -10,8 +10,9 @@
 namespace Swoole\NameResolver;
 
 use Swoole\Coroutine;
+use Swoole\NameResolver;
 
-class Nacos extends Resolver
+class Nacos extends NameResolver
 {
     private $server;
     private $prefix;
@@ -55,6 +56,9 @@ class Nacos extends Resolver
             return null;
         }
         $result = json_decode($r->getBody());
+        if (empty($list)) {
+            return null;
+        }
         $cluster = new Cluster();
         foreach ($result->hosts as $node) {
             $cluster->add($node->ip, $node->port, $node->weight);

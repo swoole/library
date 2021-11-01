@@ -25,6 +25,9 @@ class Cluster
         $this->nodes[] = ['host' => $host, 'port' => $port, 'weight' => $weight];
     }
 
+    /**
+     * @return false|string
+     */
     public function pop()
     {
         if (empty($this->nodes)) {
