@@ -233,11 +233,15 @@ class Constant
 
     public const OPTION_STACK_SIZE = 'stack_size';
 
+    public const OPTION_NAME_RESOLVER = 'name_resolver';
+
     public const OPTION_DNS_CACHE_EXPIRE = 'dns_cache_expire';
 
     public const OPTION_DNS_CACHE_CAPACITY = 'dns_cache_capacity';
 
     public const OPTION_RECONNECT = 'reconnect';
+
+    public const OPTION_MAX_RETRIES = 'max_retries';
 
     public const OPTION_DEFER = 'defer';
 
