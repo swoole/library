@@ -37,6 +37,7 @@ class Helper
         'socket_recv_timeout' => true,
         'socket_buffer_size' => true,
         'socket_timeout' => true,
+        'max_concurrency' => true,
     ];
 
     public const SERVER_OPTIONS = [
@@ -150,6 +151,35 @@ class Helper
         'ssl_sni_certs' => true,
     ];
 
+    public const AIO_OPTIONS = [
+        'aio_core_worker_num' => true,
+        'aio_worker_num' => true,
+        'aio_max_wait_time' => true,
+        'aio_max_idle_time' => true,
+        'enable_signalfd' => true,
+        'wait_signal' => true,
+        'dns_cache_refresh_time' => true,
+        'thread_num' => true,
+        'min_thread_num' => true,
+        'max_thread_num' => true,
+        'socket_dontwait' => true,
+        'dns_lookup_random' => true,
+        'use_async_resolver' => true,
+        'enable_coroutine' => true,
+    ];
+
+    public const COROUTINE_OPTIONS = [
+        'max_coro_num' => true,
+        'max_coroutine' => true,
+        'enable_deadlock_check' => true,
+        'hook_flags' => true,
+        'enable_preemptive_scheduler' => true,
+        'c_stack_size' => true,
+        'stack_size' => true,
+        'dns_cache_expire' => true,
+        'dns_cache_capacity' => true,
+    ];
+
     public const HELPER_OPTIONS = [
         'stats_file' => true,
         'stats_timer_interval' => true,
@@ -158,7 +188,8 @@ class Helper
 
     public static function checkOptions(array $input_options)
     {
-        $const_options = self::GLOBAL_OPTIONS + self::SERVER_OPTIONS + self::PORT_OPTIONS + self::HELPER_OPTIONS;
+        $const_options = self::GLOBAL_OPTIONS + self::SERVER_OPTIONS + self::PORT_OPTIONS
+            + self::AIO_OPTIONS + self::COROUTINE_OPTIONS + self::HELPER_OPTIONS;
 
         foreach ($input_options as $k => $v) {
             if (!array_key_exists(strtolower($k), $const_options)) {
