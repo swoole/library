@@ -14,12 +14,13 @@ use Swoole\NameResolver;
 
 class Nacos extends NameResolver
 {
-    private $server;
+    private $baseUrl;
     private $prefix;
 
-    public function __construct($server, $prefix = 'swoole_service_')
+    public function __construct($baseUrl, $prefix = 'swoole_service_')
     {
-        $this->server = $server;
+        $this->checkBaseURL($baseUrl);
+        $this->baseUrl = $baseUrl;
         $this->prefix = $prefix;
     }
 
@@ -33,7 +34,7 @@ class Nacos extends NameResolver
         $params['namespaceId'] = $options['namespaceId'] ?? 'public';
         $params['serviceName'] = $this->prefix . $name;
 
-        $r = Coroutine\Http\post($this->server . '/nacos/v1/ns/instance?' . http_build_query($params), []);
+        $r = Coroutine\Http\post($this->baseUrl . '/nacos/v1/ns/instance?' . http_build_query($params), []);
         return $r and $r->getStatusCode() === 200;
     }
 
@@ -43,7 +44,7 @@ class Nacos extends NameResolver
         $params['ip'] = $ip;
         $params['serviceName'] = $this->prefix . $name;
 
-        $r = Coroutine\Http\request($this->server . '/nacos/v1/ns/instance?' . http_build_query($params), 'DELETE');
+        $r = Coroutine\Http\request($this->baseUrl . '/nacos/v1/ns/instance?' . http_build_query($params), 'DELETE');
         return $r and $r->getStatusCode() === 200;
     }
 
@@ -51,7 +52,7 @@ class Nacos extends NameResolver
     {
         $params['serviceName'] = $this->prefix . $name;
 
-        $r = Coroutine\Http\get($this->server . '/nacos/v1/ns/instance/list?' . http_build_query($params));
+        $r = Coroutine\Http\get($this->baseUrl . '/nacos/v1/ns/instance/list?' . http_build_query($params));
         if (!$r or $r->getStatusCode() !== 200) {
             return null;
         }

@@ -13,21 +13,25 @@ use Swoole\NameResolver;
 
 class Redis extends NameResolver
 {
-    private $redis_host;
-    private $redis_port;
+    private $serverHost;
+    private $serverPort;
     private $prefix;
 
     public function __construct($host, $port, $prefix = 'swoole:service:')
     {
-        $this->redis_host = $host;
-        $this->redis_port = $port;
+        // The host MUST BE IP ADDRESS
+        if (!filter_var($host, FILTER_VALIDATE_IP)) {
+            $host = gethostbyname($host);
+        }
+        $this->serverHost = $host;
+        $this->serverPort = $port;
         $this->prefix = $prefix;
     }
 
     protected function connect()
     {
         $redis = new \redis;
-        if ($redis->connect($this->redis_host, $this->redis_port) === false) {
+        if ($redis->connect($this->serverHost, $this->serverPort) === false) {
             return false;
         }
         return $redis;

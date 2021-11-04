@@ -3,6 +3,7 @@
 namespace Swoole;
 
 use Swoole\NameResolver\Cluster;
+use RuntimeException;
 
 abstract class NameResolver
 {
@@ -28,6 +29,24 @@ abstract class NameResolver
     public function hasFilter(): bool
     {
         return !empty($this->filter_fn);
+    }
+
+    /**
+     * !!! The host MUST BE IP ADDRESS
+     * @param $baseURL
+     */
+    protected function checkBaseURL(&$baseURL)
+    {
+        $info = parse_url($baseURL);
+        if (empty($info['scheme']) or empty($info['host'])) {
+            throw new RuntimeException("invalid baseURL{$baseURL}");
+        }
+
+        if (!filter_var($info['host'], FILTER_VALIDATE_IP)) {
+            $ipAddr = gethostbyname($info['host']);
+            $baseURL = str_replace($baseURL, $info['scheme'] . '://' . $info['host'],
+                $info['scheme'] . '://' . $ipAddr);
+        }
     }
 
     /**
