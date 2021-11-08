@@ -12,7 +12,9 @@ declare(strict_types=1);
 namespace Swoole\Coroutine;
 
 use PHPUnit\Framework\TestCase;
+use Swoole\Constant;
 use Swoole\Coroutine;
+
 use function Swoole\Coroutine\Http\get;
 use function Swoole\Coroutine\Http\post;
 
@@ -63,24 +65,24 @@ class HttpFunctionTest extends TestCase
     }
 
     public function testCurlGet() {
-        swoole_library_set_option('http_client_driver', 'curl');
+        swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'curl');
         $this->fun1();
         $this->fun2();
     }
 
     public function testCurlPost() {
-        swoole_library_set_option('http_client_driver', 'curl');
+        swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'curl');
         $this->fun3();
     }
 
     public function testStreamGet() {
-        swoole_library_set_option('http_client_driver', 'stream');
+        swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun1();
         $this->fun2();
     }
 
     public function testStreamPost() {
-        swoole_library_set_option('http_client_driver', 'stream');
+        swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun3();
     }
 }

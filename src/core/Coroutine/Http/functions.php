@@ -31,12 +31,15 @@ function request(
     array $headers = null,
     array $cookies = null
 ) {
-    if (swoole_library_get_option('http_client_driver') == 'curl') {
-        return request_with_curl($url, $method, $data, $options, $headers, $cookies);
-    } elseif (swoole_library_get_option('http_client_driver') == 'stream') {
-        return request_with_stream($url, $method, $data, $options, $headers, $cookies);
-    } else {
-        return request_with_http_client($url, $method, $data, $options, $headers, $cookies);
+    $driver = swoole_library_get_option('http_client_driver');
+    switch ($driver) {
+        case 'curl':
+            return request_with_curl($url, $method, $data, $options, $headers, $cookies);
+        case 'stream':
+            return request_with_stream($url, $method, $data, $options, $headers, $cookies);
+        case 'swoole':
+        default:
+            return request_with_http_client($url, $method, $data, $options, $headers, $cookies);
     }
 }
 
