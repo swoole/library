@@ -47,7 +47,7 @@ class Nacos extends NameResolver
             return null;
         }
         $result = json_decode($r->getBody());
-        if (empty($list)) {
+        if (empty($result)) {
             return null;
         }
         $cluster = new Cluster();

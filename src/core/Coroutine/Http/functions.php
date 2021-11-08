@@ -157,11 +157,10 @@ function request_with_curl(
         }
     }
     $body = curl_exec($ch);
-    if ($body) {
-        return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
-    } else {
+    if ($body === false) {
         return false;
     }
+    return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
 }
 
 /**
