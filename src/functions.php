@@ -40,7 +40,7 @@ function swoole_library_get_options(array $options)
     return $GLOBALS['swoole_library_options'];
 }
 
-function swoole_library_set_option(string $key, mixed $value)
+function swoole_library_set_option(string $key, $value)
 {
     $GLOBALS['swoole_library_options'][$key] = $value;
 }

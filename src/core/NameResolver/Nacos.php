@@ -14,16 +14,6 @@ use Swoole\NameResolver;
 
 class Nacos extends NameResolver
 {
-    private $baseUrl;
-    private $prefix;
-
-    public function __construct($baseUrl, $prefix = 'swoole_service_')
-    {
-        $this->checkBaseURL($baseUrl);
-        $this->baseUrl = $baseUrl;
-        $this->prefix = $prefix;
-    }
-
     public function join(string $name, string $ip, int $port, array $options = []): bool
     {
         $params['port'] = $port;

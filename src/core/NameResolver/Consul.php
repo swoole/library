@@ -9,21 +9,13 @@
 
 namespace Swoole\NameResolver;
 
-use Swoole\Coroutine;
 use Swoole\NameResolver;
+
+use function  Swoole\Coroutine\Http\request;
+use function  Swoole\Coroutine\Http\get;
 
 class Consul extends NameResolver
 {
-    private $baseUrl;
-    private $prefix;
-
-    public function __construct($baseUrl, $prefix = 'swoole_service_')
-    {
-        $this->checkBaseURL($baseUrl);
-        $this->baseUrl = $baseUrl;
-        $this->prefix = $prefix;
-    }
-
     private function getServiceId(string $name, string $ip, int $port): string
     {
         return $this->prefix . $name . "_{$ip}:{$port}";
@@ -43,13 +35,13 @@ class Consul extends NameResolver
                 "Warning" => 1,
             ]
         ];
-        $r = Coroutine\Http\request($this->baseUrl . '/v1/agent/service/register', 'PUT', json_encode($data));
+        $r = request($this->baseUrl . '/v1/agent/service/register', 'PUT', json_encode($data));
         return $r and $r->getStatusCode() === 200;
     }
 
     public function leave(string $name, string $ip, int $port): bool
     {
-        $r = Coroutine\Http\request(
+        $r = request(
             $this->baseUrl . '/v1/agent/service/deregister/' . $this->getServiceId(
                 $name,
                 $ip,
@@ -62,7 +54,7 @@ class Consul extends NameResolver
 
     public function enableMaintenanceMode(string $name, string $ip, int $port): bool
     {
-        $r = Coroutine\Http\request(
+        $r = request(
             $this->baseUrl . '/v1/agent/service/maintenance/' . $this->getServiceId(
                 $name,
                 $ip,
@@ -75,7 +67,7 @@ class Consul extends NameResolver
 
     public function getCluster(string $name): ?Cluster
     {
-        $r = Coroutine\Http\get($this->baseUrl . '/v1/catalog/service/' . $this->prefix . $name);
+        $r = get($this->baseUrl . '/v1/catalog/service/' . $this->prefix . $name);
         if (!$r or $r->getStatusCode() !== 200) {
             return null;
         }

@@ -15,6 +15,16 @@ abstract class NameResolver
 
     abstract public function getCluster(string $name): ?Cluster;
 
+    protected $baseUrl;
+    protected $prefix;
+    protected $info;
+
+    public function __construct($url, $prefix = 'swoole_service_')
+    {
+        $this->checkServerUrl($url);
+        $this->prefix = $prefix;
+    }
+
     public function withFilter(callable $fn): self
     {
         $this->filter_fn = $fn;
@@ -33,20 +43,31 @@ abstract class NameResolver
 
     /**
      * !!! The host MUST BE IP ADDRESS
-     * @param $baseURL
+     * @param $url
      */
-    protected function checkBaseURL(&$baseURL)
+    protected function checkServerUrl($url)
     {
-        $info = parse_url($baseURL);
+        $info = parse_url($url);
         if (empty($info['scheme']) or empty($info['host'])) {
-            throw new RuntimeException("invalid baseURL{$baseURL}");
+            throw new RuntimeException("invalid url parameter '{$url}'");
         }
-
         if (!filter_var($info['host'], FILTER_VALIDATE_IP)) {
-            $ipAddr = gethostbyname($info['host']);
-            $baseURL = str_replace($baseURL, $info['scheme'] . '://' . $info['host'],
-                $info['scheme'] . '://' . $ipAddr);
+            $info['ip'] = gethostbyname($info['host']);
+            if (!filter_var($info['ip'], FILTER_VALIDATE_IP)) {
+                throw new RuntimeException("Failed to resolve host '{$info['host']}'");
+            }
+        } else {
+            $info['ip'] = $info['host'];
         }
+        $baseUrl = $info['scheme'] . '://' . $info['ip'];
+        if (!empty($info['port'])) {
+            $baseUrl .= ":{$info['port']}";
+        }
+        if (!empty($info['path'])) {
+            $baseUrl .= rtrim($info['path'], '/');
+        }
+        $this->baseUrl = $baseUrl;
+        $this->info = $info;
     }
 
     /**

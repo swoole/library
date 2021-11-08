@@ -15,17 +15,12 @@ class Redis extends NameResolver
 {
     private $serverHost;
     private $serverPort;
-    private $prefix;
 
-    public function __construct($host, $port, $prefix = 'swoole:service:')
+    public function __construct($url, $prefix = 'swoole:service:')
     {
-        // The host MUST BE IP ADDRESS
-        if (!filter_var($host, FILTER_VALIDATE_IP)) {
-            $host = gethostbyname($host);
-        }
-        $this->serverHost = $host;
-        $this->serverPort = $port;
-        $this->prefix = $prefix;
+        parent::__construct($url, $prefix);
+        $this->serverHost = $this->info['ip'];
+        $this->serverPort = $this->info['port'] ?? 6379;
     }
 
     protected function connect()
