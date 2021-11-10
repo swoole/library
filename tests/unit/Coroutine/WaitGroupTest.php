@@ -35,7 +35,7 @@ class WaitGroupTest extends TestCase
 
             $wg->wait();
 
-            self::assertEquals(microtime(true), $st + 0.525, 'The four coroutines take about 0.50 to 0.55 second in total to finish.', 0.025);
+            self::assertEqualsWithDelta(microtime(true), $st + 0.525, 0.025, 'The four coroutines take about 0.50 to 0.55 second in total to finish.');
             $this->assertEquals(0, $wg->count(), 'All four coroutines have finished execution.');
         });
     }

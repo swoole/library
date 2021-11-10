@@ -37,7 +37,7 @@ class BarrierTest extends TestCase
             }
             Barrier::wait($barrier);
 
-            self::assertEquals(microtime(true), $st + 0.525, 'It takes about 0.50 to 0.55 second to finish execution of the four child coroutines.', 0.025);
+            self::assertEqualsWithDelta(microtime(true), $st + 0.525, 0.025, 'It takes about 0.50 to 0.55 second to finish execution of the four child coroutines.');
             self::assertEquals($N, $count, 'All four child coroutines have finished execution; the counter is increased to 4.');
         });
     }
