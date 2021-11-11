@@ -1,5 +1,6 @@
 # Swoole Library
 
+[![Twitter](https://badgen.net/badge/icon/twitter?icon=twitter&label)](https://twitter.com/phpswoole)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.swoole.dev)
 [![Library Status](https://github.com/swoole/library/workflows/Unit%20Tests/badge.svg)](https://github.com/swoole/library/actions)
 [![License](https://img.shields.io/badge/license-apache2-blue.svg)](LICENSE)
