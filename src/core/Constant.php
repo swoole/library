@@ -103,8 +103,6 @@ class Constant
 
     public const OPTION_SOCKET_TIMEOUT = 'socket_timeout';
 
-    public const OPTION_MAX_CONCURRENCY = 'max_concurrency';
-
     public const OPTION_AIO_CORE_WORKER_NUM = 'aio_core_worker_num';
 
     public const OPTION_AIO_WORKER_NUM = 'aio_worker_num';
@@ -237,6 +235,8 @@ class Constant
 
     public const OPTION_DNS_CACHE_CAPACITY = 'dns_cache_capacity';
 
+    public const OPTION_MAX_CONCURRENCY = 'max_concurrency';
+
     public const OPTION_RECONNECT = 'reconnect';
 
     public const OPTION_DEFER = 'defer';
@@ -306,6 +306,8 @@ class Constant
     public const OPTION_MAX_WAIT_TIME = 'max_wait_time';
 
     public const OPTION_MAX_QUEUED_BYTES = 'max_queued_bytes';
+
+    public const OPTION_WORKER_MAX_CONCURRENCY = 'worker_max_concurrency';
 
     public const OPTION_SEND_TIMEOUT = 'send_timeout';
 
