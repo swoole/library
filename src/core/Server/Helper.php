@@ -37,7 +37,6 @@ class Helper
         'socket_recv_timeout' => true,
         'socket_buffer_size' => true,
         'socket_timeout' => true,
-        'max_concurrency' => true,
     ];
 
     public const SERVER_OPTIONS = [
@@ -51,6 +50,8 @@ class Helper
         'worker_num' => true,
         'max_wait_time' => true,
         'max_queued_bytes' => true,
+        'max_concurrency' => true,
+        'worker_max_concurrency' => true,
         'enable_coroutine' => true,
         'send_timeout' => true,
         'dispatch_mode' => true,
@@ -178,6 +179,7 @@ class Helper
         'stack_size' => true,
         'dns_cache_expire' => true,
         'dns_cache_capacity' => true,
+        'max_concurrency' => true,
     ];
 
     public const HELPER_OPTIONS = [
