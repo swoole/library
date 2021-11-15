@@ -42,7 +42,7 @@ class FunctionTest extends TestCase
                 },
             ], 0.1);
             Runtime::setHookFlags(0);
-            self::assertEquals(microtime(true), $start + 0.11, 'Tasks in the batch take about 0.10 to 0.12 second in total to finish.', 0.01);
+            self::assertEqualsWithDelta(microtime(true), $start + 0.11, 0.01, 'Tasks in the batch take about 0.10 to 0.12 second in total to finish.');
             $this->assertEquals(count($results), 4);
 
             $this->assertEquals($results['gethostbyname'], gethostbyname('localhost'));
@@ -123,7 +123,7 @@ class FunctionTest extends TestCase
                 System::sleep(0.2);
                 return $i * 2;
             });
-            self::assertEquals(microtime(true), $start + 0.21, 'The method call to map() takes about 0.20 to 0.22 second in total to finish.', 0.01);
+            self::assertEqualsWithDelta(microtime(true), $start + 0.21, 0.01, 'The method call to map() takes about 0.20 to 0.22 second in total to finish.');
             $this->assertSameSize($results, $list);
             $this->assertSame([2, 4, 6, 8], $results);
         });
