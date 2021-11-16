@@ -23,7 +23,7 @@ jobs:
 
       - name: Setup Services
         run: |
-          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:php${{ matrix.php }}/g" ./Dockerfile
+          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:php${{ matrix.php }}-dev/g" ./Dockerfile
           docker-compose up -d
           docker ps -a
           docker pull nacos/nacos-server
