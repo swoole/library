@@ -23,7 +23,7 @@ jobs:
           docker ps -a
           docker exec -t $(docker ps -qf "name=app") bash -c "php -v"
           docker exec -t $(docker ps -qf "name=app") bash -c "php --ri swoole"
-          docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:php${{ matrix.php }}-dev composer install -n
+          docker run --rm -v "$(pwd)":/var/www -t library_app composer install -n
 
       - name: Run Unit Tests
         run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"

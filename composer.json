@@ -20,9 +20,10 @@
         "ext-swoole": ">=4.6"
     },
     "require-dev": {
-        "ext-curl": "*",
         "ext-sockets": "*",
         "ext-json": "*",
+        "ext-redis": "*",
+        "ext-curl": "*",
         "phpunit/phpunit": "~8.0",
         "swoole/ide-helper": "~4.6",
         "friendsofphp/php-cs-fixer": "^3.0"
@@ -30,7 +31,8 @@
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
         "ext-pdo": "Required to use pdo database",
-        "ext-redis": "Required to use redis database, and the required version is greater than or equal to 3.1.3"
+        "ext-redis": "Required to use redis database, and the required version is greater than or equal to 3.1.3",
+        "ext-curl": "Required to use http client"
     },
     "autoload": {
         "files": [
@@ -62,10 +64,10 @@
         "cs-check": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix --dry-run",
         "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix",
         "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
-        "post-install-cmd" : [
+        "post-install-cmd": [
             "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
         ],
-        "post-update-cmd" : [
+        "post-update-cmd": [
             "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
         ]
     }

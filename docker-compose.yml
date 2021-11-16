@@ -7,10 +7,13 @@ services:
       - mysql
       - redis
       - wordpress
+      - nacos
+      - consul
     environment:
       DISABLE_DEFAULT_SERVER: 1
+      GITHUB_ACTIONS: "yes"
     ports:
-      - 80:80
+      - "80:80"
     volumes:
       - .:/var/www
       - wordpress:/var/www/html
@@ -43,6 +46,18 @@ services:
       MYSQL_ROOT_PASSWORD: password
   redis:
     image: redis:5.0
-
+  nacos:
+    image: nacos/nacos-server
+    ports:
+      - "8848:8848"
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+  consul:
+    image: consul
+    command:
+      consul agent -dev -client=0.0.0.0
+    ports:
+      - "8500:8500"
 volumes:
   wordpress:

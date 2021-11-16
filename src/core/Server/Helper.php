@@ -177,6 +177,7 @@ class Helper
         'enable_preemptive_scheduler' => true,
         'c_stack_size' => true,
         'stack_size' => true,
+        'name_resolver' => true,
         'dns_cache_expire' => true,
         'dns_cache_capacity' => true,
         'max_concurrency' => true,
