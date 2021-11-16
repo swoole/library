@@ -35,7 +35,7 @@ class NameResolverTest extends TestCase
 
     public function testNacos()
     {
-        $this->markTestSkipped("Nacos is not available.");
+        // $this->markTestSkipped("Nacos is not available.");
         swoole_library_set_option('http_client_driver', 'curl');
         $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
         $this->fun1($ns);
@@ -77,7 +77,7 @@ class NameResolverTest extends TestCase
 
     public function testNacosCo()
     {
-        $this->markTestSkipped("Nacos is not available.");
+        // $this->markTestSkipped("Nacos is not available.");
         run(function () {
             $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
             $this->fun1($ns);
