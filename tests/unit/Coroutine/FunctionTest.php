@@ -123,7 +123,7 @@ class FunctionTest extends TestCase
                 System::sleep(0.2);
                 return $i * 2;
             });
-            self::assertEqualsWithDelta(microtime(true), $start + 0.21, 0.01, 'The method call to map() takes about 0.20 to 0.22 second in total to finish.');
+            self::assertEqualsWithDelta(microtime(true), $start + 0.21, 0.05, 'The method call to map() takes about 0.20 to 0.22 second in total to finish.');
             $this->assertSameSize($results, $list);
             $this->assertSame([2, 4, 6, 8], $results);
         });

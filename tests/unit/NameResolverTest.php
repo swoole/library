@@ -35,7 +35,9 @@ class NameResolverTest extends TestCase
 
     public function testNacos()
     {
-        // $this->markTestSkipped("Nacos is not available.");
+        if (GITHUB_ACTIONS) {
+            $this->markTestSkipped('Nacos is not available.');
+        }
         swoole_library_set_option('http_client_driver', 'curl');
         $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
         $this->fun1($ns);
@@ -44,7 +46,7 @@ class NameResolverTest extends TestCase
     public function testLookup()
     {
         if (!function_exists('swoole_name_resolver_lookup')) {
-            $this->markTestSkipped("Swoole v4.9 or later is required.");
+            $this->markTestSkipped('Swoole v4.9 or later is required.');
         }
         $count = 0;
         $ns = new NameResolver\Redis(REDIS_SERVER_URL);
@@ -77,7 +79,9 @@ class NameResolverTest extends TestCase
 
     public function testNacosCo()
     {
-        // $this->markTestSkipped("Nacos is not available.");
+        if (GITHUB_ACTIONS) {
+            $this->markTestSkipped('Nacos is not available.');
+        }
         run(function () {
             $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
             $this->fun1($ns);
