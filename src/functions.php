@@ -32,7 +32,7 @@ if (SWOOLE_USE_SHORTNAME) {
 
 class SwooleLibrary
 {
-    static public $options = [];
+    public static $options = [];
 }
 
 function swoole_library_set_options(array $options)
