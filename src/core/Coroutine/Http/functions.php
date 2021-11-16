@@ -186,14 +186,19 @@ function request_with_stream(
             $headerStr .= "Cookie: {$k}={$v}\r\n";
         }
     }
-    if ($headerStr) {
-        $stream_options['http']['header'] = $headerStr;
-    }
     if (isset($options['timeout'])) {
         $stream_options['http']['timeout'] = intval($options['timeout']);
     }
     if ($data) {
-        $stream_options['http']['content'] = is_array($data) ? http_build_query($data) : strval($data);
+        if (is_array($data)) {
+            $headerStr .= "Content-type: application/x-www-form-urlencoded\r\n";
+            $stream_options['http']['content'] = http_build_query($data);
+        } else {
+            $stream_options['http']['content'] = strval($data);
+        }
+    }
+    if ($headerStr) {
+        $stream_options['http']['header'] = $headerStr;
     }
     $body = file_get_contents($url, false, stream_context_create($stream_options));
     if ($body) {

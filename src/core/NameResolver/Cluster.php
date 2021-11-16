@@ -21,9 +21,6 @@ class Cluster
     private $nodes = [];
 
     /**
-     * @param string $host
-     * @param int $port
-     * @param int $weight
      * @throws Exception
      */
     public function add(string $host, int $port, int $weight = 100): void
