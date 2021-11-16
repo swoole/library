@@ -24,18 +24,21 @@ use function Swoole\Coroutine\Http\post;
  */
 class HttpFunctionTest extends TestCase
 {
-    private function fun1 () {
+    private function fun1()
+    {
         self::assertSame(200, get('http://httpbin.org')->getStatusCode(), 'Test HTTP GET without query strings.');
     }
 
-    private function fun2 () {
+    private function fun2()
+    {
         $data = get('http://httpbin.org/get?hello=world');
         $body = json_decode($data->getBody());
         self::assertSame('httpbin.org', $body->headers->Host);
         self::assertSame('world', $body->args->hello);
     }
 
-    private function fun3 () {
+    private function fun3()
+    {
         $random_data = base64_encode(random_bytes(128));
         $data = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
         $body = json_decode($data->getBody());
@@ -64,24 +67,28 @@ class HttpFunctionTest extends TestCase
         });
     }
 
-    public function testCurlGet() {
+    public function testCurlGet()
+    {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'curl');
         $this->fun1();
         $this->fun2();
     }
 
-    public function testCurlPost() {
+    public function testCurlPost()
+    {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'curl');
         $this->fun3();
     }
 
-    public function testStreamGet() {
+    public function testStreamGet()
+    {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun1();
         $this->fun2();
     }
 
-    public function testStreamPost() {
+    public function testStreamPost()
+    {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun3();
     }

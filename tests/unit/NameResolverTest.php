@@ -36,25 +36,27 @@ class NameResolverTest extends TestCase
         $this->assertTrue($ns->leave($service_name, $ip, $port));
     }
 
-    function testRedis()
+    public function testRedis()
     {
         $ns = new NameResolver\Redis(REDIS_SERVER_URL);
         $this->fun1($ns);
     }
 
-    function testConsul() {
+    public function testConsul()
+    {
         swoole_library_set_option('http_client_driver', 'curl');
         $ns = new NameResolver\Consul(CONSUL_AGENT_URL);
         $this->fun1($ns);
     }
 
-    function testNacos() {
+    public function testNacos()
+    {
         swoole_library_set_option('http_client_driver', 'curl');
         $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
         $this->fun1($ns);
     }
 
-    function testLookup()
+    public function testLookup()
     {
         $count = 0;
         $ns = new NameResolver\Redis(REDIS_SERVER_URL);
@@ -69,15 +71,15 @@ class NameResolverTest extends TestCase
         $this->assertTrue(swoole_name_resolver_remove($ns));
     }
 
-    function testRedisCo()
+    public function testRedisCo()
     {
-        run(function (){
+        run(function () {
             $ns = new NameResolver\Redis(REDIS_SERVER_URL);
             $this->fun1($ns);
         });
     }
 
-    function testConsulCo()
+    public function testConsulCo()
     {
         run(function () {
             $ns = new NameResolver\Consul(CONSUL_AGENT_URL);
@@ -85,7 +87,7 @@ class NameResolverTest extends TestCase
         });
     }
 
-    function testNacosCo()
+    public function testNacosCo()
     {
         run(function () {
             $ns = new NameResolver\Nacos(NACOS_SERVER_URL);

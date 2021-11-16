@@ -19,7 +19,7 @@ class FunctionTest extends TestCase
      * @covers ::swoole_library_get_options
      * @covers ::swoole_library_set_options
      */
-    function testOptions()
+    public function testOptions()
     {
         $options = [__METHOD__ => uniqid()];
         swoole_library_set_options($options);
@@ -30,7 +30,7 @@ class FunctionTest extends TestCase
      * @covers ::swoole_library_get_option
      * @covers ::swoole_library_set_option
      */
-    function testOption()
+    public function testOption()
     {
         $option = uniqid();
         swoole_library_set_option(__METHOD__, $option);
