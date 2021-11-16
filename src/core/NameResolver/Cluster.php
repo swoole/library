@@ -1,4 +1,13 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
 
 namespace Swoole\NameResolver;
 
@@ -7,20 +16,20 @@ use Swoole\Exception;
 class Cluster
 {
     /**
-     * @var array $nodes
+     * @var array
      */
     private $nodes = [];
 
     public function add(string $host, int $port, int $weight = 100): void
     {
         if (!filter_var($host, FILTER_VALIDATE_IP)) {
-            throw new Exception("Bad IP Address [$host]");
+            throw new Exception("Bad IP Address [{$host}]");
         }
         if ($port < 0 or $port > 65535) {
-            throw new Exception("Bad Port [$port]");
+            throw new Exception("Bad Port [{$port}]");
         }
         if ($weight < 0 or $weight > 100) {
-            throw new Exception("Bad Weight [$weight]");
+            throw new Exception("Bad Weight [{$weight}]");
         }
         $this->nodes[] = ['host' => $host, 'port' => $port, 'weight' => $weight];
     }

@@ -14,13 +14,7 @@ namespace Swoole\Coroutine\Http;
 use Swoole\Coroutine\Http\Client\Exception;
 
 /**
- * @param string $url
- * @param string $method
  * @param null $data
- * @param array|null $options
- * @param array|null $headers
- * @param array|null $cookies
- * @return ClientProxy
  * @throws Exception
  */
 function request(
@@ -44,13 +38,7 @@ function request(
 }
 
 /**
- * @param string $url
- * @param string $method
  * @param mixed $data
- * @param array|null $options
- * @param array|null $headers
- * @param array|null $cookies
- * @return ClientProxy
  * @throws Exception
  */
 function request_with_http_client(
@@ -101,13 +89,7 @@ function request_with_http_client(
 }
 
 /**
- * @param string $url
- * @param string $method
  * @param mixed $data
- * @param array|null $options
- * @param array|null $headers
- * @param array|null $cookies
- * @return ClientProxy
  * @throws Exception
  */
 function request_with_curl(
@@ -149,7 +131,7 @@ function request_with_curl(
     if ($cookies) {
         $cookie_str = '';
         foreach ($cookies as $k => $v) {
-            $cookie_str .= "$k=$v; ";
+            $cookie_str .= "{$k}={$v}; ";
         }
         curl_setopt($ch, CURLOPT_COOKIE, $cookie_str);
     }
@@ -177,13 +159,7 @@ function request_with_curl(
 }
 
 /**
- * @param string $url
- * @param string $method
  * @param mixed $data
- * @param array|null $options
- * @param array|null $headers
- * @param array|null $cookies
- * @return ClientProxy
  * @throws Exception
  */
 function request_with_stream(
@@ -194,20 +170,20 @@ function request_with_stream(
     array $headers = null,
     array $cookies = null
 ): ClientProxy {
-    $stream_options = array(
-        'http' => array(
+    $stream_options = [
+        'http' => [
             'method' => $method,
-        )
-    );
+        ],
+    ];
     $headerStr = '';
     if ($headers) {
         foreach ($headers as $k => $v) {
-            $headerStr .= "$k: $v\r\n";
+            $headerStr .= "{$k}: {$v}\r\n";
         }
     }
     if ($cookies) {
         foreach ($cookies as $k => $v) {
-            $headerStr .= "Cookie: $k=$v\r\n";
+            $headerStr .= "Cookie: {$k}={$v}\r\n";
         }
     }
     if ($headerStr) {
@@ -228,12 +204,7 @@ function request_with_stream(
 }
 
 /**
- * @param string $url
  * @param mixed $data
- * @param array|null $options
- * @param array|null $headers
- * @param array|null $cookies
- * @return ClientProxy
  * @throws Exception
  */
 function post(string $url, $data, array $options = null, array $headers = null, array $cookies = null): ClientProxy
@@ -242,11 +213,6 @@ function post(string $url, $data, array $options = null, array $headers = null, 
 }
 
 /**
- * @param string $url
- * @param array|null $options
- * @param array|null $headers
- * @param array|null $cookies
- * @return ClientProxy
  * @throws Exception
  */
 function get(string $url, array $options = null, array $headers = null, array $cookies = null): ClientProxy

@@ -7,33 +7,36 @@
  * @license  https://github.com/swoole/library/blob/master/LICENSE
  */
 
+declare(strict_types=1);
+/**
+ * This file is part of Swoole.
+ *
+ * @see     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
 namespace Swoole\NameResolver;
 
 use Swoole\NameResolver;
-
-use function  Swoole\Coroutine\Http\request;
-use function  Swoole\Coroutine\Http\get;
+use function Swoole\Coroutine\Http\get;
+use function Swoole\Coroutine\Http\request;
 
 class Consul extends NameResolver
 {
-    private function getServiceId(string $name, string $ip, int $port): string
-    {
-        return $this->prefix . $name . "_{$ip}:{$port}";
-    }
-
     public function join(string $name, string $ip, int $port, array $options = []): bool
     {
         $weight = $options['weight'] ?? 100;
         $data = [
-            "ID" => $this->getServiceId($name, $ip, $port),
-            "Name" => $this->prefix . $name,
-            "Address" => $ip,
-            "Port" => $port,
-            "EnableTagOverride" => false,
-            "Weights" => [
-                "Passing" => $weight,
-                "Warning" => 1,
-            ]
+            'ID' => $this->getServiceId($name, $ip, $port),
+            'Name' => $this->prefix . $name,
+            'Address' => $ip,
+            'Port' => $port,
+            'EnableTagOverride' => false,
+            'Weights' => [
+                'Passing' => $weight,
+                'Warning' => 1,
+            ],
         ];
         $url = $this->baseUrl . '/v1/agent/service/register';
         $r = request($url, 'PUT', json_encode($data));
@@ -78,5 +81,10 @@ class Consul extends NameResolver
             $cluster->add($li->ServiceAddress, $li->ServicePort, $li->ServiceWeights->Passing);
         }
         return $cluster;
+    }
+
+    private function getServiceId(string $name, string $ip, int $port): string
+    {
+        return $this->prefix . $name . "_{$ip}:{$port}";
     }
 }

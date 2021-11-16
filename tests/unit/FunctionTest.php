@@ -13,6 +13,10 @@ namespace Swoole;
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class FunctionTest extends TestCase
 {
     /**

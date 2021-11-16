@@ -14,7 +14,6 @@ namespace Swoole\Coroutine;
 use PHPUnit\Framework\TestCase;
 use Swoole\Constant;
 use Swoole\Coroutine;
-
 use function Swoole\Coroutine\Http\get;
 use function Swoole\Coroutine\Http\post;
 
@@ -24,29 +23,6 @@ use function Swoole\Coroutine\Http\post;
  */
 class HttpFunctionTest extends TestCase
 {
-    private function fun1()
-    {
-        self::assertSame(200, get('http://httpbin.org')->getStatusCode(), 'Test HTTP GET without query strings.');
-    }
-
-    private function fun2()
-    {
-        $data = get('http://httpbin.org/get?hello=world');
-        $body = json_decode($data->getBody());
-        self::assertSame('httpbin.org', $body->headers->Host);
-        self::assertSame('world', $body->args->hello);
-    }
-
-    private function fun3()
-    {
-        $random_data = base64_encode(random_bytes(128));
-        $data = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
-        $body = json_decode($data->getBody());
-        self::assertSame('httpbin.org', $body->headers->Host);
-        self::assertSame('world', $body->args->hello);
-        self::assertSame($random_data, $body->form->random_data);
-    }
-
     public function testGet()
     {
         run(function () {
@@ -91,5 +67,28 @@ class HttpFunctionTest extends TestCase
     {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun3();
+    }
+
+    private function fun1()
+    {
+        self::assertSame(200, get('http://httpbin.org')->getStatusCode(), 'Test HTTP GET without query strings.');
+    }
+
+    private function fun2()
+    {
+        $data = get('http://httpbin.org/get?hello=world');
+        $body = json_decode($data->getBody());
+        self::assertSame('httpbin.org', $body->headers->Host);
+        self::assertSame('world', $body->args->hello);
+    }
+
+    private function fun3()
+    {
+        $random_data = base64_encode(random_bytes(128));
+        $data = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
+        $body = json_decode($data->getBody());
+        self::assertSame('httpbin.org', $body->headers->Host);
+        self::assertSame('world', $body->args->hello);
+        self::assertSame($random_data, $body->form->random_data);
     }
 }
