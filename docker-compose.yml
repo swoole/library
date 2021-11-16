@@ -9,6 +9,7 @@ services:
       - wordpress
     environment:
       DISABLE_DEFAULT_SERVER: 1
+      GITHUB_ACTIONS: yes
     ports:
       - 80:80
     volumes:
