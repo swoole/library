@@ -67,7 +67,7 @@ class Redis extends NameResolver
         $cluster = new Cluster();
         foreach ($members as $m) {
             [$host, $port] = explode(':', $m);
-            $cluster->add($host, $port);
+            $cluster->add($host, intval($port));
         }
         return $cluster;
     }
