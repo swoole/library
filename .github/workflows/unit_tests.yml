@@ -32,7 +32,7 @@ jobs:
           docker run --name consul -d -p 8500:8500 consul agent -dev -client=0.0.0.0
           docker exec -t $(docker ps -qf "name=app") bash -c "php -v"
           docker exec -t $(docker ps -qf "name=app") bash -c "php --ri swoole"
-          docker run --rm -v "$(pwd)":/var/www -t $(docker ps -qf "name=app") composer install -n
+          docker run --rm -v "$(pwd)":/var/www -t library_app composer install -n
 
       - name: Run Unit Tests
         run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
