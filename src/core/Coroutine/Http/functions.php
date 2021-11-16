@@ -161,7 +161,7 @@ function request_with_curl(
     }
     $body = curl_exec($ch);
     if ($body === false) {
-        return false;
+        throw new Exception(curl_error($ch), curl_errno($ch));
     }
     return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
 }
