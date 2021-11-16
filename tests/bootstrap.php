@@ -13,4 +13,3 @@ require_once dirname(__DIR__) . '/examples/bootstrap.php';
 
 // This points to folder ./tests/www under root directory of the project.
 define('DOCUMENT_ROOT', '/var/www/tests/www');
-

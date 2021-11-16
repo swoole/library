@@ -17,11 +17,11 @@
     },
     "require": {
         "php": ">=7.2",
-        "ext-swoole": ">=4.6"
+        "ext-swoole": ">=4.6",
+        "ext-curl": "*"
     },
     "require-dev": {
-        "ext-curl": "*",
-        "ext-sockets": "*",
+      "ext-sockets": "*",
         "ext-json": "*",
         "ext-redis": "*",
         "phpunit/phpunit": "~8.0",
@@ -30,7 +30,8 @@
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
-        "ext-pdo": "Required to use pdo database"
+        "ext-pdo": "Required to use pdo database",
+        "ext-curl": "Required to use http client"
     },
     "autoload": {
         "files": [

@@ -20,7 +20,7 @@ use Swoole\Coroutine\Http\Client\Exception;
  * @param array|null $options
  * @param array|null $headers
  * @param array|null $cookies
- * @return false|ClientProxy
+ * @return ClientProxy
  * @throws Exception
  */
 function request(
@@ -30,7 +30,7 @@ function request(
     array $options = null,
     array $headers = null,
     array $cookies = null
-) {
+): ClientProxy {
     $driver = swoole_library_get_option('http_client_driver');
     switch ($driver) {
         case 'curl':
@@ -44,8 +44,13 @@ function request(
 }
 
 /**
+ * @param string $url
+ * @param string $method
  * @param mixed $data
- * @return ClientProxy|false
+ * @param array|null $options
+ * @param array|null $headers
+ * @param array|null $cookies
+ * @return ClientProxy
  * @throws Exception
  */
 function request_with_http_client(
@@ -55,7 +60,7 @@ function request_with_http_client(
     array $options = null,
     array $headers = null,
     array $cookies = null
-) {
+): ClientProxy {
     $info = parse_url($url);
     if (empty($info['scheme'])) {
         throw new Exception('The URL given is illegal [no scheme]');
@@ -92,12 +97,17 @@ function request_with_http_client(
             $client->getCookies()
         );
     }
-    return false;
+    throw new Exception($client->errMsg, $client->errCode);
 }
 
 /**
+ * @param string $url
+ * @param string $method
  * @param mixed $data
- * @return ClientProxy|false
+ * @param array|null $options
+ * @param array|null $headers
+ * @param array|null $cookies
+ * @return ClientProxy
  * @throws Exception
  */
 function request_with_curl(
@@ -107,7 +117,7 @@ function request_with_curl(
     array $options = null,
     array $headers = null,
     array $cookies = null
-) {
+): ClientProxy {
     $ch = curl_init($url);
     if (empty($ch)) {
         throw new Exception('failed to curl_init');
@@ -160,15 +170,21 @@ function request_with_curl(
         }
     }
     $body = curl_exec($ch);
-    if ($body === false) {
-        throw new Exception(curl_error($ch), curl_errno($ch));
+    if ($body !== false) {
+        return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
     }
-    return new ClientProxy($body, curl_getinfo($ch, CURLINFO_HTTP_CODE), $responseHeaders, $responseCookies);
+    throw new Exception(curl_error($ch), curl_errno($ch));
 }
 
 /**
+ * @param string $url
+ * @param string $method
  * @param mixed $data
- * @return ClientProxy|false
+ * @param array|null $options
+ * @param array|null $headers
+ * @param array|null $cookies
+ * @return ClientProxy
+ * @throws Exception
  */
 function request_with_stream(
     string $url,
@@ -177,7 +193,7 @@ function request_with_stream(
     array $options = null,
     array $headers = null,
     array $cookies = null
-) {
+): ClientProxy {
     $stream_options = array(
         'http' => array(
             'method' => $method,
@@ -206,26 +222,34 @@ function request_with_stream(
     $body = file_get_contents($url, false, stream_context_create($stream_options));
     if ($body) {
         return new ClientProxy($body, 200, [], []);
-    } else {
-        return false;
     }
+    $error = error_get_last();
+    throw new Exception($error['message']);
 }
 
 /**
+ * @param string $url
  * @param mixed $data
- * @return Client|false|mixed
+ * @param array|null $options
+ * @param array|null $headers
+ * @param array|null $cookies
+ * @return ClientProxy
  * @throws Exception
  */
-function post(string $url, $data, array $options = null, array $headers = null, array $cookies = null)
+function post(string $url, $data, array $options = null, array $headers = null, array $cookies = null): ClientProxy
 {
     return request($url, 'POST', $data, $options, $headers, $cookies);
 }
 
 /**
- * @return Client|false|mixed
+ * @param string $url
+ * @param array|null $options
+ * @param array|null $headers
+ * @param array|null $cookies
+ * @return ClientProxy
  * @throws Exception
  */
-function get(string $url, array $options = null, array $headers = null, array $cookies = null)
+function get(string $url, array $options = null, array $headers = null, array $cookies = null): ClientProxy
 {
     return request($url, 'GET', null, $options, $headers, $cookies);
 }
