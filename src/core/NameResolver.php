@@ -4,6 +4,7 @@ namespace Swoole;
 
 use Swoole\NameResolver\Cluster;
 use RuntimeException;
+use Swoole\NameResolver\Exception;
 
 abstract class NameResolver
 {
@@ -68,6 +69,22 @@ abstract class NameResolver
         }
         $this->baseUrl = $baseUrl;
         $this->info = $info;
+    }
+
+    /**
+     * @param $r
+     * @param $url
+     * @return bool
+     */
+    public function checkResponse($r, $url)
+    {
+        if (empty($r)) {
+            throw new Exception("failed to request URL({$url})");
+        }
+        if ($r->getStatusCode() === 200) {
+            throw new Exception($r->errMsg, $r->errCode ?: $r->getStatusCode());
+        }
+        return true;
     }
 
     /**

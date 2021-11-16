@@ -14,6 +14,9 @@ use Swoole\NameResolver;
 
 class Nacos extends NameResolver
 {
+    /**
+     * @throws Coroutine\Http\Client\Exception|Exception
+     */
     public function join(string $name, string $ip, int $port, array $options = []): bool
     {
         $params['port'] = $port;
@@ -24,26 +27,35 @@ class Nacos extends NameResolver
         $params['namespaceId'] = $options['namespaceId'] ?? 'public';
         $params['serviceName'] = $this->prefix . $name;
 
-        $r = Coroutine\Http\post($this->baseUrl . '/nacos/v1/ns/instance?' . http_build_query($params), []);
-        return $r and $r->getStatusCode() === 200;
+        $url = $this->baseUrl . '/nacos/v1/ns/instance?' . http_build_query($params);
+        $r = Coroutine\Http\post($url, []);
+        return $this->checkResponse($r, $url);
     }
 
+    /**
+     * @throws Coroutine\Http\Client\Exception|Exception
+     */
     public function leave(string $name, string $ip, int $port): bool
     {
         $params['port'] = $port;
         $params['ip'] = $ip;
         $params['serviceName'] = $this->prefix . $name;
 
+        $url = $this->baseUrl . '/nacos/v1/ns/instance?' . http_build_query($params);
         $r = Coroutine\Http\request($this->baseUrl . '/nacos/v1/ns/instance?' . http_build_query($params), 'DELETE');
-        return $r and $r->getStatusCode() === 200;
+        return $this->checkResponse($r, $url);
     }
 
+    /**
+     * @throws Coroutine\Http\Client\Exception|Exception|\Swoole\Exception
+     */
     public function getCluster(string $name): ?Cluster
     {
         $params['serviceName'] = $this->prefix . $name;
 
-        $r = Coroutine\Http\get($this->baseUrl . '/nacos/v1/ns/instance/list?' . http_build_query($params));
-        if (!$r or $r->getStatusCode() !== 200) {
+        $url = $this->baseUrl . '/nacos/v1/ns/instance/list?' . http_build_query($params);
+        $r = Coroutine\Http\get($url);
+        if (!$this->checkResponse($r, $url)) {
             return null;
         }
         $result = json_decode($r->getBody());

@@ -35,40 +35,38 @@ class Consul extends NameResolver
                 "Warning" => 1,
             ]
         ];
-        $r = request($this->baseUrl . '/v1/agent/service/register', 'PUT', json_encode($data));
-        return $r and $r->getStatusCode() === 200;
+        $url = $this->baseUrl . '/v1/agent/service/register';
+        $r = request($url, 'PUT', json_encode($data));
+        return $this->checkResponse($r, $url);
     }
 
     public function leave(string $name, string $ip, int $port): bool
     {
-        $r = request(
-            $this->baseUrl . '/v1/agent/service/deregister/' . $this->getServiceId(
-                $name,
-                $ip,
-                $port
-            ),
-            'PUT'
+        $url = $this->baseUrl . '/v1/agent/service/deregister/' . $this->getServiceId(
+            $name,
+            $ip,
+            $port
         );
-        return $r and $r->getStatusCode() === 200;
+        $r = request($url, 'PUT');
+        return $this->checkResponse($r, $url);
     }
 
     public function enableMaintenanceMode(string $name, string $ip, int $port): bool
     {
-        $r = request(
-            $this->baseUrl . '/v1/agent/service/maintenance/' . $this->getServiceId(
-                $name,
-                $ip,
-                $port
-            ),
-            'PUT'
+        $url = $this->baseUrl . '/v1/agent/service/maintenance/' . $this->getServiceId(
+            $name,
+            $ip,
+            $port
         );
-        return $r and $r->getStatusCode() === 200;
+        $r = request($url, 'PUT');
+        return $this->checkResponse($r, $url);
     }
 
     public function getCluster(string $name): ?Cluster
     {
-        $r = get($this->baseUrl . '/v1/catalog/service/' . $this->prefix . $name);
-        if (!$r or $r->getStatusCode() !== 200) {
+        $url = $this->baseUrl . '/v1/catalog/service/' . $this->prefix . $name;
+        $r = get($url);
+        if (!$this->checkResponse($r, $url)) {
             return null;
         }
         $list = json_decode($r->getBody());
