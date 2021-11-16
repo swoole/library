@@ -2,6 +2,7 @@
 
 namespace Swoole;
 
+use Swoole\Coroutine\Http\ClientProxy;
 use Swoole\NameResolver\Cluster;
 use RuntimeException;
 use Swoole\NameResolver\Exception;
@@ -72,17 +73,25 @@ abstract class NameResolver
     }
 
     /**
-     * @param $r
+     * @param $r ClientProxy
      * @param $url
      * @return bool
      */
-    public function checkResponse($r, $url)
+    protected function checkResponse($r, $url)
     {
         if (empty($r)) {
             throw new Exception("failed to request URL({$url})");
         }
-        if ($r->getStatusCode() === 200) {
-            throw new Exception($r->errMsg, $r->errCode ?: $r->getStatusCode());
+        if ($r->getStatusCode() !== 200) {
+            $msg = '';
+            if (!empty($r->errMsg)) {
+                $msg .= 'errMsg: '.$r->errMsg;
+            }
+            $body = $r->getBody();
+            if (empty($r->errMsg)) {
+                $msg .= 'Http Body: '.$body;
+            }
+            throw new Exception($msg, $r->errCode ?: $r->getStatusCode());
         }
         return true;
     }
