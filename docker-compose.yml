@@ -50,6 +50,7 @@ services:
       - "8848:8848"
     environment:
       MODE: standalone
+      PREFER_HOST_MODE: hostname
   consul:
     image: consul
     command:
