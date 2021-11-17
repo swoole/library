@@ -29,7 +29,7 @@ function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_
     return $socket->recv($length);
 }
 
-function swoole_socket_write(Socket $socket, string $buffer, int $length = 0): int
+function swoole_socket_write(Socket $socket, string $buffer, int $length = 0)
 {
     if ($length > 0 and $length < strlen($buffer)) {
         $buffer = substr($buffer, 0, $length);
@@ -37,7 +37,7 @@ function swoole_socket_write(Socket $socket, string $buffer, int $length = 0): i
     return $socket->send($buffer);
 }
 
-function swoole_socket_send(Socket $socket, string $buffer, int $length, int $flags): int
+function swoole_socket_send(Socket $socket, string $buffer, int $length, int $flags)
 {
     if ($flags != 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
