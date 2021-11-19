@@ -84,6 +84,10 @@ function swoole_socket_recvfrom(Socket $socket, &$buffer, int $length, int $flag
     if ($flags != 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
+    if ($length == 0) {
+        $socket->errCode = SOCKET_EAGAIN;
+        return false;
+    }
     if ($socket->type != SOCK_DGRAM) {
         throw new RuntimeException('only supports dgram type socket');
     }
@@ -204,6 +208,9 @@ function swoole_socket_last_error(Socket $socket = null): int
 
 function swoole_socket_set_block(Socket $socket)
 {
+    if ($socket->isClosed()) {
+        return false;
+    }
     if (isset($socket->__ext_sockets_nonblock) and $socket->__ext_sockets_nonblock) {
         $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, $socket->__ext_sockets_timeout);
     }
@@ -213,6 +220,9 @@ function swoole_socket_set_block(Socket $socket)
 
 function swoole_socket_set_nonblock(Socket $socket)
 {
+    if ($socket->isClosed()) {
+        return false;
+    }
     if (isset($socket->__ext_sockets_nonblock) and $socket->__ext_sockets_nonblock) {
         return true;
     }
