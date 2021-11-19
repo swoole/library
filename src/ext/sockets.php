@@ -100,7 +100,7 @@ function swoole_socket_recvfrom(Socket $socket, &$buffer, int $length, int $flag
     } else {
         $buffer = $data;
     }
-    return 100;
+    return strlen($buffer);
 }
 
 function swoole_socket_bind(Socket $socket, string $address, int $port = 0): bool
