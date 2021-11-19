@@ -79,7 +79,7 @@ function swoole_socket_sendto(Socket $socket, string $buffer, int $length, int $
     return $socket->sendto($addr, $port, $buffer);
 }
 
-function swoole_socket_recvfrom(Socket $socket, &$buffer, int $length, int $flags, &$name, &$port)
+function swoole_socket_recvfrom(Socket $socket, &$buffer, int $length, int $flags, &$name, &$port = null)
 {
     if ($flags != 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
@@ -176,9 +176,9 @@ function swoole_socket_getopt(Socket $socket, int $level, int $optname)
     return $socket->getOption($level, $optname);
 }
 
-function swoole_socket_shutdown(Socket $socket, int $how = 2)
+function swoole_socket_shutdown(Socket $socket, int $how = 2): bool
 {
-    $socket->shutdown($how);
+    return $socket->shutdown($how);
 }
 
 function swoole_socket_close(Socket $socket)
