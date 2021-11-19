@@ -48,7 +48,7 @@ function swoole_socket_send(Socket $socket, string $buffer, int $length, int $fl
 function swoole_socket_recv(Socket $socket, &$buffer, int $length, int $flags)
 {
     if ($flags & MSG_OOB) {
-        throw new RuntimeException('$flags[MSG_OOB] is not supported');
+        throw new RuntimeException('\$flags[MSG_OOB] is not supported');
     }
     if ($flags & MSG_PEEK) {
         $buffer = $socket->peek($length);
@@ -220,4 +220,19 @@ function swoole_socket_set_nonblock(Socket $socket)
     $socket->__ext_sockets_timeout = $socket->getOption(SOL_SOCKET, SO_RCVTIMEO);
     $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, ['sec' => 0, 'usec' => 1000]);
     return true;
+}
+
+function swoole_socket_create_pair(
+    int $domain,
+    int $type,
+    int $protocol,
+    array &$pair
+) {
+    $_pair =swoole_coroutine_socketpair($domain, $type, $protocol);
+    if ($_pair) {
+        $pair = $_pair;
+        return true;
+    } else {
+        return false;
+    }
 }
