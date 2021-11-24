@@ -238,11 +238,10 @@ function swoole_socket_create_pair(
     int $protocol,
     array &$pair
 ) {
-    $_pair =swoole_coroutine_socketpair($domain, $type, $protocol);
+    $_pair = swoole_coroutine_socketpair($domain, $type, $protocol);
     if ($_pair) {
         $pair = $_pair;
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
