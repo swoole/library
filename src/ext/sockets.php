@@ -245,3 +245,8 @@ function swoole_socket_create_pair(
     }
     return false;
 }
+
+function swoole_socket_import_stream($stream)
+{
+    return Socket::import($stream);
+}
