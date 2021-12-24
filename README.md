@@ -23,12 +23,12 @@ Table of Contents
 
 ## How to Contribute
 
-Just new pull request (and we need unit tests for new features)
+Just open new pull requests (and we need unit tests for new features)
 
 ### Code Requirements
 
 + [PSR1](https://www.php-fig.org/psr/psr-1/) and [PSR12](https://www.php-fig.org/psr/psr-12/)
-+ Strict type
++ Strict types
 
 ## Development
 
@@ -37,34 +37,52 @@ Just new pull request (and we need unit tests for new features)
 
 ### Branches
 
-+ **master**: For Swoole 4.6, which supports PHP 7.2+.
-+ **4.5.x**: For Swoole 4.5, which supports PHP 7.1+.
++ **4.6.x**: For Swoole 4.6, which supports PHP 7.2+
++ **4.5.x**: For Swoole 4.5, which supports PHP 7.1+
 
-## Dockerized Local Development
+## Dockerized Local Development (*Compose v2*)
 
-First, run following command to autoload PHP classes/files (no exra Composer packages to be installed):
+First, you need to build the base image:
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer update -n
+docker compose build image
 ```
 
-Secondly, run next command to start Docker containers:
+Then run the following command to autoload PHP classes/files (no extra Composer packages to be installed):
 
 ```bash
-docker-compose up
+docker compose run --rm composer install
+```
+
+Secondly, run the next command to start Docker containers:
+
+```bash
+docker compose up
 ```
 
 Alternatively, if you need to rebuild the service(s) and to restart the containers:
 
 ```bash
-docker-compose build --no-cache
-docker-compose up --force-recreate
+docker compose build image --no-cache
+docker compose up --force-recreate
 ```
 
-Now you can run unit tests included:
+Now you can create an `app`'s `bash` session:
 
 ```bash
-docker exec -t $(docker ps -qf "name=app") ./vendor/bin/phpunit
+docker compose exec app bash
+```
+
+And run commands inside the container:
+
+```bash
+composer test
+```
+
+Or you can tell to run it directly:
+
+```bash
+docker compose exec app composer test
 ```
 
 ## Examples
@@ -75,9 +93,9 @@ examples under folder [examples](https://github.com/swoole/library/tree/master/e
 ### Examples of Database Connection Pool
 
 ```bash
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/mysqli/base.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/pdo/base.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/redis/base.php"
+docker compose exec app php examples/mysqli/base.php
+docker compose exec app php examples/pdo/base.php
+docker compose exec app php examples/redis/base.php
 ```
 
 ### Examples of FastCGI Calls
@@ -89,10 +107,10 @@ found [here](https://github.com/swoole/library/blob/master/examples/fastcgi/prox
 Here are some more examples to make FastCGI calls to PHP-FPM:
 
 ```bash
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/fastcgi/greeter/call.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/fastcgi/greeter/client.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/fastcgi/proxy/base.php"
-docker exec -t $(docker ps -qf "name=app") bash -c "php ./examples/fastcgi/var/client.php"
+docker compose exec app php examples/fastcgi/greeter/call.php
+docker compose exec app php examples/fastcgi/greeter/client.php
+docker compose exec app php examples/fastcgi/proxy/base.php
+docker compose exec app php examples/fastcgi/var/client.php
 ```
 
 ## Compatibility Patch (Swoole version <= v4.4.12)
@@ -106,19 +124,19 @@ define('SWOOLE_USE_SHORTNAME', true); // or false (it depends on you)
 To update Composer packages (optional):
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole:latest-dev composer update -n
+docker compose run --rm composer update
 ```
 
 To check coding standard violations:
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer cs-check"
+docker compose run --rm composer cs-check
 ```
 
 To correct coding standard violations automatically:
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www -t phpswoole/swoole bash -c "composer cs-fix"
+docker compose run --rm composer cs-fix
 ```
 
 ## Third Party Libraries
@@ -131,4 +149,4 @@ You can find the licensing information of these third party libraries [here](htt
 
 ## License
 
-This project follows [the Apache 2 license](https://github.com/swoole/library/blob/master/LICENSE).
+This project follows the [Apache 2 license](https://github.com/swoole/library/blob/master/LICENSE).
