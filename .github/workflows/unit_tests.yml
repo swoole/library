@@ -21,12 +21,12 @@ jobs:
           sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:php${{ matrix.php }}/g" ./Dockerfile
           docker-compose up -d
           docker ps -a
-          docker exec -t $(docker ps -qf "name=app") bash -c "php -v"
-          docker exec -t $(docker ps -qf "name=app") bash -c "php --ri swoole"
-          docker run --rm -v "$(pwd)":/var/www -t library_app composer install -n
+          docker-compose exec app php -v
+          docker-compose exec app php --ri swoole
+          docker-compose exec app composer install -n
 
       - name: Run Unit Tests
-        run: docker exec -t $(docker ps -qf "name=app") bash -c "./vendor/bin/phpunit"
+        run: docker-compose exec app composer test
 
       - name: Stop and Remove Docker Containers
         run: docker-compose down
