@@ -12,7 +12,7 @@ Table of Contents
    * [Code Requirements](#code-requirements)
 * [Development](#development)
    * [Branches](#branches)
-* [Dockerized Local Development](#dockerized-local-development)
+* [Dockerized Local Development](#dockerized-local-development-compose-v2)
 * [Examples](#examples)
    * [Examples of Database Connection Pool](#examples-of-database-connection-pool)
    * [Examples of FastCGI Calls](#examples-of-fastcgi-calls)
