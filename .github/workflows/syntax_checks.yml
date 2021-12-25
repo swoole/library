@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: ["7.4", "8.0"]
+        php: ["7.2", "7.3", "7.4", "8.0"]
 
     name: Syntax Checks Under PHP ${{ matrix.php }}
 
@@ -17,4 +17,9 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run Syntax Checks
-        run: docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php${{ matrix.php }} phplint examples src tests
+        run: |
+          if [ ${{ matrix.php }} == '7.3' ] ; then
+            docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:1.60.0-php7.3        phplint examples src tests
+          else
+            docker run --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php${{ matrix.php }} phplint examples src tests
+          fi
