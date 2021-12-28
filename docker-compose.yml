@@ -1,8 +1,24 @@
 version: '3.2'
 
 services:
-  app:
+  image:
+    container_name: swoole-library-image-builder
     build: .
+    image: swoole-library
+    entrypoint: echo
+    command: Image ready
+
+  composer:
+    container_name: swoole-library-composer-runner
+    image: swoole-library
+    entrypoint: composer
+    command: validate
+    volumes:
+      - ./:/var/www
+
+  app:
+    container_name: swoole-library-app
+    image: swoole-library
     links:
       - mysql
       - redis
@@ -17,11 +33,15 @@ services:
     volumes:
       - .:/var/www
       - wordpress:/var/www/html
+
   php-fpm:
+    container_name: swoole-library-php-fpm
     image: php:7.4-fpm
     volumes:
       - .:/var/www
+
   wordpress:
+    container_name: swoole-library-wordpress
     image: wordpress:php7.4-fpm
     links:
       - mysql
@@ -37,27 +57,40 @@ services:
         target: /var/www/html
         volume:
           nocopy: false
+
   mysql:
+    container_name: swoole-library-mysql
     image: mysql:5.7
     environment:
       MYSQL_DATABASE: test
       MYSQL_USER: username
       MYSQL_PASSWORD: password
       MYSQL_ROOT_PASSWORD: password
+
   redis:
+    container_name: swoole-library-redis
     image: redis:5.0
+
   nacos:
+    container_name: swoole-library-nacos
     image: nacos/nacos-server
     ports:
       - "8848:8848"
     environment:
       MODE: standalone
       PREFER_HOST_MODE: hostname
+
   consul:
+    container_name: swoole-library-consul
     image: consul
     command:
       consul agent -dev -client=0.0.0.0
     ports:
       - "8500:8500"
+
 volumes:
   wordpress:
+
+networks:
+  default:
+    name: swoole-library-network
