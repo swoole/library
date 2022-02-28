@@ -25,6 +25,11 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
      */
     protected $array;
 
+    public static function from(array $array = []): self
+    {
+        return new static($array);
+    }
+
     /**
      * ArrayObject constructor.
      */

@@ -18,6 +18,11 @@ class StringObject
      */
     protected $string;
 
+    public static function from(string $string = ''): self
+    {
+        return new static($string);
+    }
+
     /**
      * StringObject constructor.
      */
