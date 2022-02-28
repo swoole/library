@@ -18,11 +18,6 @@ class StringObject
      */
     protected $string;
 
-    public static function from(string $string = ''): self
-    {
-        return new static($string);
-    }
-
     /**
      * StringObject constructor.
      */
@@ -34,6 +29,11 @@ class StringObject
     public function __toString(): string
     {
         return $this->string;
+    }
+
+    public static function from(string $string = ''): self
+    {
+        return new static($string);
     }
 
     public function length(): int

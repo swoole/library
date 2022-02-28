@@ -25,11 +25,6 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
      */
     protected $array;
 
-    public static function from(array $array = []): self
-    {
-        return new static($array);
-    }
-
     /**
      * ArrayObject constructor.
      */
@@ -51,6 +46,11 @@ class ArrayObject implements ArrayAccess, Serializable, Countable, Iterator
     public function __unserialize(array $data): void
     {
         $this->array = $data;
+    }
+
+    public static function from(array $array = []): self
+    {
+        return new static($array);
     }
 
     public function toArray(): array
