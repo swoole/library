@@ -592,6 +592,6 @@ class ArrayObjectTest extends TestCase
     {
         $arr = ArrayObject::from([1, 2, 3]);
         $this->assertInstanceOf(ArrayObject::class, $arr);
-        $this->assertSame([1, 2, 3], $arr->getArray());
+        $this->assertSame([1, 2, 3], $arr->toArray());
     }
 }
