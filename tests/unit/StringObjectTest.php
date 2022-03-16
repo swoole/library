@@ -248,4 +248,14 @@ class StringObjectTest extends TestCase
         $this->assertTrue($str->equals(swoole_string('123456'), true));
         $this->assertFalse($str->equals(123456, true));
     }
+
+    /**
+     * @covers \Swoole\StringObject::from()
+     */
+    public function testFrom()
+    {
+        $str = StringObject::from('string');
+        $this->assertInstanceOf(StringObject::class, $str);
+        $this->assertSame('string', (string) $str);
+    }
 }

@@ -587,4 +587,11 @@ class ArrayObjectTest extends TestCase
         $this->assertNull($this->data->getOr('undefined_key'));
         $this->assertSame('default_value', $this->data->getOr('undefined_key', 'default_value'));
     }
+
+    public function testFrom()
+    {
+        $arr = ArrayObject::from([1, 2, 3]);
+        $this->assertInstanceOf(ArrayObject::class, $arr);
+        $this->assertSame([1, 2, 3], $arr->toArray());
+    }
 }
