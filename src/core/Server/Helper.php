@@ -89,6 +89,7 @@ class Helper
         'compression_min_length' => true,
         'websocket_compression' => true,
         'upload_tmp_dir' => true,
+        'upload_max_filesize' => true,
         'enable_static_handler' => true,
         'document_root' => true,
         'http_autoindex' => true,
