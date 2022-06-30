@@ -94,6 +94,7 @@ class Helper
         'document_root' => true,
         'http_autoindex' => true,
         'http_index_files' => true,
+        'http_compression_types' => true,
         'static_handler_locations' => true,
         'input_buffer_size' => true,
         'buffer_input_size' => true,
