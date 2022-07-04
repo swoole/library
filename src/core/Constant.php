@@ -58,6 +58,8 @@ class Constant
 
     public const EVENT_HANDSHAKE = 'handshake';
 
+    public const EVENT_BEFORE_HAND_SHAKE_RESPONSE = 'beforeHandShakeResponse';
+
     public const EVENT_OPEN = 'open';
 
     public const EVENT_MESSAGE = 'message';
@@ -239,8 +241,6 @@ class Constant
 
     public const OPTION_MAX_CONCURRENCY = 'max_concurrency';
 
-    public const OPTION_RECONNECT = 'reconnect';
-
     public const OPTION_MAX_RETRIES = 'max_retries';
 
     public const OPTION_DEFER = 'defer';
@@ -265,9 +265,17 @@ class Constant
 
     public const OPTION_HTTP_COMPRESSION_LEVEL = 'http_compression_level';
 
+    public const OPTION_COMPRESSION_LEVEL = 'compression_level';
+
     public const OPTION_HTTP_GZIP_LEVEL = 'http_gzip_level';
 
+    public const OPTION_HTTP_COMPRESSION_MIN_LENGTH = 'http_compression_min_length';
+
     public const OPTION_COMPRESSION_MIN_LENGTH = 'compression_min_length';
+
+    public const OPTION_HTTP_COMPRESSION_TYPES = 'http_compression_types';
+
+    public const OPTION_COMPRESSION_TYPES = 'compression_types';
 
     public const OPTION_UPLOAD_TMP_DIR = 'upload_tmp_dir';
 
@@ -290,6 +298,8 @@ class Constant
     public const OPTION_FETCH_MODE = 'fetch_mode';
 
     public const OPTION_SERIALIZE = 'serialize';
+
+    public const OPTION_RECONNECT = 'reconnect';
 
     public const OPTION_COMPATIBILITY_MODE = 'compatibility_mode';
 
@@ -366,6 +376,8 @@ class Constant
     public const OPTION_OPEN_CPU_AFFINITY = 'open_cpu_affinity';
 
     public const OPTION_CPU_AFFINITY_IGNORE = 'cpu_affinity_ignore';
+
+    public const OPTION_UPLOAD_MAX_FILESIZE = 'upload_max_filesize';
 
     public const OPTION_ENABLE_STATIC_HANDLER = 'enable_static_handler';
 
