@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 use Swoole\Coroutine;
+
 use function Swoole\Coroutine\map;
 
 require __DIR__ . '/../bootstrap.php';

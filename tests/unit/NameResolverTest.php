@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole;
 
 use PHPUnit\Framework\TestCase;
+
 use function Swoole\Coroutine\run;
 
 /**
@@ -56,7 +57,7 @@ class NameResolverTest extends TestCase
         });
         swoole_name_resolver_add($ns);
         $domain = 'localhost';
-        $this->assertEquals(swoole_name_resolver_lookup($domain, (new NameResolver\Context())), gethostbyname($domain));
+        $this->assertEquals(swoole_name_resolver_lookup($domain, new NameResolver\Context()), gethostbyname($domain));
         $this->assertEquals(1, $count);
         $this->assertTrue(swoole_name_resolver_remove($ns));
     }
