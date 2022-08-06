@@ -95,7 +95,7 @@ function swoole_table(int $size, string $fields): Swoole\Table
                 if ($_f->count() < 3) {
                     throw new RuntimeException('need to give string length');
                 }
-                $length = intval($_f->get(2)->trim()->toString());
+                $length = (int) $_f->get(2)->trim()->toString();
                 if ($length <= 0) {
                     throw new RuntimeException("invalid string length[{$length}]");
                 }
