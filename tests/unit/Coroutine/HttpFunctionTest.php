@@ -14,6 +14,7 @@ namespace Swoole\Coroutine;
 use PHPUnit\Framework\TestCase;
 use Swoole\Constant;
 use Swoole\Coroutine;
+
 use function Swoole\Coroutine\Http\get;
 use function Swoole\Coroutine\Http\post;
 

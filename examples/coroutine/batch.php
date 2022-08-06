@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 use Swoole\Coroutine;
+
 use function Swoole\Coroutine\batch;
 
 require __DIR__ . '/../bootstrap.php';
