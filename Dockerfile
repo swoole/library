@@ -1,12 +1,8 @@
 FROM phpswoole/swoole
 
 RUN pecl update-channels
-#RUN pecl install redis-stable
-#RUN docker-php-ext-enable redis
 RUN docker-php-ext-install mysqli
 RUN docker-php-ext-enable mysqli
-RUN docker-php-ext-install pdo_mysql
-RUN docker-php-ext-enable pdo_mysql
 
 RUN echo "swoole.enable_library=off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini && \
     { \
