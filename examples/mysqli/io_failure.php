@@ -83,7 +83,7 @@ Coroutine\run(function () {
                 }
                 $pool->put($mysqli);
                 $success++;
-                Co::sleep(mt_rand(100, 1000) / 1000);
+                co::sleep(mt_rand(100, 1000) / 1000);
             }
         });
     }

@@ -11,8 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PDO;
-use stdClass;
 use Swoole\Coroutine;
 use Swoole\Tests\DatabaseTestCase;
 
@@ -31,7 +29,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
     {
         Coroutine\run(function () {
             self::assertFalse(
-                $this->getPdoPool()->get()->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(PDO::FETCH_ASSOC),
+                $this->getPdoPool()->get()->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(\PDO::FETCH_ASSOC),
                 'FALSE is returned if no results found.'
             );
         });
@@ -46,7 +44,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
                     ['col1' => '3', 'col2' => '4'],
                     ['col1' => '5', 'col2' => '6'],
                 ],
-                [PDO::FETCH_ASSOC],
+                [\PDO::FETCH_ASSOC],
                 'Test the  fetch mode "PDO::FETCH_ASSOC"',
             ],
             [
@@ -55,7 +53,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
                     '4',
                     '6',
                 ],
-                [PDO::FETCH_COLUMN, 1],
+                [\PDO::FETCH_COLUMN, 1],
                 'Test the  fetch mode "PDO::FETCH_COLUMN"',
             ],
             [
@@ -64,7 +62,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
                     (object) ['col1' => '3', 'col2' => '4'],
                     (object) ['col1' => '5', 'col2' => '6'],
                 ],
-                [PDO::FETCH_CLASS, stdClass::class],
+                [\PDO::FETCH_CLASS, \stdClass::class],
                 'Test the  fetch mode "PDO::FETCH_CLASS"',
             ],
         ];
@@ -99,7 +97,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
         Coroutine\run(function () {
             $stmt = $this->getPdoPool()->get()->prepare('SHOW TABLES like ?');
             $table = 'NON_EXISTING_TABLE_NAME';
-            $stmt->bindParam(1, $table, PDO::PARAM_STR);
+            $stmt->bindParam(1, $table, \PDO::PARAM_STR);
             $stmt->execute();
             self::assertIsArray($stmt->fetchAll());
         });

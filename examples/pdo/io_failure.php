@@ -76,7 +76,7 @@ Coroutine\run(function () {
                 }
                 $success++;
                 $pool->put($pdo);
-                Co::sleep(mt_rand(100, 1000) / 1000);
+                co::sleep(mt_rand(100, 1000) / 1000);
             }
         });
     }

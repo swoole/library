@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PDOException;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Tests\HookFlagsTrait;
@@ -52,7 +51,7 @@ class PDOPoolTest extends TestCase
                         // simulate error happens
                         $statement = $pdo->prepare('KILL CONNECTION_ID()');
                         $statement->execute();
-                    } catch (PDOException $th) {
+                    } catch (\PDOException $th) {
                         // do nothing
                     }
                     $pdo = null;
