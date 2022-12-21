@@ -3,7 +3,7 @@ return [
     'name' => 'swoole',
     'checkFileChange' => !getenv('SWOOLE_LIBRARY_DEV'),
     'output' => getenv('SWOOLE_DIR') . '/ext-src/php_swoole_library.h',
-    'stripComments' => true,
+    'stripComments' => false,
     /* Notice: Sort by dependency */
     'files' => [
         # <basic> #
