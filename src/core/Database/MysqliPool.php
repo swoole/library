@@ -42,6 +42,7 @@ class MysqliPool extends ConnectionPool
             if ($mysqli->connect_errno) {
                 throw new MysqliException($mysqli->connect_error, $mysqli->connect_errno);
             }
+            $mysqli->set_charset($this->config->getCharset());
             return $mysqli;
         }, $size, MysqliProxy::class);
     }
