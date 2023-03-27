@@ -236,7 +236,6 @@ class StringObjectTest extends TestCase
         $this->assertEquals(swoole_string('hello swoole')->reverse()->toString(), strrev('hello swoole'));
     }
 
-
     /**
      * @covers \Swoole\StringObject::endsWith()
      */
