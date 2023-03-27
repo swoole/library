@@ -36,7 +36,8 @@ class PDOPool extends ConnectionPool
                 (
                     $this->config->hasUnixSocket() ?
                     "unix_socket={$this->config->getUnixSocket()};" :
-                    "host={$this->config->getHost()};port={$this->config->getPort()};") .
+                    "host={$this->config->getHost()};port={$this->config->getPort()};"
+                ) .
                 "dbname={$this->config->getDbname()};" .
                 (
                     ($driver !== 'pgsql') ?

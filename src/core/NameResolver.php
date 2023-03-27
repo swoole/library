@@ -79,6 +79,7 @@ abstract class NameResolver
 
     /**
      * !!! The host MUST BE IP ADDRESS
+     * @param mixed $url
      */
     protected function checkServerUrl($url)
     {
@@ -107,6 +108,7 @@ abstract class NameResolver
 
     /**
      * @param $r ClientProxy
+     * @param mixed $url
      * @return bool
      */
     protected function checkResponse($r, $url)

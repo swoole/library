@@ -537,6 +537,7 @@ class Admin
 
     /**
      * @param $server Server
+     * @param mixed $msg
      * @return false|string
      */
     public static function handlerGetResources($server, $msg)
@@ -558,6 +559,7 @@ class Admin
 
     /**
      * @param $server Server
+     * @param mixed $msg
      * @return false|string
      */
     public static function handlerGetWorkerInfo($server, $msg)
@@ -579,6 +581,8 @@ class Admin
     }
 
     /**
+     * @param mixed $server
+     * @param mixed $msg
      * @return false|string
      */
     public static function handlerCloseSession($server, $msg)
@@ -594,6 +598,8 @@ class Admin
     }
 
     /**
+     * @param mixed $server
+     * @param mixed $msg
      * @return false|string
      */
     public static function handlerGetTimerList($server, $msg)
@@ -610,6 +616,8 @@ class Admin
     }
 
     /**
+     * @param mixed $server
+     * @param mixed $msg
      * @return false|string
      */
     public static function handlerGetCoroutineList($server, $msg)
