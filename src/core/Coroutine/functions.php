@@ -67,7 +67,7 @@ function map(array $list, callable $fn, float $timeout = -1): array
     foreach ($list as $id => $elem) {
         Coroutine::create(function () use ($wg, &$list, $id, $elem, $fn): void {
             $list[$id] = null;
-            $list[$id] = $fn($elem);
+            $list[$id] = $fn($elem, $id);
             $wg->done();
         });
     }
