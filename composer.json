@@ -17,7 +17,8 @@
     },
     "require": {
         "php": ">=7.2",
-        "ext-swoole": ">=4.6"
+        "ext-swoole": ">=4.6",
+        "psr/cache": "^1.0"
     },
     "require-dev": {
         "ext-sockets": "*",
@@ -48,7 +49,8 @@
             "src/vendor_init.php"
         ],
         "psr-4": {
-            "Swoole\\": "src/core"
+            "Swoole\\": "src/core",
+            "Swoole\\Psr\\": "src/psr"
         }
     },
     "autoload-dev": {
