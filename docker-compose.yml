@@ -100,7 +100,7 @@ services:
 
   consul:
     container_name: swoole-library-consul
-    image: consul
+    image: hashicorp/consul:latest
     command:
       consul agent -dev -client=0.0.0.0
     ports:
