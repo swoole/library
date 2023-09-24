@@ -72,6 +72,7 @@ return (new PhpCsFixer\Config())
         'declare_strict_types' => true,
         'linebreak_after_opening_tag' => true,
         'lowercase_static_reference' => true,
+        'no_superfluous_phpdoc_tags' => ['allow_mixed' => true, 'remove_inheritdoc' => false],
         'no_useless_else' => true,
         'no_unused_imports' => true,
         'not_operator_with_successor_space' => false,
