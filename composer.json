@@ -16,16 +16,16 @@
         "issues": "https://github.com/swoole/library"
     },
     "require": {
-        "php": ">=7.2",
-        "ext-swoole": ">=4.6"
+        "php": ">=8.0",
+        "ext-swoole": ">=5.0"
     },
     "require-dev": {
         "ext-sockets": "*",
         "ext-json": "*",
         "ext-redis": "*",
         "ext-curl": "*",
-        "phpunit/phpunit": "~8.0",
-        "swoole/ide-helper": "~4.6",
+        "phpunit/phpunit": "~9.0",
+        "swoole/ide-helper": "~5.0",
         "friendsofphp/php-cs-fixer": "^3.0"
     },
     "suggest": {
