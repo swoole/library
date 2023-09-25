@@ -191,7 +191,7 @@ final class Handler
         if (!$this->isAvailable()) {
             return false;
         }
-        foreach ((new \ReflectionClass(static::class))->getDefaultProperties() as $name => $value) {
+        foreach ((new \ReflectionClass(self::class))->getDefaultProperties() as $name => $value) {
             $this->{$name} = $value;
         }
     }
@@ -825,7 +825,7 @@ final class Handler
             }
             if ($client->statusCode >= 300 and $client->statusCode < 400 and isset($client->headers['location'])) {
                 $redirectParsedUrl = $this->getRedirectUrl($client->headers['location']);
-                $redirectUrl = static::unparseUrl($redirectParsedUrl);
+                $redirectUrl = self::unparseUrl($redirectParsedUrl);
                 if ($this->followLocation and ($this->maxRedirects === null or $this->info['redirect_count'] < $this->maxRedirects)) {
                     if ($this->info['redirect_count'] === 0) {
                         $this->info['starttransfer_time'] = microtime(true) - $timeBegin;

@@ -1,5 +1,7 @@
 /.idea
 /.php_cs
+/.php_cs.cache
+/.phplint.cache/
 /.phplint-cache
 /.phpunit.result.cache
 /composer.lock
@@ -7,4 +9,3 @@
 /html/*
 /phpunit.xml
 /vendor
-/.php_cs.cache
