@@ -5,69 +5,36 @@
 [![Library Status](https://github.com/swoole/library/workflows/Unit%20Tests/badge.svg)](https://github.com/swoole/library/actions)
 [![License](https://img.shields.io/badge/license-apache2-blue.svg)](LICENSE)
 
-Table of Contents
-=================
+## Dockerized Local Development
 
-* [How to Contribute](#how-to-contribute)
-   * [Code Requirements](#code-requirements)
-* [Development](#development)
-   * [Branches](#branches)
-* [Dockerized Local Development](#dockerized-local-development-compose-v2)
-* [Examples](#examples)
-   * [Examples of Database Connection Pool](#examples-of-database-connection-pool)
-   * [Examples of FastCGI Calls](#examples-of-fastcgi-calls)
-* [Compatibility Patch (Swoole version &lt;= v4.4.12)](#compatibility-patch-swoole-version--v4412)
-* [Coding Style Checks and Fixes](#coding-style-checks-and-fixes)
-* [Third Party Libraries](#third-party-libraries)
-* [License](#license)
+First, run the following command to install development packages using _Composer_:
 
-## How to Contribute
+```bash
+composer install --ignore-platform-reqs
+# or,
+docker compose run --rm composer install --ignore-platform-reqs
+```
 
-Just open new pull requests (and we need unit tests for new features)
-
-### Code Requirements
-
-+ [PSR1](https://www.php-fig.org/psr/psr-1/) and [PSR12](https://www.php-fig.org/psr/psr-12/)
-+ Strict types
-
-## Development
-
-+ [Document](https://wiki.swoole.com/#/library)
-+ [Examples](https://github.com/swoole/library/tree/master/examples)
-
-### Branches
-
-+ **4.6.x**: For Swoole 4.6, which supports PHP 7.2+
-+ **4.5.x**: For Swoole 4.5, which supports PHP 7.1+
-
-## Dockerized Local Development (*Compose v2*)
-
-First, you need to build the base image:
+Next, you need to build the base image:
 
 ```bash
 docker compose build image
 ```
 
-Then run the following command to autoload PHP classes/files (no extra Composer packages to be installed):
+Then run the next command to start Docker containers:
 
 ```bash
-docker compose run --rm composer install
-```
-
-Secondly, run the next command to start Docker containers:
-
-```bash
-docker compose up
+docker compose up -d
 ```
 
 Alternatively, if you need to rebuild the service(s) and to restart the containers:
 
 ```bash
 docker compose build image --no-cache
-docker compose up --force-recreate
+docker compose up -d --force-recreate
 ```
 
-Now you can create an `app`'s `bash` session:
+Now you can create a `bash` session in the `app` container:
 
 ```bash
 docker compose exec app bash
@@ -79,7 +46,7 @@ And run commands inside the container:
 composer test
 ```
 
-Or you can tell to run it directly:
+Or you can run commands directly inside the `app` container:
 
 ```bash
 docker compose exec app composer test
@@ -111,32 +78,6 @@ docker compose exec app php examples/fastcgi/greeter/call.php
 docker compose exec app php examples/fastcgi/greeter/client.php
 docker compose exec app php examples/fastcgi/proxy/base.php
 docker compose exec app php examples/fastcgi/var/client.php
-```
-
-## Compatibility Patch (Swoole version <= v4.4.12)
-
-```php
-define('SWOOLE_USE_SHORTNAME', true); // or false (it depends on you)
-```
-
-## Coding Style Checks and Fixes
-
-To update Composer packages (optional):
-
-```bash
-docker compose run --rm composer update
-```
-
-To check coding standard violations:
-
-```bash
-docker compose run --rm composer cs-check
-```
-
-To correct coding standard violations automatically:
-
-```bash
-docker compose run --rm composer cs-fix
 ```
 
 ## Third Party Libraries
