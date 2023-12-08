@@ -26,25 +26,20 @@ function request(
     ?array $cookies = null
 ): ClientProxy {
     $driver = swoole_library_get_option('http_client_driver');
-    switch ($driver) {
-        case 'curl':
-            return request_with_curl($url, $method, $data, $options, $headers, $cookies);
-        case 'stream':
-            return request_with_stream($url, $method, $data, $options, $headers, $cookies);
-        case 'swoole':
-        default:
-            return request_with_http_client($url, $method, $data, $options, $headers, $cookies);
-    }
+    return match ($driver) {
+        'curl' => request_with_curl($url, $method, $data, $options, $headers, $cookies),
+        'stream' => request_with_stream($url, $method, $data, $options, $headers, $cookies),
+        default => request_with_http_client($url, $method, $data, $options, $headers, $cookies),
+    };
 }
 
 /**
- * @param mixed $data
  * @throws Exception
  */
 function request_with_http_client(
     string $url,
     string $method,
-    $data = null,
+    mixed $data = null,
     ?array $options = null,
     ?array $headers = null,
     ?array $cookies = null
@@ -89,13 +84,12 @@ function request_with_http_client(
 }
 
 /**
- * @param mixed $data
  * @throws Exception
  */
 function request_with_curl(
     string $url,
     string $method,
-    $data = null,
+    mixed $data = null,
     ?array $options = null,
     ?array $headers = null,
     ?array $cookies = null
@@ -159,13 +153,12 @@ function request_with_curl(
 }
 
 /**
- * @param mixed $data
  * @throws Exception
  */
 function request_with_stream(
     string $url,
     string $method,
-    $data = null,
+    mixed $data = null,
     ?array $options = null,
     ?array $headers = null,
     ?array $cookies = null
@@ -209,10 +202,9 @@ function request_with_stream(
 }
 
 /**
- * @param mixed $data
  * @throws Exception
  */
-function post(string $url, $data, ?array $options = null, ?array $headers = null, ?array $cookies = null): ClientProxy
+function post(string $url, mixed $data, ?array $options = null, ?array $headers = null, ?array $cookies = null): ClientProxy
 {
     return request($url, 'POST', $data, $options, $headers, $cookies);
 }

@@ -16,7 +16,7 @@ use Swoole\FastCGI;
 /**
  * FastCGI record.
  */
-class Record
+class Record implements \Stringable
 {
     /**
      * Identifies the FastCGI protocol version.
@@ -55,24 +55,18 @@ class Record
 
     /**
      * The number of bytes in the paddingData component of the record.
-     *
-     * @var int
      */
-    private $paddingLength = 0;
+    private int $paddingLength = 0;
 
     /**
      * Binary data, between 0 and 65535 bytes of data, interpreted according to the record type.
-     *
-     * @var string
      */
-    private $contentData = '';
+    private string $contentData = '';
 
     /**
      * Padding data, between 0 and 255 bytes of data, which are ignored.
-     *
-     * @var string
      */
-    private $paddingData = '';
+    private string $paddingData = '';
 
     /**
      * Returns the binary message representation of record
@@ -116,7 +110,7 @@ class Record
 
         $payload = substr($data, FastCGI::HEADER_LEN);
         self::unpackPayload($self, $payload);
-        if (get_called_class() !== __CLASS__ && $self->contentLength > 0) {
+        if (static::class !== self::class && $self->contentLength > 0) {
             static::unpackPayload($self, $payload);
         }
 

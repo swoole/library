@@ -17,11 +17,11 @@ use Swoole\Timer;
 
 class Barrier
 {
-    private $cid = -1;
+    private int $cid = -1;
 
     private $timer = -1;
 
-    private static $cancel_list = [];
+    private static array $cancel_list = [];
 
     public function __destruct()
     {

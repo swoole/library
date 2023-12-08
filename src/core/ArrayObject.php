@@ -105,10 +105,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $key
      * @return ArrayObject|StringObject
      */
-    public function get($key)
+    public function get(mixed $key)
     {
         if (!$this->exists($key)) {
             throw new ArrayKeyNotExists($key);
@@ -117,11 +116,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $key
-     * @param mixed $default
      * @return ArrayObject|StringObject
      */
-    public function getOr($key, $default = null)
+    public function getOr(mixed $key, mixed $default = null)
     {
         if (!$this->exists($key)) {
             return $default;
@@ -170,31 +167,27 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $key
-     * @param mixed $value
      * @return $this
      */
-    public function set($key, $value): self
+    public function set(mixed $key, mixed $value): self
     {
         $this->array[$key] = $value;
         return $this;
     }
 
     /**
-     * @param mixed $key
      * @return $this
      */
-    public function delete($key): self
+    public function delete(mixed $key): self
     {
         unset($this->array[$key]);
         return $this;
     }
 
     /**
-     * @param mixed $value
      * @return $this
      */
-    public function remove($value, bool $strict = true, bool $loop = false): self
+    public function remove(mixed $value, bool $strict = true, bool $loop = false): self
     {
         do {
             $key = $this->search($value, $strict);
@@ -217,11 +210,10 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $key
      * @return mixed|null
      */
     #[\ReturnTypeWillChange]
-    public function offsetGet($key)
+    public function offsetGet(mixed $key)
     {
         if (!array_key_exists($key, $this->array)) {
             return null;
@@ -229,63 +221,47 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return $this->array[$key];
     }
 
-    /**
-     * @param mixed $key
-     * @param mixed $value
-     */
-    public function offsetSet($key, $value): void
+    public function offsetSet(mixed $key, mixed $value): void
     {
         $this->array[$key] = $value;
     }
 
-    /**
-     * @param mixed $key
-     */
-    public function offsetUnset($key): void
+    public function offsetUnset(mixed $key): void
     {
         unset($this->array[$key]);
     }
 
     /**
-     * @param mixed $key
      * @return bool
      */
     #[\ReturnTypeWillChange]
-    public function offsetExists($key)
+    public function offsetExists(mixed $key)
     {
         return isset($this->array[$key]);
     }
 
-    /**
-     * @param mixed $key
-     */
-    public function exists($key): bool
+    public function exists(mixed $key): bool
     {
         return array_key_exists($key, $this->array);
     }
 
-    /**
-     * @param mixed $value
-     */
-    public function contains($value, bool $strict = true): bool
+    public function contains(mixed $value, bool $strict = true): bool
     {
         return in_array($value, $this->array, $strict);
     }
 
     /**
-     * @param mixed $value
      * @return mixed
      */
-    public function indexOf($value, bool $strict = true)
+    public function indexOf(mixed $value, bool $strict = true)
     {
         return $this->search($value, $strict);
     }
 
     /**
-     * @param mixed $value
      * @return mixed
      */
-    public function lastIndexOf($value, bool $strict = true)
+    public function lastIndexOf(mixed $value, bool $strict = true)
     {
         $array = $this->array;
         for (end($array); ($currentKey = key($array)) !== null; prev($array)) {
@@ -301,10 +277,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $needle
      * @return mixed
      */
-    public function search($needle, bool $strict = true)
+    public function search(mixed $needle, bool $strict = true)
     {
         return array_search($needle, $this->array, $strict);
     }
@@ -346,19 +321,17 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $value
      * @return int
      */
-    public function push($value)
+    public function push(mixed $value)
     {
         return $this->pushBack($value);
     }
 
     /**
-     * @param mixed $value
      * @return int
      */
-    public function pushFront($value)
+    public function pushFront(mixed $value)
     {
         return array_unshift($this->array, $value);
     }
@@ -370,19 +343,17 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $value
      * @return int
      */
-    public function pushBack($value)
+    public function pushBack(mixed $value)
     {
         return array_push($this->array, $value);
     }
 
     /**
-     * @param mixed $value
      * @return $this
      */
-    public function insert(int $offset, $value): self
+    public function insert(int $offset, mixed $value): self
     {
         if (is_array($value) || is_object($value) || is_null($value)) {
             $value = [$value];
@@ -416,10 +387,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $offset
      * @return static
      */
-    public function slice($offset, ?int $length = null, bool $preserve_keys = false): self
+    public function slice(mixed $offset, ?int $length = null, bool $preserve_keys = false): self
     {
         return new static(array_slice($this->array, ...func_get_args()));
     }
@@ -479,11 +449,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $column_key
-     * @param mixed $index
      * @return static
      */
-    public function column($column_key, $index = null): self
+    public function column(mixed $column_key, mixed $index = null): self
     {
         return new static(array_column($this->array, $column_key, $index));
     }
@@ -680,10 +648,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @param mixed $value
      * @return ArrayObject|mixed|StringObject
      */
-    protected static function detectType($value)
+    protected static function detectType(mixed $value)
     {
         if (is_string($value)) {
             return static::detectStringType($value);

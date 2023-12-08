@@ -148,7 +148,7 @@ class Proxy
                 $request->withParam('HTTPS', '1');
             }
         } else {
-            throw new \InvalidArgumentException('Not supported on ' . get_class($userRequest));
+            throw new \InvalidArgumentException('Not supported on ' . $userRequest::class);
         }
         return $request;
     }
@@ -161,7 +161,7 @@ class Proxy
             $userResponse->cookie = $response->getSetCookieHeaderLines();
             $userResponse->end($response->getBody());
         } else {
-            throw new \InvalidArgumentException('Not supported on ' . get_class($userResponse));
+            throw new \InvalidArgumentException('Not supported on ' . $userResponse::class);
         }
     }
 
@@ -191,7 +191,7 @@ class Proxy
             $extension = pathinfo($request->getScriptFilename(), PATHINFO_EXTENSION);
             if ($extension !== 'php') {
                 $realPath = realpath($request->getScriptFilename());
-                if (!$realPath || strpos($realPath, $this->documentRoot) !== 0 || !is_file($realPath)) {
+                if (!$realPath || !str_starts_with($realPath, $this->documentRoot) || !is_file($realPath)) {
                     $userResponse->status(Http\Status::NOT_FOUND);
                 } else {
                     $userResponse->sendfile($realPath);
@@ -200,6 +200,6 @@ class Proxy
             }
             return false;
         }
-        throw new \InvalidArgumentException('Not supported on ' . get_class($userResponse));
+        throw new \InvalidArgumentException('Not supported on ' . $userResponse::class);
     }
 }

@@ -146,7 +146,7 @@ class BarrierTest extends TestCase
             $et = microtime(true);
 
             $this->assertEquals(0, $count, 'The counter does not change since the child coroutine not yet finished.');
-            $this->lessThan(0.25, $et - $st, 'The parent coroutine continues exeuction without waiting the child to finish.');
+            $this->lessThan(0.25);
         });
     }
 }

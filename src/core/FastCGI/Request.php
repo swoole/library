@@ -16,7 +16,7 @@ use Swoole\FastCGI\Record\BeginRequest;
 use Swoole\FastCGI\Record\Params;
 use Swoole\FastCGI\Record\Stdin;
 
-class Request extends Message
+class Request extends Message implements \Stringable
 {
     protected $keepConn = false;
 
@@ -39,7 +39,7 @@ class Request extends Message
                 $body = substr($body, $stdinLength);
             }
             $stdinList[] = new Stdin();
-            $stdin       = implode($stdinList);
+            $stdin       = implode('', $stdinList);
             $message     = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}{$stdin}}";
         }
         return $message;

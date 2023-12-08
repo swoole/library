@@ -84,7 +84,7 @@ class HandlerTest extends TestCase
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: httpbin.org']);
             $body = curl_exec($ch);
-            $body = json_decode($body, true);
+            $body = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             curl_close($ch);
         });
@@ -121,7 +121,7 @@ class HandlerTest extends TestCase
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $data) {
                 self::assertIsString($data);
-                $body = json_decode($data, true);
+                $body = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
                 self::assertSame($body['headers']['Host'], 'httpbin.org');
                 return strlen($data);
             });
@@ -150,7 +150,7 @@ class HandlerTest extends TestCase
             $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
             curl_close($ch);
-            $body = json_decode($data, true);
+            $body = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             self::assertEquals($body['url'], $url);
             self::assertEquals($ip, $httpPrimaryIp);
@@ -197,7 +197,7 @@ class HandlerTest extends TestCase
 
             $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            $body          = json_decode($data, true);
+            $body          = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             self::assertEquals($body['url'], $url);
             self::assertEquals($ip, $httpPrimaryIp);
@@ -267,7 +267,7 @@ class HandlerTest extends TestCase
 
             $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            $body          = json_decode($data, true);
+            $body          = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             self::assertEquals($body['url'], $url);
             self::assertSame('', $httpPrimaryIp);
@@ -286,7 +286,7 @@ class HandlerTest extends TestCase
             curl_setopt($ch, CURLOPT_PRIVATE, $private);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: httpbin.org']);
             $body        = curl_exec($ch);
-            $body        = json_decode($body, true);
+            $body        = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             $get_private = curl_getinfo($ch, CURLINFO_PRIVATE);
             self::assertEquals($private, $get_private);
             self::assertSame($body['headers']['Host'], 'httpbin.org');

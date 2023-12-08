@@ -22,17 +22,15 @@ Runtime::enableCoroutine();
 
 Coroutine\run(function () {
     /* PDO instance constructor */
-    $constructor = function () {
-        return new PDO(
-            'mysql:' .
-            'host=' . MYSQL_SERVER_HOST . ';' .
-            'port=' . MYSQL_SERVER_PWD . ';' .
-            'dbname=' . MYSQL_SERVER_DB . ';' .
-            'charset=utf8mb4',
-            MYSQL_SERVER_USER,
-            MYSQL_SERVER_PWD
-        );
-    };
+    $constructor = fn() => new PDO(
+        'mysql:' .
+        'host=' . MYSQL_SERVER_HOST . ';' .
+        'port=' . MYSQL_SERVER_PWD . ';' .
+        'dbname=' . MYSQL_SERVER_DB . ';' .
+        'charset=utf8mb4',
+        MYSQL_SERVER_USER,
+        MYSQL_SERVER_PWD
+    );
     /* connection killer */
     Coroutine::create(function () use ($constructor) {
         $pdo = $constructor();
@@ -40,9 +38,7 @@ Coroutine\run(function () {
             $processList = $pdo->query('show processlist');
             $processList->execute();
             $processList = $processList->fetchAll();
-            $processList = array_filter($processList, function (array $value) {
-                return $value['db'] === 'test' && $value['Info'] != 'show processlist';
-            });
+            $processList = array_filter($processList, fn(array $value) => $value['db'] === 'test' && $value['Info'] != 'show processlist');
             foreach ($processList as $process) {
                 $pdo->exec("KILL {$process['Id']}");
             }

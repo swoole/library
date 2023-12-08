@@ -181,10 +181,8 @@ Hello world!',
     /**
      * @dataProvider dataStatus
      * @covers \Swoole\FastCGI\HttpResponse
-     * @param mixed $expectedStatusCode
-     * @param mixed $expectedReasonPhrase
      */
-    public function testStatus($expectedStatusCode, $expectedReasonPhrase, string $contentData): void
+    public function testStatus(mixed $expectedStatusCode, mixed $expectedReasonPhrase, string $contentData): void
     {
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
         $response    = new HttpResponse([new Stdout($contentData), new EndRequest()]);
@@ -225,10 +223,8 @@ Hello world!',
     /**
      * @dataProvider dataStatusFromFPM
      * @covers \Swoole\FastCGI\HttpResponse
-     * @param mixed $expectedStatusCode
-     * @param mixed $expectedReasonPhrase
      */
-    public function testStatusFromFPM($expectedStatusCode, $expectedReasonPhrase, string $filename): void
+    public function testStatusFromFPM(mixed $expectedStatusCode, mixed $expectedReasonPhrase, string $filename): void
     {
         Coroutine\run(
             function () use ($expectedStatusCode, $expectedReasonPhrase, $filename) {

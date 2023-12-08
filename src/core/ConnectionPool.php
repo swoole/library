@@ -27,7 +27,7 @@ class ConnectionPool
     protected $size;
 
     /** @var int */
-    protected $num;
+    protected $num = 0;
 
     /** @var string|null */
     protected $proxy;
@@ -36,7 +36,6 @@ class ConnectionPool
     {
         $this->pool        = new Channel($this->size = $size);
         $this->constructor = $constructor;
-        $this->num         = 0;
         $this->proxy       = $proxy;
     }
 

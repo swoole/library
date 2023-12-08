@@ -19,16 +19,13 @@ abstract class NameResolver
 {
     protected $baseUrl;
 
-    protected $prefix;
-
     protected $info;
 
     private $filter_fn;
 
-    public function __construct($url, $prefix = 'swoole_service_')
+    public function __construct($url, protected $prefix = 'swoole_service_')
     {
         $this->checkServerUrl($url);
-        $this->prefix = $prefix;
     }
 
     abstract public function join(string $name, string $ip, int $port, array $options = []): bool;
@@ -79,9 +76,8 @@ abstract class NameResolver
 
     /**
      * !!! The host MUST BE IP ADDRESS
-     * @param mixed $url
      */
-    protected function checkServerUrl($url)
+    protected function checkServerUrl(mixed $url)
     {
         $info = parse_url($url);
         if (empty($info['scheme']) or empty($info['host'])) {
@@ -108,10 +104,9 @@ abstract class NameResolver
 
     /**
      * @param $r ClientProxy
-     * @param mixed $url
      * @return bool
      */
-    protected function checkResponse($r, $url)
+    protected function checkResponse($r, mixed $url)
     {
         if (empty($r)) {
             throw new Exception("failed to request URL({$url})");

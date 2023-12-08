@@ -39,7 +39,7 @@ class Admin
 
     public const SIZE_OF_ZEND_ARRAY = 56;
 
-    private static $map = [
+    private static array $map = [
         'reactor'        => SWOOLE_SERVER_COMMAND_REACTOR_THREAD,
         'reactor_thread' => SWOOLE_SERVER_COMMAND_REACTOR_THREAD,
         'worker'         => SWOOLE_SERVER_COMMAND_EVENT_WORKER,
@@ -48,7 +48,7 @@ class Admin
         'task_worker'    => SWOOLE_SERVER_COMMAND_TASK_WORKER,
     ];
 
-    private static $allList = [
+    private static array $allList = [
         'all',
         'all_reactor',
         'all_reactor_thread',
@@ -59,13 +59,13 @@ class Admin
         'specific',
     ];
 
-    private static $postMethodList = [
+    private static array $postMethodList = [
         'server_reload',
         'server_shutdown',
         'close_session',
     ];
 
-    private static $accessToken = '';
+    private static string $accessToken = '';
 
     public static function init(Server $server)
     {
@@ -94,24 +94,20 @@ class Admin
         $server->addCommand(
             'coroutine_stats',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json(Coroutine::stats());
-            }
+            fn($server, $msg) => self::json(Coroutine::stats())
         );
 
         $server->addCommand(
             'coroutine_list',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json(iterator_to_array(Coroutine::list()));
-            }
+            fn($server, $msg) => self::json(iterator_to_array(Coroutine::list()))
         );
 
         $server->addCommand(
             'coroutine_bt',
             $accepted_process_types,
             function ($server, $msg) {
-                $json = json_decode($msg);
+                $json = json_decode($msg, null, 512, JSON_THROW_ON_ERROR);
                 $cid  = empty($json->cid) ? 0 : intval($json->cid);
                 $bt   = Coroutine::getBackTrace($cid);
                 if ($bt === false) {
@@ -124,9 +120,7 @@ class Admin
         $server->addCommand(
             'server_stats',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json($server->stats());
-            }
+            fn($server, $msg) => self::json($server->stats())
         );
 
         $server->addCommand(
@@ -147,7 +141,7 @@ class Admin
             'get_client_info',
             $accepted_process_types,
             function (Server $server, $msg) {
-                $json = json_decode($msg, true);
+                $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
                 if (empty($json['session_id'])) {
                     return self::json('require session_id', 4003);
                 }
@@ -155,32 +149,32 @@ class Admin
             }
         );
 
-        $server->addCommand('close_session', $accepted_process_types, [__CLASS__, 'handlerCloseSession']);
-        $server->addCommand('get_version_info', $accepted_process_types, [__CLASS__, 'handlerGetVersionInfo']);
-        $server->addCommand('get_worker_info', $accepted_process_types, [__CLASS__, 'handlerGetWorkerInfo']);
-        $server->addCommand('get_timer_list', $accepted_process_types, [__CLASS__, 'handlerGetTimerList']);
-        $server->addCommand('get_coroutine_list', $accepted_process_types, [__CLASS__, 'handlerGetCoroutineList']);
-        $server->addCommand('get_objects', $accepted_process_types, [__CLASS__, 'handlerGetObjects']);
-        $server->addCommand('get_class_info', $accepted_process_types, [__CLASS__, 'handlerGetClassInfo']);
-        $server->addCommand('get_function_info', $accepted_process_types, [__CLASS__, 'handlerGetFunctionInfo']);
-        $server->addCommand('get_object_by_handle', $accepted_process_types, [__CLASS__, 'handlerGetObjectByHandle']);
-        $server->addCommand('get_server_cpu_usage', $accepted_process_types, [__CLASS__, 'handlerGetServerCpuUsage']);
+        $server->addCommand('close_session', $accepted_process_types, [self::class, 'handlerCloseSession']);
+        $server->addCommand('get_version_info', $accepted_process_types, [self::class, 'handlerGetVersionInfo']);
+        $server->addCommand('get_worker_info', $accepted_process_types, [self::class, 'handlerGetWorkerInfo']);
+        $server->addCommand('get_timer_list', $accepted_process_types, [self::class, 'handlerGetTimerList']);
+        $server->addCommand('get_coroutine_list', $accepted_process_types, [self::class, 'handlerGetCoroutineList']);
+        $server->addCommand('get_objects', $accepted_process_types, [self::class, 'handlerGetObjects']);
+        $server->addCommand('get_class_info', $accepted_process_types, [self::class, 'handlerGetClassInfo']);
+        $server->addCommand('get_function_info', $accepted_process_types, [self::class, 'handlerGetFunctionInfo']);
+        $server->addCommand('get_object_by_handle', $accepted_process_types, [self::class, 'handlerGetObjectByHandle']);
+        $server->addCommand('get_server_cpu_usage', $accepted_process_types, [self::class, 'handlerGetServerCpuUsage']);
         $server->addCommand(
             'get_server_memory_usage',
             $accepted_process_types,
-            [__CLASS__, 'handlerGetServerMemoryUsage']
+            [self::class, 'handlerGetServerMemoryUsage']
         );
         $server->addCommand(
             'get_static_property_value',
             $accepted_process_types,
-            [__CLASS__, 'handlerGetStaticPropertyValue']
+            [self::class, 'handlerGetStaticPropertyValue']
         );
         $server->addCommand(
             'get_defined_functions',
             $accepted_process_types,
-            [__CLASS__, 'handlerGetDefinedFunctions']
+            [self::class, 'handlerGetDefinedFunctions']
         );
-        $server->addCommand('get_declared_classes', $accepted_process_types, [__CLASS__, 'handlerGetDeclaredClasses']);
+        $server->addCommand('get_declared_classes', $accepted_process_types, [self::class, 'handlerGetDeclaredClasses']);
 
         $server->addCommand(
             'gc_status',
@@ -195,40 +189,32 @@ class Admin
             $server->addCommand(
                 'opcache_status',
                 $accepted_process_types,
-                function ($server, $msg) {
-                    return self::json(opcache_get_status(true));
-                }
+                fn($server, $msg) => self::json(opcache_get_status(true))
             );
         }
 
         $server->addCommand(
             'getpid',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json(['pid' => posix_getpid()]);
-            }
+            fn($server, $msg) => self::json(['pid' => posix_getpid()])
         );
 
         $server->addCommand(
             'memory_usage',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json([
-                    'usage'      => memory_get_usage(),
-                    'real_usage' => memory_get_usage(true),
-                ]);
-            }
+            fn($server, $msg) => self::json([
+                'usage'      => memory_get_usage(),
+                'real_usage' => memory_get_usage(true),
+            ])
         );
 
         $server->addCommand(
             'get_included_files',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json(['files' => get_included_files()]);
-            }
+            fn($server, $msg) => self::json(['files' => get_included_files()])
         );
 
-        $server->addCommand('get_resources', $accepted_process_types, [__CLASS__, 'handlerGetResources']);
+        $server->addCommand('get_resources', $accepted_process_types, [self::class, 'handlerGetResources']);
 
         $server->addCommand(
             'get_defined_constants',
@@ -266,24 +252,20 @@ class Admin
         $server->addCommand(
             'get_declared_interfaces',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json(get_declared_interfaces());
-            }
+            fn($server, $msg) => self::json(get_declared_interfaces())
         );
 
         $server->addCommand(
             'get_declared_traits',
             $accepted_process_types,
-            function ($server, $msg) {
-                return self::json(get_declared_traits());
-            }
+            fn($server, $msg) => self::json(get_declared_traits())
         );
 
         $server->addCommand(
             'get_included_file_contents',
             $accepted_process_types,
             function (Server $server, $msg) {
-                $json = json_decode($msg, true);
+                $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
                 if (empty($json['filename'])) {
                     return self::json('require filename', 4003);
                 }
@@ -313,7 +295,7 @@ class Admin
                     $other = [];
                     if ($type === 'object') {
                         $other = [
-                            'class_name'  => get_class($item),
+                            'class_name'  => $item::class,
                             'object_id'   => spl_object_id($item),
                             'object_hash' => spl_object_hash($item),
                         ];
@@ -336,7 +318,7 @@ class Admin
             'get_extension_info',
             $accepted_process_types,
             function (Server $server, $msg) {
-                $json = json_decode($msg, true);
+                $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
 
                 if (empty($json['extension_name']) || !extension_loaded($json['extension_name'])) {
                     return self::json('require extension_name', 4004);
@@ -470,7 +452,7 @@ class Admin
             }
 
             if ($cmd === 'multi') {
-                $body = json_decode($req->getContent(), true);
+                $body = json_decode($req->getContent(), true, 512, JSON_THROW_ON_ERROR);
                 if (empty($body) || !is_array($body) || $method != 'POST') {
                     goto _bad_process;
                 }
@@ -523,7 +505,7 @@ class Admin
                 $resp->end(json_encode([
                     'code' => swoole_last_error(),
                     'data' => swoole_strerror(swoole_last_error()),
-                ]));
+                ], JSON_THROW_ON_ERROR));
             } else {
                 $resp->end($result);
             }
@@ -537,10 +519,9 @@ class Admin
 
     /**
      * @param $server Server
-     * @param mixed $msg
      * @return false|string
      */
-    public static function handlerGetResources($server, $msg)
+    public static function handlerGetResources($server, mixed $msg)
     {
         $resources = get_resources();
         $list      = [];
@@ -559,10 +540,9 @@ class Admin
 
     /**
      * @param $server Server
-     * @param mixed $msg
      * @return false|string
      */
-    public static function handlerGetWorkerInfo($server, $msg)
+    public static function handlerGetWorkerInfo($server, mixed $msg)
     {
         $info = [
             'id'                => $server->getWorkerId(),
@@ -581,13 +561,11 @@ class Admin
     }
 
     /**
-     * @param mixed $server
-     * @param mixed $msg
      * @return false|string
      */
-    public static function handlerCloseSession($server, $msg)
+    public static function handlerCloseSession(mixed $server, mixed $msg)
     {
-        $json = json_decode($msg, true);
+        $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
         if (empty($json['session_id'])) {
             return self::json('require session_id', 4003);
         }
@@ -598,11 +576,9 @@ class Admin
     }
 
     /**
-     * @param mixed $server
-     * @param mixed $msg
      * @return false|string
      */
-    public static function handlerGetTimerList($server, $msg)
+    public static function handlerGetTimerList(mixed $server, mixed $msg)
     {
         $list = [];
         foreach (Timer::list() as $timer_id) {
@@ -616,11 +592,9 @@ class Admin
     }
 
     /**
-     * @param mixed $server
-     * @param mixed $msg
      * @return false|string
      */
-    public static function handlerGetCoroutineList($server, $msg)
+    public static function handlerGetCoroutineList(mixed $server, mixed $msg)
     {
         $list = [];
         foreach (Coroutine::list() as $cid) {
@@ -643,7 +617,7 @@ class Admin
         $list    = [];
         $objects = swoole_get_objects();
         foreach ($objects as $o) {
-            $class_name = get_class($o);
+            $class_name = $o::class;
             $class      = new \ReflectionClass($class_name);
             $filename   = $class->getFileName();
             $line       = $class->getStartLine();
@@ -662,7 +636,7 @@ class Admin
 
     public static function handlerGetClassInfo($server, $msg)
     {
-        $json = json_decode($msg, true);
+        $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
         if (empty($json['class_name']) && empty($json['interface_name'])) {
             return self::json(['error' => 'require class_name or interface_name'], 4004);
         }
@@ -789,7 +763,7 @@ class Admin
 
     public static function handlerGetFunctionInfo($server, $msg)
     {
-        $json = json_decode($msg, true);
+        $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
 
         $className    = $json['class_name'] ?? '';
         $functionName = $json['function_name'] ?? '';
@@ -898,7 +872,7 @@ class Admin
             return self::json(['require ext-swoole_plus'], 5000);
         }
 
-        $json = json_decode($msg, true);
+        $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
         if (empty($json) || empty($json['object_id']) || empty($json['object_hash'])) {
             return self::json(['error' => 'Params Error!'], 4004);
         }
@@ -1043,7 +1017,7 @@ class Admin
 
     public static function handlerGetStaticPropertyValue($server, $msg)
     {
-        $json = json_decode($msg, true);
+        $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
         if (empty($json['class_name'])) {
             return self::json(['error' => 'require class_name!'], 4004);
         }

@@ -43,7 +43,7 @@ class Client
             $this->af = AF_UNIX;
             $host     = '/' . ltrim(substr($host, strlen('unix:/')), '/');
             $port     = 0;
-        } elseif (strpos($host, ':') !== false) {
+        } elseif (str_contains($host, ':')) {
             $this->af = AF_INET6;
         } else {
             $this->af = AF_INET;
@@ -112,12 +112,10 @@ class Client
                     $this->socket->close();
                     $this->socket = null;
                 }
-                switch (true) {
-                    case $request instanceof HttpRequest:
-                        return new HttpResponse($records);
-                    default:
-                        return new Response($records);
-                }
+                return match (true) {
+                    $request instanceof HttpRequest => new HttpResponse($records),
+                    default => new Response($records),
+                };
             }
         }
         /* never here */

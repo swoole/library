@@ -78,7 +78,7 @@ class HttpFunctionTest extends TestCase
     private function fun2()
     {
         $data = get('http://httpbin.org/get?hello=world');
-        $body = json_decode($data->getBody());
+        $body = json_decode($data->getBody(), null, 512, JSON_THROW_ON_ERROR);
         self::assertSame('httpbin.org', $body->headers->Host);
         self::assertSame('world', $body->args->hello);
     }
@@ -87,7 +87,7 @@ class HttpFunctionTest extends TestCase
     {
         $random_data = base64_encode(random_bytes(128));
         $data        = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
-        $body        = json_decode($data->getBody());
+        $body        = json_decode($data->getBody(), null, 512, JSON_THROW_ON_ERROR);
         self::assertSame('httpbin.org', $body->headers->Host);
         self::assertSame('world', $body->args->hello);
         self::assertSame($random_data, $body->form->random_data);

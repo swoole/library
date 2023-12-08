@@ -15,10 +15,7 @@ use Swoole\Exception;
 
 class Cluster
 {
-    /**
-     * @var array
-     */
-    private $nodes = [];
+    private array $nodes = [];
 
     /**
      * @throws Exception

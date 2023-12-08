@@ -67,7 +67,7 @@ class Nacos extends NameResolver
         if (!$this->checkResponse($r, $url)) {
             return null;
         }
-        $result = json_decode($r->getBody());
+        $result = json_decode($r->getBody(), null, 512, JSON_THROW_ON_ERROR);
         if (empty($result)) {
             return null;
         }

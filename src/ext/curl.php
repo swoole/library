@@ -40,36 +40,22 @@ function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
 {
     $info = $obj->getInfo();
     if (is_array($info) and $opt) {
-        switch ($opt) {
-            case CURLINFO_EFFECTIVE_URL:
-                return $info['url'];
-            case CURLINFO_HTTP_CODE:
-                return $info['http_code'];
-            case CURLINFO_CONTENT_TYPE:
-                return $info['content_type'];
-            case CURLINFO_REDIRECT_COUNT:
-                return $info['redirect_count'];
-            case CURLINFO_REDIRECT_URL:
-                return $info['redirect_url'];
-            case CURLINFO_TOTAL_TIME:
-                return $info['total_time'];
-            case CURLINFO_STARTTRANSFER_TIME:
-                return $info['starttransfer_time'];
-            case CURLINFO_SIZE_DOWNLOAD:
-                return $info['size_download'];
-            case CURLINFO_SPEED_DOWNLOAD:
-                return $info['speed_download'];
-            case CURLINFO_REDIRECT_TIME:
-                return $info['redirect_time'];
-            case CURLINFO_HEADER_SIZE:
-                return $info['header_size'];
-            case CURLINFO_PRIMARY_IP:
-                return $info['primary_ip'];
-            case CURLINFO_PRIVATE:
-                return $info['private'];
-            default:
-                return null;
-        }
+        return match ($opt) {
+            CURLINFO_EFFECTIVE_URL => $info['url'],
+            CURLINFO_HTTP_CODE => $info['http_code'],
+            CURLINFO_CONTENT_TYPE => $info['content_type'],
+            CURLINFO_REDIRECT_COUNT => $info['redirect_count'],
+            CURLINFO_REDIRECT_URL => $info['redirect_url'],
+            CURLINFO_TOTAL_TIME => $info['total_time'],
+            CURLINFO_STARTTRANSFER_TIME => $info['starttransfer_time'],
+            CURLINFO_SIZE_DOWNLOAD => $info['size_download'],
+            CURLINFO_SPEED_DOWNLOAD => $info['speed_download'],
+            CURLINFO_REDIRECT_TIME => $info['redirect_time'],
+            CURLINFO_HEADER_SIZE => $info['header_size'],
+            CURLINFO_PRIMARY_IP => $info['primary_ip'],
+            CURLINFO_PRIVATE => $info['private'],
+            default => null,
+        };
     }
     return $info;
 }

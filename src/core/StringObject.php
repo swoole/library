@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-class StringObject
+class StringObject implements \Stringable
 {
     /**
      * @var string
@@ -46,7 +46,7 @@ class StringObject
      */
     public function indexOf(string $needle, int $offset = 0)
     {
-        return strpos($this->string, ...func_get_args());
+        return strpos($this->string, ...(string) func_get_args());
     }
 
     /**
@@ -54,7 +54,7 @@ class StringObject
      */
     public function lastIndexOf(string $needle, int $offset = 0)
     {
-        return strrpos($this->string, ...func_get_args());
+        return strrpos($this->string, ...(string) func_get_args());
     }
 
     /**
@@ -62,7 +62,7 @@ class StringObject
      */
     public function pos(string $needle, int $offset = 0)
     {
-        return strpos($this->string, ...func_get_args());
+        return strpos($this->string, ...(string) func_get_args());
     }
 
     /**
@@ -70,7 +70,7 @@ class StringObject
      */
     public function rpos(string $needle, int $offset = 0)
     {
-        return strrpos($this->string, ...func_get_args());
+        return strrpos($this->string, ...(string) func_get_args());
     }
 
     /**
@@ -106,10 +106,9 @@ class StringObject
     }
 
     /**
-     * @param mixed $characters
      * @return static
      */
-    public function trim($characters = ''): self
+    public function trim(mixed $characters = ''): self
     {
         if ($characters) {
             return new static(trim($this->string, $characters));
@@ -150,10 +149,9 @@ class StringObject
     }
 
     /**
-     * @param mixed $str
      * @return static
      */
-    public function append($str): self
+    public function append(mixed $str): self
     {
         return new static($this->string .= $str);
     }
@@ -169,7 +167,7 @@ class StringObject
 
     public function startsWith(string $needle): bool
     {
-        return strpos($this->string, $needle) === 0;
+        return str_starts_with($this->string, $needle);
     }
 
     public function endsWith(string $needle): bool
@@ -190,7 +188,7 @@ class StringObject
 
     public function contains(string $subString): bool
     {
-        return strpos($this->string, $subString) !== false;
+        return str_contains($this->string, $subString);
     }
 
     public function split(string $delimiter, int $limit = PHP_INT_MAX): ArrayObject

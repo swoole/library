@@ -19,7 +19,7 @@ use Swoole\Coroutine\Http\Client;
 use Swoole\Curl\Exception as CurlException;
 use Swoole\Http\Status;
 
-final class Handler
+final class Handler implements \Stringable
 {
     /**
      * @var Client
@@ -141,7 +141,7 @@ final class Handler
         }
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         $id = spl_object_id($this);
         return "Object({$id}) of type (curl)";
@@ -260,7 +260,7 @@ final class Handler
             $this->setError(CURLE_URL_MALFORMAT, 'No URL set!');
             return false;
         }
-        if (strpos($url, '://') === false && $this->unix_socket_path === '') {
+        if (!str_contains($url, '://') && $this->unix_socket_path === '') {
             $url = 'http://' . $url;
         }
         if ($setInfo) {
@@ -357,10 +357,9 @@ final class Handler
     }
 
     /**
-     * @param mixed $value
      * @throws Swoole\Curl\Exception
      */
-    private function setOption(int $opt, $value): bool
+    private function setOption(int $opt, mixed $value): bool
     {
         switch ($opt) {
             // case CURLOPT_STDERR:
@@ -725,26 +724,21 @@ final class Handler
                     }
                     $this->proxy = $proxy = $ip;
                 }
-                switch ($proxyType) {
-                    case CURLPROXY_HTTP:
-                        $proxyOptions = [
-                            'http_proxy_host'     => $proxy,
-                            'http_proxy_port'     => $proxyPort,
-                            'http_proxy_username' => $proxyUsername,
-                            'http_proxy_password' => $proxyPassword,
-                        ];
-                        break;
-                    case CURLPROXY_SOCKS5:
-                        $proxyOptions = [
-                            'socks5_host'     => $proxy,
-                            'socks5_port'     => $proxyPort,
-                            'socks5_username' => $proxyUsername,
-                            'socks5_password' => $proxyPassword,
-                        ];
-                        break;
-                    default:
-                        throw new CurlException("Unexpected proxy type [{$proxyType}]");
-                }
+                $proxyOptions = match ($proxyType) {
+                    CURLPROXY_HTTP => [
+                        'http_proxy_host'     => $proxy,
+                        'http_proxy_port'     => $proxyPort,
+                        'http_proxy_username' => $proxyUsername,
+                        'http_proxy_password' => $proxyPassword,
+                    ],
+                    CURLPROXY_SOCKS5 => [
+                        'socks5_host'     => $proxy,
+                        'socks5_port'     => $proxyPort,
+                        'socks5_username' => $proxyUsername,
+                        'socks5_password' => $proxyPassword,
+                    ],
+                    default => throw new CurlException("Unexpected proxy type [{$proxyType}]"),
+                };
             }
             /*
              * Client Options
@@ -984,7 +978,7 @@ final class Handler
                 if ($path === '.') {
                     $path = '/';
                 }
-                if (isset($location[1]) and substr($location, 0, 2) === './') {
+                if (isset($location[1]) and str_starts_with($location, './')) {
                     $location = substr($location, 2);
                 }
                 $redirectUri['path'] = $path . $location;

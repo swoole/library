@@ -20,12 +20,8 @@ Coroutine::set(['hook_flags' => SWOOLE_HOOK_ALL]);
 Coroutine\run(function () {
     $use     = microtime(true);
     $results = batch([
-        'gethostbyname' => function () {
-            return gethostbyname('localhost');
-        },
-        'file_get_contents' => function () {
-            return file_get_contents(__DIR__ . '/greeter.txt');
-        },
+        'gethostbyname' => fn() => gethostbyname('localhost'),
+        'file_get_contents' => fn() => file_get_contents(__DIR__ . '/greeter.txt'),
         'sleep' => function () {
             sleep(1);
             return true;

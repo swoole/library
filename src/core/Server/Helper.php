@@ -239,7 +239,7 @@ class Helper
                 $stats      = $server->stats();
                 $stats_file = swoole_string($server->setting['stats_file']);
                 if ($stats_file->endsWith('.json')) {
-                    $out = json_encode($stats);
+                    $out = json_encode($stats, JSON_THROW_ON_ERROR);
                 } elseif ($stats_file->endsWith('.php')) {
                     $out = "<?php\nreturn " . var_export($stats, true) . ";\n";
                 } else {

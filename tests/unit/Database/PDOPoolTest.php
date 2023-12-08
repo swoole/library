@@ -52,7 +52,7 @@ class PDOPoolTest extends TestCase
                         // simulate error happens
                         $statement = $pdo->prepare('KILL CONNECTION_ID()');
                         $statement->execute();
-                    } catch (\PDOException $th) {
+                    } catch (\PDOException) {
                         // do nothing
                     }
                     $pdo = null;

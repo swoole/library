@@ -93,7 +93,7 @@ class NameResolverTest extends TestCase
     {
         $service_name = uniqid() . '.service';
         $ip           = '127.0.0.1';
-        $port         = rand(10000, 65536);
+        $port         = random_int(10000, 65536);
         $this->assertTrue($ns->join($service_name, $ip, $port));
 
         $rs = $ns->getCluster($service_name);

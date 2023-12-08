@@ -40,7 +40,7 @@ class Consul extends NameResolver
             ],
         ];
         $url = $this->baseUrl . '/v1/agent/service/register';
-        $r   = request($url, 'PUT', json_encode($data));
+        $r   = request($url, 'PUT', json_encode($data, JSON_THROW_ON_ERROR));
         return $this->checkResponse($r, $url);
     }
 
@@ -73,7 +73,7 @@ class Consul extends NameResolver
         if (!$this->checkResponse($r, $url)) {
             return null;
         }
-        $list = json_decode($r->getBody());
+        $list = json_decode($r->getBody(), null, 512, JSON_THROW_ON_ERROR);
         if (empty($list)) {
             return null;
         }

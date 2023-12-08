@@ -36,9 +36,7 @@ Coroutine\run(function () {
         while (true) {
             $processList = $killer->query('show processlist');
             $processList = $processList->fetch_all(MYSQLI_ASSOC);
-            $processList = array_filter($processList, function (array $value) {
-                return $value['db'] === 'test' && $value['Info'] != 'show processlist';
-            });
+            $processList = array_filter($processList, fn(array $value) => $value['db'] === 'test' && $value['Info'] != 'show processlist');
             foreach ($processList as $process) {
                 $killer->query("KILL {$process['Id']}");
             }
