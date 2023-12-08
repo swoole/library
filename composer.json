@@ -25,8 +25,7 @@
         "ext-redis": "*",
         "ext-curl": "*",
         "phpunit/phpunit": "~9.0",
-        "swoole/ide-helper": "~5.0",
-        "friendsofphp/php-cs-fixer": "^3.0"
+        "swoole/ide-helper": "~5.0"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
@@ -61,8 +60,6 @@
         "discard-changes": true
     },
     "scripts": {
-        "cs-check": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix --dry-run",
-        "cs-fix": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/php-cs-fixer fix",
         "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
         "post-install-cmd": [
             "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
