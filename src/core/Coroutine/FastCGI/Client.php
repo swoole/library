@@ -114,7 +114,7 @@ class Client
                 }
                 return match (true) {
                     $request instanceof HttpRequest => new HttpResponse($records),
-                    default => new Response($records),
+                    default                         => new Response($records),
                 };
             }
         }

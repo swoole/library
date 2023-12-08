@@ -27,9 +27,9 @@ function request(
 ): ClientProxy {
     $driver = swoole_library_get_option('http_client_driver');
     return match ($driver) {
-        'curl' => request_with_curl($url, $method, $data, $options, $headers, $cookies),
+        'curl'   => request_with_curl($url, $method, $data, $options, $headers, $cookies),
         'stream' => request_with_stream($url, $method, $data, $options, $headers, $cookies),
-        default => request_with_http_client($url, $method, $data, $options, $headers, $cookies),
+        default  => request_with_http_client($url, $method, $data, $options, $headers, $cookies),
     };
 }
 

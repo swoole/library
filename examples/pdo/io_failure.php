@@ -22,7 +22,7 @@ Runtime::enableCoroutine();
 
 Coroutine\run(function () {
     /* PDO instance constructor */
-    $constructor = fn() => new PDO(
+    $constructor = fn () => new PDO(
         'mysql:' .
         'host=' . MYSQL_SERVER_HOST . ';' .
         'port=' . MYSQL_SERVER_PWD . ';' .
@@ -38,7 +38,7 @@ Coroutine\run(function () {
             $processList = $pdo->query('show processlist');
             $processList->execute();
             $processList = $processList->fetchAll();
-            $processList = array_filter($processList, fn(array $value) => $value['db'] === 'test' && $value['Info'] != 'show processlist');
+            $processList = array_filter($processList, fn (array $value) => $value['db'] === 'test' && $value['Info'] != 'show processlist');
             foreach ($processList as $process) {
                 $pdo->exec("KILL {$process['Id']}");
             }
@@ -72,7 +72,7 @@ Coroutine\run(function () {
                 }
                 $success++;
                 $pool->put($pdo);
-                Co::sleep(mt_rand(100, 1000) / 1000);
+                co::sleep(mt_rand(100, 1000) / 1000);
             }
         });
     }

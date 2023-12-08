@@ -94,13 +94,13 @@ class Admin
         $server->addCommand(
             'coroutine_stats',
             $accepted_process_types,
-            fn($server, $msg) => self::json(Coroutine::stats())
+            fn ($server, $msg) => self::json(Coroutine::stats())
         );
 
         $server->addCommand(
             'coroutine_list',
             $accepted_process_types,
-            fn($server, $msg) => self::json(iterator_to_array(Coroutine::list()))
+            fn ($server, $msg) => self::json(iterator_to_array(Coroutine::list()))
         );
 
         $server->addCommand(
@@ -120,7 +120,7 @@ class Admin
         $server->addCommand(
             'server_stats',
             $accepted_process_types,
-            fn($server, $msg) => self::json($server->stats())
+            fn ($server, $msg) => self::json($server->stats())
         );
 
         $server->addCommand(
@@ -189,20 +189,20 @@ class Admin
             $server->addCommand(
                 'opcache_status',
                 $accepted_process_types,
-                fn($server, $msg) => self::json(opcache_get_status(true))
+                fn ($server, $msg) => self::json(opcache_get_status(true))
             );
         }
 
         $server->addCommand(
             'getpid',
             $accepted_process_types,
-            fn($server, $msg) => self::json(['pid' => posix_getpid()])
+            fn ($server, $msg) => self::json(['pid' => posix_getpid()])
         );
 
         $server->addCommand(
             'memory_usage',
             $accepted_process_types,
-            fn($server, $msg) => self::json([
+            fn ($server, $msg) => self::json([
                 'usage'      => memory_get_usage(),
                 'real_usage' => memory_get_usage(true),
             ])
@@ -211,7 +211,7 @@ class Admin
         $server->addCommand(
             'get_included_files',
             $accepted_process_types,
-            fn($server, $msg) => self::json(['files' => get_included_files()])
+            fn ($server, $msg) => self::json(['files' => get_included_files()])
         );
 
         $server->addCommand('get_resources', $accepted_process_types, [self::class, 'handlerGetResources']);
@@ -252,13 +252,13 @@ class Admin
         $server->addCommand(
             'get_declared_interfaces',
             $accepted_process_types,
-            fn($server, $msg) => self::json(get_declared_interfaces())
+            fn ($server, $msg) => self::json(get_declared_interfaces())
         );
 
         $server->addCommand(
             'get_declared_traits',
             $accepted_process_types,
-            fn($server, $msg) => self::json(get_declared_traits())
+            fn ($server, $msg) => self::json(get_declared_traits())
         );
 
         $server->addCommand(

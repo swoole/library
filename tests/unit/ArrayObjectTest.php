@@ -130,7 +130,7 @@ class ArrayObjectTest extends TestCase
 
     public function testFilter()
     {
-        $data = $this->data->filter(fn($v) => $v > 20);
+        $data = $this->data->filter(fn ($v) => $v > 20);
 
         $find = false;
         foreach ($data as $v) {
@@ -166,7 +166,7 @@ class ArrayObjectTest extends TestCase
         $arr2 = [6, 7, 8, 9, 10];
         $arr3 = [62, 71, 82, 93, 103];
 
-        $this->assertEquals(swoole_array($arr1)->map(fn($val1) => $val1 * 3)->toArray(), [
+        $this->assertEquals(swoole_array($arr1)->map(fn ($val1) => $val1 * 3)->toArray(), [
             3,
             6,
             9,
@@ -174,7 +174,7 @@ class ArrayObjectTest extends TestCase
             15,
         ]);
 
-        $this->assertEquals(swoole_array($arr1)->map(fn($val1, $val2, $val3) => $val1 + $val2 + $val3, $arr2, $arr3)->toArray(), [
+        $this->assertEquals(swoole_array($arr1)->map(fn ($val1, $val2, $val3) => $val1 + $val2 + $val3, $arr2, $arr3)->toArray(), [
             69,
             80,
             93,
@@ -386,7 +386,7 @@ class ArrayObjectTest extends TestCase
     {
         $data1 = ['a' => 4, 'b' => 8, 'c' => -1, 'd' => -9, 'e' => 2, 'f' => 5, 'g' => 3, 'h' => -4];
         $data2 = swoole_array($data1);
-        $cmp   = fn($a, $b) => $a <=> $b;
+        $cmp   = fn ($a, $b) => $a <=> $b;
         uasort($data1, $cmp);
         $this->assertEquals($data1, $data2->uasort($cmp)->toArray());
     }
@@ -409,7 +409,7 @@ class ArrayObjectTest extends TestCase
 
     public function testUsort()
     {
-        $cmp = fn($a, $b) => $a <=> $b;
+        $cmp = fn ($a, $b) => $a <=> $b;
 
         $data1 = [3, 2, 5, 6, 1];
         $data2 = swoole_array($data1);

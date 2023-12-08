@@ -41,20 +41,20 @@ function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
     $info = $obj->getInfo();
     if (is_array($info) and $opt) {
         return match ($opt) {
-            CURLINFO_EFFECTIVE_URL => $info['url'],
-            CURLINFO_HTTP_CODE => $info['http_code'],
-            CURLINFO_CONTENT_TYPE => $info['content_type'],
-            CURLINFO_REDIRECT_COUNT => $info['redirect_count'],
-            CURLINFO_REDIRECT_URL => $info['redirect_url'],
-            CURLINFO_TOTAL_TIME => $info['total_time'],
+            CURLINFO_EFFECTIVE_URL      => $info['url'],
+            CURLINFO_HTTP_CODE          => $info['http_code'],
+            CURLINFO_CONTENT_TYPE       => $info['content_type'],
+            CURLINFO_REDIRECT_COUNT     => $info['redirect_count'],
+            CURLINFO_REDIRECT_URL       => $info['redirect_url'],
+            CURLINFO_TOTAL_TIME         => $info['total_time'],
             CURLINFO_STARTTRANSFER_TIME => $info['starttransfer_time'],
-            CURLINFO_SIZE_DOWNLOAD => $info['size_download'],
-            CURLINFO_SPEED_DOWNLOAD => $info['speed_download'],
-            CURLINFO_REDIRECT_TIME => $info['redirect_time'],
-            CURLINFO_HEADER_SIZE => $info['header_size'],
-            CURLINFO_PRIMARY_IP => $info['primary_ip'],
-            CURLINFO_PRIVATE => $info['private'],
-            default => null,
+            CURLINFO_SIZE_DOWNLOAD      => $info['size_download'],
+            CURLINFO_SPEED_DOWNLOAD     => $info['speed_download'],
+            CURLINFO_REDIRECT_TIME      => $info['redirect_time'],
+            CURLINFO_HEADER_SIZE        => $info['header_size'],
+            CURLINFO_PRIMARY_IP         => $info['primary_ip'],
+            CURLINFO_PRIVATE            => $info['private'],
+            default                     => null,
         };
     }
     return $info;

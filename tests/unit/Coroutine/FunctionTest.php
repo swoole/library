@@ -26,9 +26,9 @@ class FunctionTest extends TestCase
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
             $start   = microtime(true);
             $results = batch([
-                'gethostbyname' => fn() => gethostbyname('localhost'),
-                'file_get_contents' => fn() => file_get_contents(__FILE__),
-                'sleep' => function () {
+                'gethostbyname'     => fn () => gethostbyname('localhost'),
+                'file_get_contents' => fn () => file_get_contents(__FILE__),
+                'sleep'             => function () {
                     sleep(1);
                     return true;
                 },
@@ -54,9 +54,9 @@ class FunctionTest extends TestCase
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
             $start   = microtime(true);
             $results = batch([
-                'gethostbyname' => fn() => gethostbyname('localhost'),
-                'file_get_contents' => fn() => file_get_contents(__FILE__),
-                'sleep' => function () {
+                'gethostbyname'     => fn () => gethostbyname('localhost'),
+                'file_get_contents' => fn () => file_get_contents(__FILE__),
+                'sleep'             => function () {
                     sleep(1);
                     return true;
                 },
