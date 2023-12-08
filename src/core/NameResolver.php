@@ -77,7 +77,7 @@ abstract class NameResolver
     /**
      * !!! The host MUST BE IP ADDRESS
      */
-    protected function checkServerUrl(mixed $url)
+    protected function checkServerUrl(string $url)
     {
         $info = parse_url($url);
         if (empty($info['scheme']) or empty($info['host'])) {
@@ -102,11 +102,7 @@ abstract class NameResolver
         $this->info    = $info;
     }
 
-    /**
-     * @param $r ClientProxy
-     * @return bool
-     */
-    protected function checkResponse($r, mixed $url)
+    protected function checkResponse(?ClientProxy $r, string $url): bool
     {
         if (empty($r)) {
             throw new Exception("failed to request URL({$url})");

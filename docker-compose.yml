@@ -90,7 +90,3 @@ services:
 
 volumes:
   wordpress:
-
-networks:
-  default:
-    name: swoole-library-network

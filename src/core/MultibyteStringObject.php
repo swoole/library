@@ -18,36 +18,24 @@ class MultibyteStringObject extends StringObject
         return mb_strlen($this->string);
     }
 
-    /**
-     * @return false|int
-     */
-    public function indexOf(string $needle, int $offset = 0, ?string $encoding = null)
+    public function indexOf(string $needle, int $offset = 0, ?string $encoding = null): false|int
     {
-        return mb_strpos($this->string, ...func_get_args());
+        return mb_strpos($this->string, $needle, $offset, $encoding);
     }
 
-    /**
-     * @return false|int
-     */
-    public function lastIndexOf(string $needle, int $offset = 0, ?string $encoding = null)
+    public function lastIndexOf(string $needle, int $offset = 0, ?string $encoding = null): false|int
     {
-        return mb_strrpos($this->string, ...func_get_args());
+        return mb_strrpos($this->string, $needle, $offset, $encoding);
     }
 
-    /**
-     * @return false|int
-     */
-    public function pos(string $needle, int $offset = 0, ?string $encoding = null)
+    public function pos(string $needle, int $offset = 0, ?string $encoding = null): false|int
     {
-        return mb_strpos($this->string, ...func_get_args());
+        return mb_strpos($this->string, $needle, $offset, $encoding);
     }
 
-    /**
-     * @return false|int
-     */
-    public function rpos(string $needle, int $offset = 0, ?string $encoding = null)
+    public function rpos(string $needle, int $offset = 0, ?string $encoding = null): false|int
     {
-        return mb_strrpos($this->string, ...func_get_args());
+        return mb_strrpos($this->string, $needle, $offset, $encoding);
     }
 
     /**

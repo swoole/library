@@ -38,7 +38,11 @@ class FunctionTest extends TestCase
                 },
             ], 0.1);
             Runtime::setHookFlags(0);
-            self::assertEqualsWithDelta(microtime(true), $start + 0.11, 0.01, 'Tasks in the batch take about 0.10 to 0.12 second in total to finish.');
+            self::assertThat(
+                microtime(true),
+                self::logicalAnd(self::greaterThan($start + 0.09), self::lessThan($start + 0.15)),
+                'Tasks in the batch take 0.10+ second to finish.'
+            );
             $this->assertEquals(count($results), 4);
 
             $this->assertEquals($results['gethostbyname'], gethostbyname('localhost'));

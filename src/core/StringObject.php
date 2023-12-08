@@ -13,10 +13,7 @@ namespace Swoole;
 
 class StringObject implements \Stringable
 {
-    /**
-     * @var string
-     */
-    protected $string;
+    protected string $string;
 
     /**
      * StringObject constructor.
@@ -41,36 +38,24 @@ class StringObject implements \Stringable
         return strlen($this->string);
     }
 
-    /**
-     * @return false|int
-     */
-    public function indexOf(string $needle, int $offset = 0)
+    public function indexOf(string $needle, int $offset = 0): false|int
     {
-        return strpos($this->string, ...(string) func_get_args());
+        return strpos($this->string, $needle, $offset);
     }
 
-    /**
-     * @return false|int
-     */
-    public function lastIndexOf(string $needle, int $offset = 0)
+    public function lastIndexOf(string $needle, int $offset = 0): false|int
     {
-        return strrpos($this->string, ...(string) func_get_args());
+        return strrpos($this->string, $needle, $offset);
     }
 
-    /**
-     * @return false|int
-     */
-    public function pos(string $needle, int $offset = 0)
+    public function pos(string $needle, int $offset = 0): false|int
     {
-        return strpos($this->string, ...(string) func_get_args());
+        return strpos($this->string, $needle, $offset);
     }
 
-    /**
-     * @return false|int
-     */
-    public function rpos(string $needle, int $offset = 0)
+    public function rpos(string $needle, int $offset = 0): false|int
     {
-        return strrpos($this->string, ...(string) func_get_args());
+        return strrpos($this->string, $needle, $offset);
     }
 
     /**
