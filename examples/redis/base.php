@@ -31,7 +31,7 @@ Coroutine\run(function () {
     );
     for ($n = N; $n--;) {
         Coroutine::create(function () use ($pool) {
-            $redis = $pool->get();
+            $redis  = $pool->get();
             $result = $redis->set('foo', 'bar');
             if (!$result) {
                 throw new RuntimeException('Set failed');

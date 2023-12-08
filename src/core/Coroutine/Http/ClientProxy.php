@@ -23,10 +23,10 @@ class ClientProxy
 
     public function __construct($body, $statusCode, $headers, $cookies)
     {
-        $this->body = $body;
+        $this->body       = $body;
         $this->statusCode = $statusCode;
-        $this->headers = $headers;
-        $this->cookies = $cookies;
+        $this->headers    = $headers;
+        $this->cookies    = $cookies;
     }
 
     public function getBody()

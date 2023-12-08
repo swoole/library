@@ -29,15 +29,15 @@ class ConnectionPool
     /** @var int */
     protected $num;
 
-    /** @var null|string */
+    /** @var string|null */
     protected $proxy;
 
     public function __construct(callable $constructor, int $size = self::DEFAULT_SIZE, ?string $proxy = null)
     {
-        $this->pool = new Channel($this->size = $size);
+        $this->pool        = new Channel($this->size = $size);
         $this->constructor = $constructor;
-        $this->num = 0;
-        $this->proxy = $proxy;
+        $this->num         = 0;
+        $this->proxy       = $proxy;
     }
 
     public function fill(): void
@@ -76,7 +76,7 @@ class ConnectionPool
     {
         $this->pool->close();
         $this->pool = null;
-        $this->num = 0;
+        $this->num  = 0;
     }
 
     protected function make(): void
@@ -87,7 +87,7 @@ class ConnectionPool
                 $connection = new $this->proxy($this->constructor);
             } else {
                 $constructor = $this->constructor;
-                $connection = $constructor();
+                $connection  = $constructor();
             }
         } catch (\Throwable $throwable) {
             $this->num--;

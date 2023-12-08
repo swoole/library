@@ -28,7 +28,7 @@ class ProcessManagerTest extends TestCase
      */
     public function testAdd()
     {
-        $pm = new ProcessManager();
+        $pm     = new ProcessManager();
         $atomic = new Atomic(0);
 
         $pm->add(function (Pool $pool, int $workerId) use ($atomic) {

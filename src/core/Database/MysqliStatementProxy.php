@@ -18,16 +18,16 @@ class MysqliStatementProxy extends ObjectProxy
     /** @var \mysqli_stmt */
     protected $__object;
 
-    /** @var null|string */
+    /** @var string|null */
     protected $queryString;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $attrSetContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $bindParamContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $bindResultContext;
 
     /** @var \Mysqli|MysqliProxy */
@@ -40,7 +40,7 @@ class MysqliStatementProxy extends ObjectProxy
     {
         parent::__construct($object);
         $this->queryString = $queryString;
-        $this->parent = $parent;
+        $this->parent      = $parent;
         $this->parentRound = $parent->getRound();
     }
 
@@ -61,7 +61,7 @@ class MysqliStatementProxy extends ObjectProxy
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent = $this->parent->__getObject();
+                $parent         = $this->parent->__getObject();
                 $this->__object = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
                 if ($this->__object === false) {
                     throw new MysqliException($parent->error, $parent->errno);

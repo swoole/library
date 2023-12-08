@@ -21,9 +21,9 @@ function request(
     string $url,
     string $method,
     $data = null,
-    array $options = null,
-    array $headers = null,
-    array $cookies = null
+    ?array $options = null,
+    ?array $headers = null,
+    ?array $cookies = null
 ): ClientProxy {
     $driver = swoole_library_get_option('http_client_driver');
     switch ($driver) {
@@ -45,9 +45,9 @@ function request_with_http_client(
     string $url,
     string $method,
     $data = null,
-    array $options = null,
-    array $headers = null,
-    array $cookies = null
+    ?array $options = null,
+    ?array $headers = null,
+    ?array $cookies = null
 ): ClientProxy {
     $info = parse_url($url);
     if (empty($info['scheme'])) {
@@ -96,9 +96,9 @@ function request_with_curl(
     string $url,
     string $method,
     $data = null,
-    array $options = null,
-    array $headers = null,
-    array $cookies = null
+    ?array $options = null,
+    ?array $headers = null,
+    ?array $cookies = null
 ): ClientProxy {
     $ch = curl_init($url);
     if (empty($ch)) {
@@ -108,14 +108,14 @@ function request_with_curl(
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
     $responseHeaders = $responseCookies = [];
     curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $header) use (&$responseHeaders, &$responseCookies) {
-        $len = strlen($header);
+        $len    = strlen($header);
         $header = explode(':', $header, 2);
         if (count($header) < 2) {
             return $len;
         }
         $headerKey = strtolower(trim($header[0]));
         if ($headerKey == 'set-cookie') {
-            [$k, $v] = explode('=', $header[1]);
+            [$k, $v]             = explode('=', $header[1]);
             $responseCookies[$k] = $v;
         } else {
             $responseHeaders[$headerKey][] = trim($header[1]);
@@ -166,9 +166,9 @@ function request_with_stream(
     string $url,
     string $method,
     $data = null,
-    array $options = null,
-    array $headers = null,
-    array $cookies = null
+    ?array $options = null,
+    ?array $headers = null,
+    ?array $cookies = null
 ): ClientProxy {
     $stream_options = [
         'http' => [
@@ -212,7 +212,7 @@ function request_with_stream(
  * @param mixed $data
  * @throws Exception
  */
-function post(string $url, $data, array $options = null, array $headers = null, array $cookies = null): ClientProxy
+function post(string $url, $data, ?array $options = null, ?array $headers = null, ?array $cookies = null): ClientProxy
 {
     return request($url, 'POST', $data, $options, $headers, $cookies);
 }
@@ -220,7 +220,7 @@ function post(string $url, $data, array $options = null, array $headers = null, 
 /**
  * @throws Exception
  */
-function get(string $url, array $options = null, array $headers = null, array $cookies = null): ClientProxy
+function get(string $url, ?array $options = null, ?array $headers = null, ?array $cookies = null): ClientProxy
 {
     return request($url, 'GET', null, $options, $headers, $cookies);
 }

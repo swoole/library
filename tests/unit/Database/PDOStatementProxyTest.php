@@ -95,7 +95,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
     public function testBindParam()
     {
         Coroutine\run(function () {
-            $stmt = $this->getPdoPool()->get()->prepare('SHOW TABLES like ?');
+            $stmt  = $this->getPdoPool()->get()->prepare('SHOW TABLES like ?');
             $table = 'NON_EXISTING_TABLE_NAME';
             $stmt->bindParam(1, $table, \PDO::PARAM_STR);
             $stmt->execute();

@@ -86,8 +86,8 @@ class HttpFunctionTest extends TestCase
     private function fun3()
     {
         $random_data = base64_encode(random_bytes(128));
-        $data = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
-        $body = json_decode($data->getBody());
+        $data        = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
+        $body        = json_decode($data->getBody());
         self::assertSame('httpbin.org', $body->headers->Host);
         self::assertSame('world', $body->args->hello);
         self::assertSame($random_data, $body->form->random_data);

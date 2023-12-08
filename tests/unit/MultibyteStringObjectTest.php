@@ -24,7 +24,7 @@ class MultibyteStringObjectTest extends TestCase
      */
     public function testLength()
     {
-        $str = 'hello world';
+        $str    = 'hello world';
         $length = swoole_mbstring($str)->length();
         $this->assertEquals(strlen($str), $length);
     }
@@ -83,7 +83,7 @@ class MultibyteStringObjectTest extends TestCase
      */
     public function chunk()
     {
-        $r = swoole_mbstring('hello swoole and hello world')->chunk(5)->toArray();
+        $r            = swoole_mbstring('hello swoole and hello world')->chunk(5)->toArray();
         $expectResult = [
             0 => 'hello',
             1 => ' swoo',

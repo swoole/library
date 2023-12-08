@@ -27,10 +27,10 @@ class MysqliProxy extends ObjectProxy
     /** @var string */
     protected $charsetContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $setOptContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $changeUserContext;
 
     /** @var callable */

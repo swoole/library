@@ -133,11 +133,11 @@ class Record
         $this->contentLength = strlen($data);
         if ($this->contentLength > FastCGI::MAX_CONTENT_LENGTH) {
             $this->contentLength = FastCGI::MAX_CONTENT_LENGTH;
-            $this->contentData = substr($data, 0, FastCGI::MAX_CONTENT_LENGTH);
+            $this->contentData   = substr($data, 0, FastCGI::MAX_CONTENT_LENGTH);
         } else {
             $this->contentData = $data;
         }
-        $extraLength = $this->contentLength % 8;
+        $extraLength         = $this->contentLength % 8;
         $this->paddingLength = $extraLength ? (8 - $extraLength) : 0;
         return $this;
     }

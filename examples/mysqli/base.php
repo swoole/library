@@ -33,7 +33,7 @@ Coroutine\run(function () {
     );
     for ($n = N; $n--;) {
         Coroutine::create(function () use ($pool) {
-            $mysqli = $pool->get();
+            $mysqli    = $pool->get();
             $statement = $mysqli->prepare('SELECT ? + ?');
             if (!$statement) {
                 throw new RuntimeException('Prepare failed');

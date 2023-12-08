@@ -56,7 +56,7 @@ Coroutine\run(function () {
     for ($c = C; $c--;) {
         Coroutine::create(function () use ($pool, &$success) {
             while (true) {
-                $mysqli = $pool->get();
+                $mysqli    = $pool->get();
                 $statement = $mysqli->prepare('SELECT ? + ?');
                 if (!$statement) {
                     throw new RuntimeException('Prepare failed');

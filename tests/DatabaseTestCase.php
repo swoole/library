@@ -35,7 +35,8 @@ class DatabaseTestCase extends TestCase
             ->withDbName(MYSQL_SERVER_DB)
             ->withCharset('utf8mb4')
             ->withUsername(MYSQL_SERVER_USER)
-            ->withPassword(MYSQL_SERVER_PWD);
+            ->withPassword(MYSQL_SERVER_PWD)
+        ;
 
         return new MysqliPool($config);
     }
@@ -48,7 +49,8 @@ class DatabaseTestCase extends TestCase
             ->withDbName(MYSQL_SERVER_DB)
             ->withCharset('utf8mb4')
             ->withUsername(MYSQL_SERVER_USER)
-            ->withPassword(MYSQL_SERVER_PWD);
+            ->withPassword(MYSQL_SERVER_PWD)
+        ;
 
         return new PDOPool($config);
     }

@@ -19,7 +19,7 @@ class MysqliConfig
     /** @var int */
     protected $port = 3306;
 
-    /** @var null|string */
+    /** @var string|null */
     protected $unixSocket = '';
 
     /** @var string */

@@ -58,7 +58,7 @@ abstract class NameResolver
      * and an empty string indicates name lookup failed, and lookup operation will not continue.
      * return Cluster: has multiple nodes and failover is possible
      * return false or null: try another name resolver
-     * @return null|Cluster|false|string
+     * @return Cluster|false|string|null
      */
     public function lookup(string $name)
     {
@@ -103,7 +103,7 @@ abstract class NameResolver
             $baseUrl .= rtrim($info['path'], '/');
         }
         $this->baseUrl = $baseUrl;
-        $this->info = $info;
+        $this->info    = $info;
     }
 
     /**

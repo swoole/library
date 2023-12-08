@@ -18,7 +18,7 @@ require __DIR__ . '/../bootstrap.php';
 Coroutine::set(['hook_flags' => SWOOLE_HOOK_ALL]);
 
 Coroutine\run(function () {
-    $use = microtime(true);
+    $use     = microtime(true);
     $results = batch([
         'gethostbyname' => function () {
             return gethostbyname('localhost');

@@ -22,10 +22,10 @@ class Request extends Message
 
     public function __toString(): string
     {
-        $body = $this->getBody();
+        $body              = $this->getBody();
         $beginRequestFrame = new BeginRequest(FastCGI::RESPONDER, $this->keepConn ? FastCGI::KEEP_CONN : 0);
-        $paramsFrame = new Params($this->getParams());
-        $paramsEofFrame = new Params();
+        $paramsFrame       = new Params($this->getParams());
+        $paramsEofFrame    = new Params();
         if (empty($body)) {
             $message = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}}";
         } else {
@@ -39,8 +39,8 @@ class Request extends Message
                 $body = substr($body, $stdinLength);
             }
             $stdinList[] = new Stdin();
-            $stdin = implode($stdinList);
-            $message = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}{$stdin}}";
+            $stdin       = implode($stdinList);
+            $message     = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}{$stdin}}";
         }
         return $message;
     }

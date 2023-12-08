@@ -58,7 +58,7 @@ class WaitGroup
         }
         if ($this->count > 0) {
             $this->waiting = true;
-            $done = $this->chan->pop($timeout);
+            $done          = $this->chan->pop($timeout);
             $this->waiting = false;
             return $done;
         }

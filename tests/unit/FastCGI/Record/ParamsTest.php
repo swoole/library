@@ -26,9 +26,9 @@ class ParamsTest extends TestCase
         4152455048502f50726f746f636f6c2d464347490000000000';
 
     protected static $params = [
-        'SCRIPT_FILENAME' => '/home/test.php',
+        'SCRIPT_FILENAME'   => '/home/test.php',
         'GATEWAY_INTERFACE' => 'CGI/1.1',
-        'SERVER_SOFTWARE' => 'PHP/Protocol-FCGI',
+        'SERVER_SOFTWARE'   => 'PHP/Protocol-FCGI',
     ];
 
     public function testPacking(): void

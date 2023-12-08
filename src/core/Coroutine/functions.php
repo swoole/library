@@ -15,7 +15,7 @@ use Swoole\Coroutine;
 
 function run(callable $fn, ...$args)
 {
-    $s = new Scheduler();
+    $s       = new Scheduler();
     $options = Coroutine::getOptions();
     if (!isset($options['hook_flags'])) {
         $s->set(['hook_flags' => SWOOLE_HOOK_ALL]);
@@ -51,7 +51,7 @@ function batch(array $tasks, float $timeout = -1): array
 function parallel(int $n, callable $fn): void
 {
     $count = $n;
-    $wg = new WaitGroup($n);
+    $wg    = new WaitGroup($n);
     while ($count--) {
         Coroutine::create(function () use ($fn, $wg) {
             $fn();
@@ -78,7 +78,7 @@ function map(array $list, callable $fn, float $timeout = -1): array
 function deadlock_check()
 {
     $all_coroutines = Coroutine::listCoroutines();
-    $count = Coroutine::stats()['coroutine_num'];
+    $count          = Coroutine::stats()['coroutine_num'];
     echo "\n===================================================================",
     "\n [FATAL ERROR]: all coroutines (count: {$count}) are asleep - deadlock!",
     "\n===================================================================\n";

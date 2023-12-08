@@ -33,13 +33,13 @@ Coroutine\run(function () {
     );
     for ($n = N; $n--;) {
         Coroutine::create(function () use ($pool) {
-            $pdo = $pool->get();
+            $pdo       = $pool->get();
             $statement = $pdo->prepare('SELECT ? + ?');
             if (!$statement) {
                 throw new RuntimeException('Prepare failed');
             }
-            $a = mt_rand(1, 100);
-            $b = mt_rand(1, 100);
+            $a      = mt_rand(1, 100);
+            $b      = mt_rand(1, 100);
             $result = $statement->execute([$a, $b]);
             if (!$result) {
                 throw new RuntimeException('Execute failed');

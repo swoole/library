@@ -43,16 +43,16 @@ class ArrayObjectTest extends TestCase
      */
     public function __construct(?string $name = null, array $data = [], $dataName = '')
     {
-        $_data = '11, 33, 22, 44,12,32,55, 23,19,23';
+        $_data      = '11, 33, 22, 44,12,32,55, 23,19,23';
         $this->data = swoole_string($_data)->split(',')->each(function (&$item) {
             $item = intval($item);
         });
 
         $this->data_2 = swoole_array(['hello', 'world', 'swoole']);
         $this->data_3 = swoole_array([
-            'hello' => 'world',
+            'hello'  => 'world',
             'swoole' => 'php',
-            'nihao' => '中国人',
+            'nihao'  => '中国人',
         ]);
         $this->data_4 = swoole_array([
             'd' => 'lemon',
@@ -85,7 +85,7 @@ class ArrayObjectTest extends TestCase
     public function testMix()
     {
         $datao = clone $this->data;
-        $data = $datao->sort()->unique()->toArray();
+        $data  = $datao->sort()->unique()->toArray();
 
         $copy_data = $this->control_data;
         sort($copy_data);
@@ -107,8 +107,8 @@ class ArrayObjectTest extends TestCase
      */
     public function testUnique()
     {
-        $data = $this->data->unique()->toArray();
-        $copy_data = $this->control_data;
+        $data         = $this->data->unique()->toArray();
+        $copy_data    = $this->control_data;
         $expectResult = array_unique($copy_data);
 
         $this->assertEquals($data, $expectResult);
@@ -207,7 +207,7 @@ class ArrayObjectTest extends TestCase
 
     public function testDelete()
     {
-        $data = clone $this->data_3;
+        $data       = clone $this->data_3;
         $expectData = $data->toArray();
         unset($expectData['swoole']);
 
@@ -248,7 +248,7 @@ class ArrayObjectTest extends TestCase
 
     public function testPopFront()
     {
-        $data = clone $this->data;
+        $data  = clone $this->data;
         $value = $data->popFront();
         $this->assertEquals($value, $this->data->first());
         $this->assertEquals($data->count(), $this->data->count() - 1);
@@ -256,7 +256,7 @@ class ArrayObjectTest extends TestCase
 
     public function testPopBack()
     {
-        $data = clone $this->data;
+        $data  = clone $this->data;
         $value = $data->popBack();
         $this->assertEquals($value, $this->data->last());
         $this->assertEquals($data->count(), $this->data->count() - 1);
@@ -264,7 +264,7 @@ class ArrayObjectTest extends TestCase
 
     public function testPop()
     {
-        $data = clone $this->data;
+        $data  = clone $this->data;
         $value = $data->pop();
         $this->assertEquals($value, $this->data->last());
         $this->assertEquals($data->count(), $this->data->count() - 1);
@@ -300,24 +300,24 @@ class ArrayObjectTest extends TestCase
     {
         $records = [
             [
-                'id' => 2135,
+                'id'         => 2135,
                 'first_name' => 'John',
-                'last_name' => 'Doe',
+                'last_name'  => 'Doe',
             ],
             [
-                'id' => 3245,
+                'id'         => 3245,
                 'first_name' => 'Sally',
-                'last_name' => 'Smith',
+                'last_name'  => 'Smith',
             ],
             [
-                'id' => 5342,
+                'id'         => 5342,
                 'first_name' => 'Jane',
-                'last_name' => 'Jones',
+                'last_name'  => 'Jones',
             ],
             [
-                'id' => 5623,
+                'id'         => 5623,
                 'first_name' => 'Peter',
-                'last_name' => 'Doe',
+                'last_name'  => 'Doe',
             ],
         ];
 
@@ -398,7 +398,7 @@ class ArrayObjectTest extends TestCase
     {
         $data1 = ['a' => 4, 'b' => 8, 'c' => -1, 'd' => -9, 'e' => 2, 'f' => 5, 'g' => 3, 'h' => -4];
         $data2 = swoole_array($data1);
-        $cmp = function ($a, $b) {
+        $cmp   = function ($a, $b) {
             if ($a == $b) {
                 return 0;
             }
@@ -473,8 +473,8 @@ class ArrayObjectTest extends TestCase
 
     public function testOffsetSet()
     {
-        $value = 9999;
-        $data = clone $this->data;
+        $value   = 9999;
+        $data    = clone $this->data;
         $data[7] = $value;
         $this->assertEquals($data->get(7), $value);
     }

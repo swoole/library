@@ -52,7 +52,7 @@ class Barrier
         if ($barrier->cid !== -1) {
             throw new Exception('The barrier is waiting, cannot wait again.');
         }
-        $cid = Coroutine::getCid();
+        $cid          = Coroutine::getCid();
         $barrier->cid = $cid;
         if ($timeout > 0 && ($timeout_ms = (int) ($timeout * 1000)) > 0) {
             $barrier->timer = Timer::after($timeout_ms, function () use ($cid) {

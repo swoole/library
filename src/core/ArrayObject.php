@@ -142,7 +142,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return null|int|string
+     * @return int|string|null
      */
     public function firstKey()
     {
@@ -150,7 +150,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return null|int|string
+     * @return int|string|null
      */
     public function lastKey()
     {
@@ -218,7 +218,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 
     /**
      * @param mixed $key
-     * @return null|mixed
+     * @return mixed|null
      */
     #[\ReturnTypeWillChange]
     public function offsetGet($key)
@@ -417,10 +417,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 
     /**
      * @param mixed $offset
-     * @param int $length
      * @return static
      */
-    public function slice($offset, int $length = null, bool $preserve_keys = false): self
+    public function slice($offset, ?int $length = null, bool $preserve_keys = false): self
     {
         return new static(array_slice($this->array, ...func_get_args()));
     }

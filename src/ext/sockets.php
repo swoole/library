@@ -190,7 +190,7 @@ function swoole_socket_close(Socket $socket)
     $socket->close();
 }
 
-function swoole_socket_clear_error(Socket $socket = null)
+function swoole_socket_clear_error(?Socket $socket = null)
 {
     if ($socket) {
         $socket->errCode = 0;
@@ -198,7 +198,7 @@ function swoole_socket_clear_error(Socket $socket = null)
     swoole_clear_error();
 }
 
-function swoole_socket_last_error(Socket $socket = null): int
+function swoole_socket_last_error(?Socket $socket = null): int
 {
     if ($socket) {
         return $socket->errCode;
@@ -227,7 +227,7 @@ function swoole_socket_set_nonblock(Socket $socket)
         return true;
     }
     $socket->__ext_sockets_nonblock = true;
-    $socket->__ext_sockets_timeout = $socket->getOption(SOL_SOCKET, SO_RCVTIMEO);
+    $socket->__ext_sockets_timeout  = $socket->getOption(SOL_SOCKET, SO_RCVTIMEO);
     $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, ['sec' => 0, 'usec' => 1000]);
     return true;
 }

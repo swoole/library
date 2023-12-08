@@ -23,7 +23,7 @@ class WaitGroupTest extends TestCase
     {
         run(function () {
             $wg = new WaitGroup(4);
-            $N = 4;
+            $N  = 4;
             $st = microtime(true);
             foreach (range(1, $N) as $i) {
                 \Swoole\Coroutine::create(function () use ($wg) {

@@ -26,9 +26,9 @@ class BarrierTest extends TestCase
     {
         run(function () {
             $barrier = Barrier::make();
-            $count = 0;
-            $N = 4;
-            $st = microtime(true);
+            $count   = 0;
+            $N       = 4;
+            $st      = microtime(true);
             foreach (range(1, $N) as $i) {
                 \Swoole\Coroutine::create(function () use ($barrier, &$count) {
                     System::sleep(0.5);
@@ -49,9 +49,9 @@ class BarrierTest extends TestCase
     {
         run(function () {
             $barrier = Barrier::make();
-            $count = 0;
-            $N = 4;
-            $st = microtime(true);
+            $count   = 0;
+            $N       = 4;
+            $st      = microtime(true);
             foreach (range(1, $N) as $i) {
                 \Swoole\Coroutine::create(function () use ($barrier, &$count) {
                     System::sleep(0.5);
@@ -79,8 +79,8 @@ class BarrierTest extends TestCase
     {
         run(function () {
             $barrier = Barrier::make();
-            $count = 0;
-            $N = 4;
+            $count   = 0;
+            $N       = 4;
             foreach (range(1, $N) as $i) {
                 \Swoole\Coroutine::create(function () use ($barrier, &$count) {
                     $count++;
@@ -115,7 +115,7 @@ class BarrierTest extends TestCase
     {
         run(function () {
             $barrier = Barrier::make();
-            $count = 0;
+            $count   = 0;
             \Swoole\Coroutine::create(function () use (&$barrier, &$count) {
                 unset($barrier);
                 $count++;
@@ -135,8 +135,8 @@ class BarrierTest extends TestCase
     {
         run(function () {
             $barrier = Barrier::make();
-            $count = 0;
-            $st = microtime(true);
+            $count   = 0;
+            $st      = microtime(true);
             \Swoole\Coroutine::create(function () use (&$barrier, &$count) {
                 unset($barrier);
                 System::sleep(0.5);

@@ -41,7 +41,7 @@ class Server
     /** @var bool */
     protected $running = false;
 
-    /** @var null|callable */
+    /** @var callable|null */
     protected $fn;
 
     /** @var Socket */
@@ -57,7 +57,7 @@ class Server
         if ($_host->contains('::')) {
             $this->type = AF_INET6;
         } elseif ($_host->startsWith('unix:/')) {
-            $host = $_host->substr(5)->__toString();
+            $host       = $_host->substr(5)->__toString();
             $this->type = AF_UNIX;
         } else {
             $this->type = AF_INET;
@@ -74,9 +74,9 @@ class Server
         if (!$socket->listen()) {
             throw new Exception('listen() failed', $socket->errCode);
         }
-        $this->port = $socket->getsockname()['port'] ?? 0;
-        $this->fd = $socket->fd;
-        $this->socket = $socket;
+        $this->port                = $socket->getsockname()['port'] ?? 0;
+        $this->fd                  = $socket->fd;
+        $this->socket              = $socket;
         $this->setting['open_ssl'] = $ssl;
     }
 
@@ -125,7 +125,7 @@ class Server
                     };
                     $arguments = [$this->fn, new Connection($conn)];
                 } else {
-                    $fn = $this->fn;
+                    $fn        = $this->fn;
                     $arguments = [new Connection($conn)];
                 }
                 if (Coroutine::create($fn, ...$arguments) < 0) {

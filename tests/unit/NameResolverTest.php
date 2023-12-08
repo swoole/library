@@ -50,7 +50,7 @@ class NameResolverTest extends TestCase
             $this->markTestSkipped('Swoole v4.9 or later is required.');
         }
         $count = 0;
-        $ns = new NameResolver\Redis(REDIS_SERVER_URL);
+        $ns    = new NameResolver\Redis(REDIS_SERVER_URL);
         $ns->withFilter(function ($name) use (&$count) {
             $count++;
             return swoole_string($name)->endsWith('.service');
@@ -92,8 +92,8 @@ class NameResolverTest extends TestCase
     private function fun1(NameResolver $ns)
     {
         $service_name = uniqid() . '.service';
-        $ip = '127.0.0.1';
-        $port = rand(10000, 65536);
+        $ip           = '127.0.0.1';
+        $port         = rand(10000, 65536);
         $this->assertTrue($ns->join($service_name, $ip, $port));
 
         $rs = $ns->getCluster($service_name);

@@ -46,7 +46,7 @@ class Cluster
             return false;
         }
         $index = array_rand($this->nodes, 1);
-        $node = $this->nodes[$index];
+        $node  = $this->nodes[$index];
         unset($this->nodes[$index]);
         return $node;
     }

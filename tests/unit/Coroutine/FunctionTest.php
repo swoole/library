@@ -24,7 +24,7 @@ class FunctionTest extends TestCase
     {
         run(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
-            $start = microtime(true);
+            $start   = microtime(true);
             $results = batch([
                 'gethostbyname' => function () {
                     return gethostbyname('localhost');
@@ -56,7 +56,7 @@ class FunctionTest extends TestCase
     {
         run(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
-            $start = microtime(true);
+            $start   = microtime(true);
             $results = batch([
                 'gethostbyname' => function () {
                     return gethostbyname('localhost');
@@ -99,8 +99,8 @@ class FunctionTest extends TestCase
     public function testParallel()
     {
         run(function () {
-            $start = microtime(true);
-            $c = 4;
+            $start   = microtime(true);
+            $c       = 4;
             $results = [];
             parallel($c, function () use (&$results) {
                 System::sleep(0.2);
@@ -117,8 +117,8 @@ class FunctionTest extends TestCase
     public function testMap()
     {
         run(function () {
-            $start = microtime(true);
-            $list = [1, 2, 3, 4];
+            $start   = microtime(true);
+            $list    = [1, 2, 3, 4];
             $results = map($list, function (int $i): int {
                 System::sleep(0.2);
                 return $i * 2;

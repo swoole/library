@@ -38,7 +38,8 @@ class PDOPoolTest extends TestCase
                 ->withDbName(MYSQL_SERVER_DB)
                 ->withCharset('utf8mb4')
                 ->withUsername(MYSQL_SERVER_USER)
-                ->withPassword(MYSQL_SERVER_PWD);
+                ->withPassword(MYSQL_SERVER_PWD)
+            ;
 
             $pool = new PDOPool($config, 2);
             for ($n = 5; $n--;) {

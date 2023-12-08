@@ -12,7 +12,7 @@ declare(strict_types=1);
 use Swoole\Coroutine;
 
 Coroutine::set([
-    'log_level' => SWOOLE_LOG_INFO,
+    'log_level'   => SWOOLE_LOG_INFO,
     'trace_flags' => 0,
 ]);
 

@@ -64,9 +64,9 @@ Coroutine\run(function () {
         Coroutine::create(function () use ($pool, &$success) {
             /* @var $pdo PDO */
             while (true) {
-                $pdo = $pool->get();
+                $pdo       = $pool->get();
                 $statement = $pdo->prepare('SELECT 1 + 1');
-                $ret = $statement->execute();
+                $ret       = $statement->execute();
                 if ($ret !== true) {
                     throw new RuntimeException('Execute failed');
                 }

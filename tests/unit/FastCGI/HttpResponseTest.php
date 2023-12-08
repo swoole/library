@@ -35,7 +35,7 @@ class HttpResponseTest extends TestCase
                 [
                     'X-Powered-By' => $this->poweredBy,
                     'Content-Type' => 'text/html; charset=UTF-8',
-                    'Link' => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
+                    'Link'         => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                 ],
                 "X-Powered-By: {$this->poweredBy}
 Content-Type: text/html; charset=UTF-8
@@ -89,7 +89,7 @@ Hello world!',
             [
                 [
                     'X-Powered-By' => 'to be replaced',
-                    'Link' => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
+                    'Link'         => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                     'Content-type' => 'text/html; charset=UTF-8',
                 ],
                 DOCUMENT_ROOT . '/header0.php',
@@ -106,11 +106,11 @@ Hello world!',
             [
                 [
                     'X-Powered-By' => 'to be replaced',
-                    'X-Foo0' => 'Bar0',
-                    'X-Foo1' => 'Bar1',
-                    'X-Foo3' => 'Bar3',
-                    'X-Foo4' => 'Bar4',
-                    'X-Foo5' => 'Bar5',
+                    'X-Foo0'       => 'Bar0',
+                    'X-Foo1'       => 'Bar1',
+                    'X-Foo3'       => 'Bar3',
+                    'X-Foo4'       => 'Bar4',
+                    'X-Foo5'       => 'Bar5',
                     'Content-type' => 'text/html; charset=UTF-8',
                 ],
                 DOCUMENT_ROOT . '/header2.php',
@@ -127,7 +127,7 @@ Hello world!',
     {
         Coroutine\run(
             function () use ($expectedHeaders, $filename, $message) {
-                $client = new Client('php-fpm', 9000);
+                $client   = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
 
                 /*
@@ -187,7 +187,7 @@ Hello world!',
     public function testStatus($expectedStatusCode, $expectedReasonPhrase, string $contentData): void
     {
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
-        $response = new HttpResponse([new Stdout($contentData), new EndRequest()]);
+        $response    = new HttpResponse([new Stdout($contentData), new EndRequest()]);
         self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
         self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
     }
@@ -232,7 +232,7 @@ Hello world!',
     {
         Coroutine\run(
             function () use ($expectedStatusCode, $expectedReasonPhrase, $filename) {
-                $client = new Client('php-fpm', 9000);
+                $client   = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
                 self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
                 self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');

@@ -99,9 +99,9 @@ class HandlerTest extends TestCase
             $ch = curl_init('http://httpbin.org/get');
             curl_setopt($ch, CURLOPT_HEADER, true);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            $response = curl_exec($ch);
+            $response   = curl_exec($ch);
             $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-            $headers = substr($response, 0, $headerSize);
+            $headers    = substr($response, 0, $headerSize);
             $this->assertStringContainsStringIgnoringCase("\nDate:", $headers);
             $this->assertStringContainsStringIgnoringCase("\nContent-Type:", $headers);
             $this->assertStringContainsStringIgnoringCase("\nContent-Length:", $headers);
@@ -116,7 +116,7 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $url = 'https://httpbin.org/get';
-            $ch = curl_init();
+            $ch  = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $data) {
@@ -139,15 +139,15 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
-            $url = 'https://httpbin.org/get';
-            $ip = Coroutine::gethostbyname($host);
-            $ch = curl_init();
+            $url  = 'https://httpbin.org/get';
+            $ip   = Coroutine::gethostbyname($host);
+            $ch   = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}"]);
 
-            $data = curl_exec($ch);
+            $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
             curl_close($ch);
             $body = json_decode($data, true);
@@ -164,15 +164,15 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
-            $url = 'https://httpbin.org/get';
-            $ip = '127.0.0.1'; // An incorrect IP in use.
-            $ch = curl_init();
+            $url  = 'https://httpbin.org/get';
+            $ip   = '127.0.0.1'; // An incorrect IP in use.
+            $ch   = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}"]);
 
-            $body = curl_exec($ch);
+            $body          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
             curl_close($ch);
             self::assertFalse($body);
@@ -187,17 +187,17 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
-            $url = 'https://httpbin.org/get';
-            $ip = Coroutine::gethostbyname($host);
-            $ch = curl_init();
+            $url  = 'https://httpbin.org/get';
+            $ip   = Coroutine::gethostbyname($host);
+            $ch   = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:127.0.0.1", "{$host}:443:{$ip}"]);
 
-            $data = curl_exec($ch);
+            $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            $body = json_decode($data, true);
+            $body          = json_decode($data, true);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             self::assertEquals($body['url'], $url);
             self::assertEquals($ip, $httpPrimaryIp);
@@ -211,15 +211,15 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
-            $url = 'https://httpbin.org/get';
-            $ip = Coroutine::gethostbyname($host);
-            $ch = curl_init();
+            $url  = 'https://httpbin.org/get';
+            $ip   = Coroutine::gethostbyname($host);
+            $ch   = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "+{$host}:443:127.0.0.1"]);
 
-            $body = curl_exec($ch);
+            $body          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
             curl_close($ch);
             self::assertFalse($body);
@@ -234,15 +234,15 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
-            $url = 'https://httpbin.org/get';
-            $ip = Coroutine::gethostbyname($host);
-            $ch = curl_init();
+            $url  = 'https://httpbin.org/get';
+            $ip   = Coroutine::gethostbyname($host);
+            $ch   = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "{$host}:443:127.0.0.1"]);
 
-            $body = curl_exec($ch);
+            $body          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
             curl_close($ch);
             self::assertFalse($body);
@@ -257,17 +257,17 @@ class HandlerTest extends TestCase
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
-            $url = 'https://httpbin.org/get';
-            $ip = Coroutine::gethostbyname($host);
-            $ch = curl_init();
+            $url  = 'https://httpbin.org/get';
+            $ip   = Coroutine::gethostbyname($host);
+            $ch   = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:443:{$ip}", "{$host}:443:127.0.0.1", "-{$host}:443:127.0.0.1"]);
 
-            $data = curl_exec($ch);
+            $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            $body = json_decode($data, true);
+            $body          = json_decode($data, true);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             self::assertEquals($body['url'], $url);
             self::assertSame('', $httpPrimaryIp);
@@ -277,16 +277,16 @@ class HandlerTest extends TestCase
     public function testOptPrivate()
     {
         Coroutine\run(function () {
-            $url = 'https://httpbin.org/get';
+            $url     = 'https://httpbin.org/get';
             $private = 'swoole';
-            $ch = curl_init();
+            $ch      = curl_init();
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_PRIVATE, $private);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: httpbin.org']);
-            $body = curl_exec($ch);
-            $body = json_decode($body, true);
+            $body        = curl_exec($ch);
+            $body        = json_decode($body, true);
             $get_private = curl_getinfo($ch, CURLINFO_PRIVATE);
             self::assertEquals($private, $get_private);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
