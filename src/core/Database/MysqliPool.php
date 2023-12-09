@@ -20,12 +20,8 @@ use Swoole\ConnectionPool;
  */
 class MysqliPool extends ConnectionPool
 {
-    /** @var MysqliConfig */
-    protected $config;
-
-    public function __construct(MysqliConfig $config, int $size = self::DEFAULT_SIZE)
+    public function __construct(protected MysqliConfig $config, int $size = self::DEFAULT_SIZE)
     {
-        $this->config = $config;
         parent::__construct(function () {
             $mysqli = new \mysqli();
             foreach ($this->config->getOptions() as $option => $value) {

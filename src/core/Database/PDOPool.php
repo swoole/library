@@ -20,15 +20,8 @@ use Swoole\ConnectionPool;
  */
 class PDOPool extends ConnectionPool
 {
-    /** @var int */
-    protected $size = 64;
-
-    /** @var PDOConfig */
-    protected $config;
-
-    public function __construct(PDOConfig $config, int $size = self::DEFAULT_SIZE)
+    public function __construct(protected PDOConfig $config, int $size = self::DEFAULT_SIZE)
     {
-        $this->config = $config;
         parent::__construct(function () {
             $driver = $this->config->getDriver();
             return new \PDO(
