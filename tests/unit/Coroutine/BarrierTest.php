@@ -25,7 +25,7 @@ class BarrierTest extends TestCase
     public function testWait()
     {
         run(function () {
-            $barrier = Barrier::make();
+            $barrier = new Barrier();
             $count   = 0;
             $N       = 4;
             $st      = microtime(true);
@@ -48,7 +48,7 @@ class BarrierTest extends TestCase
     public function testWaitTimeout()
     {
         run(function () {
-            $barrier = Barrier::make();
+            $barrier = new Barrier();
             $count   = 0;
             $N       = 4;
             $st      = microtime(true);
@@ -78,7 +78,7 @@ class BarrierTest extends TestCase
     public function testNoCoroutineSwitching()
     {
         run(function () {
-            $barrier = Barrier::make();
+            $barrier = new Barrier();
             $count   = 0;
             $N       = 4;
             foreach (range(1, $N) as $i) {
@@ -100,7 +100,7 @@ class BarrierTest extends TestCase
     public function testWithoutAnyChildCoroutines()
     {
         run(function () {
-            $barrier = Barrier::make();
+            $barrier = new Barrier();
             Barrier::wait($barrier);
             $this->assertNull($barrier, 'To check if there is any possible PHP warnings/errors.');
         });
@@ -114,7 +114,7 @@ class BarrierTest extends TestCase
     public function testUnexpectedDestroy()
     {
         run(function () {
-            $barrier = Barrier::make();
+            $barrier = new Barrier();
             $count   = 0;
             \Swoole\Coroutine::create(function () use (&$barrier, &$count) {
                 unset($barrier);
@@ -134,7 +134,7 @@ class BarrierTest extends TestCase
     public function testUnexpectedDestroyWithCoroutineSwitching()
     {
         run(function () {
-            $barrier = Barrier::make();
+            $barrier = new Barrier();
             $count   = 0;
             $st      = microtime(true);
             \Swoole\Coroutine::create(function () use (&$barrier, &$count) {
