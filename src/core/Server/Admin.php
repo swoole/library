@@ -242,7 +242,7 @@ class Admin
                     $list[$key] = [
                         'id'      => ++$key,
                         'name'    => $extension,
-                        'version' => $ext->getVersion() ?? '',
+                        'version' => (string) $ext->getVersion(),
                     ];
                 }
                 return self::json($list);
@@ -785,7 +785,7 @@ class Admin
 
         $result = [
             'filename'     => $ref->getFileName(),
-            'line'         => $ref->getStartLine() ?? '',
+            'line'         => $ref->getStartLine() ?: '',
             'num'          => $ref->getNumberOfParameters(),
             'user_defined' => $ref->isUserDefined(),
             'extension'    => $ref->getExtensionName(),
@@ -905,13 +905,13 @@ class Admin
         return self::json($data);
     }
 
-    public static function handlerGetDefinedFunctions($server, $msg)
+    public static function handlerGetDefinedFunctions()
     {
         $functions = get_defined_functions();
-        $arr       = [];
-        if ($functions) {
-            $arr['internal'] = $functions['internal'];
-
+        $arr       = [
+            'internal' => $functions['internal'],
+        ];
+        if (!empty($functions['user'])) {
             foreach ($functions['user'] as $function_name) {
                 $function      = new \ReflectionFunction($function_name);
                 $filename      = $function->getFileName();
@@ -926,7 +926,7 @@ class Admin
         return self::json($arr);
     }
 
-    public static function handlerGetDeclaredClasses($server, $msg)
+    public static function handlerGetDeclaredClasses()
     {
         $classes = get_declared_classes();
         $arr     = [];

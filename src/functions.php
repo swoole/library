@@ -13,7 +13,7 @@ if (PHP_VERSION_ID < 70200) {
     throw new RuntimeException('require PHP version 7.2 or later');
 }
 
-if (SWOOLE_USE_SHORTNAME) {
+if (SWOOLE_USE_SHORTNAME) { // @phpstan-ignore if.alwaysTrue
     function _string(string $string = ''): Swoole\StringObject
     {
         return new Swoole\StringObject($string);
@@ -103,7 +103,6 @@ function swoole_table(int $size, string $fields): Swoole\Table
                 break;
             default:
                 throw new RuntimeException("unknown field type[{$type}]");
-                break;
         }
     }
 

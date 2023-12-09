@@ -399,14 +399,10 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return static::detectType($this->array[array_rand($this->array, 1)]);
     }
 
-    /**
-     * @return $this
-     */
     public function each(callable $fn): self
     {
-        if (array_walk($this->array, $fn) === false) {
-            throw new \RuntimeException('array_walk() failed');
-        }
+        array_walk($this->array, $fn);
+
         return $this;
     }
 
@@ -476,7 +472,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     /**
      * | Function name     | Sorts by | Maintains key association   | Order of sort               | Related functions |
      * | :---------------- | :------- | :-------------------------- | :-------------------------- | :---------------- |
-     * | array_multisort() | value    | associative yes, numeric no | first array or sort options  | array_walk()      |
+     * | array_multisort() | value    | associative yes, numeric no | first array or sort options | array_walk()      |
      * | asort()           | value    | yes                         | low to high                 | arsort()          |
      * | arsort()          | value    | yes                         | high to low                 | asort()           |
      * | krsort()          | key      | yes                         | high to low                 | ksort()           |
@@ -484,11 +480,11 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      * | natcasesort()     | value    | yes                         | natural, case insensitive   | natsort()         |
      * | natsort()         | value    | yes                         | natural                     | natcasesort()     |
      * | rsort()           | value    | no                          | high to low                 | sort()            |
-     * | shuffle()          | value    | no                          | random                      | array_rand()      |
+     * | shuffle()         | value    | no                          | random                      | array_rand()      |
      * | sort()            | value    | no                          | low to high                 | rsort()           |
-     * | uasort()          | value    | yes                         | user defined                 | uksort()          |
-     * | uksort()          | key      | yes                         | user defined                 | uasort()          |
-     * | usort()           | value    | no                          | user defined                 | uasort()          |
+     * | uasort()          | value    | yes                         | user defined                | uksort()          |
+     * | uksort()          | key      | yes                         | user defined                | uasort()          |
+     * | usort()           | value    | no                          | user defined                | uasort()          |
      */
 
     /**
@@ -496,42 +492,29 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function asort(int $sort_flags = SORT_REGULAR): self
     {
-        if (asort($this->array, $sort_flags) !== true) {
-            throw new \RuntimeException('asort() failed');
-        }
+        asort($this->array, $sort_flags);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function arsort(int $sort_flags = SORT_REGULAR): self
     {
-        if (arsort($this->array, $sort_flags) !== true) {
-            throw new \RuntimeException('arsort() failed');
-        }
+        arsort($this->array, $sort_flags);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function krsort(int $sort_flags = SORT_REGULAR): self
     {
-        if (krsort($this->array, $sort_flags) !== true) {
-            throw new \RuntimeException('krsort() failed');
-        }
+        krsort($this->array, $sort_flags);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function ksort(int $sort_flags = SORT_REGULAR): self
     {
-        if (ksort($this->array, $sort_flags) !== true) {
-            throw new \RuntimeException('ksort() failed');
-        }
+        ksort($this->array, $sort_flags);
+
         return $this;
     }
 
@@ -568,58 +551,38 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function shuffle(): self
     {
-        if (shuffle($this->array) !== true) {
-            throw new \RuntimeException('shuffle() failed');
-        }
+        shuffle($this->array);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function sort(int $sort_flags = SORT_REGULAR): self
     {
-        if (sort($this->array, $sort_flags) !== true) {
-            throw new \RuntimeException('sort() failed');
-        }
+        sort($this->array, $sort_flags);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function uasort(callable $value_compare_func): self
     {
-        if (uasort($this->array, $value_compare_func) !== true) {
-            throw new \RuntimeException('uasort() failed');
-        }
+        uasort($this->array, $value_compare_func);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function uksort(callable $value_compare_func): self
     {
-        if (uksort($this->array, $value_compare_func) !== true) {
-            throw new \RuntimeException('uksort() failed');
-        }
+        uksort($this->array, $value_compare_func);
+
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function usort(callable $value_compare_func): self
     {
-        if (usort($this->array, $value_compare_func) !== true) {
-            throw new \RuntimeException('usort() failed');
-        }
+        usort($this->array, $value_compare_func);
+
         return $this;
     }
 

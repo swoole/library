@@ -224,7 +224,7 @@ class Helper
 
     public static function onBeforeShutdown(Server $server)
     {
-        if ($server->admin_server) {
+        if ($server->admin_server) { // @phpstan-ignore if.alwaysTrue
             $server->admin_server->shutdown();
             $server->admin_server = null;
         }

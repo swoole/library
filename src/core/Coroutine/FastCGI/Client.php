@@ -22,20 +22,15 @@ use Swoole\FastCGI\Response;
 
 class Client
 {
-    /** @var int */
-    protected $af;
+    protected int $af;
 
-    /** @var string */
-    protected $host;
+    protected string $host;
 
-    /** @var int */
-    protected $port;
+    protected int $port;
 
-    /** @var bool */
-    protected $ssl;
+    protected bool $ssl;
 
-    /** @var Socket */
-    protected $socket;
+    protected ?Socket $socket;
 
     public function __construct(string $host, int $port = 0, bool $ssl = false)
     {
@@ -77,33 +72,17 @@ class Client
         }
         $records = [];
         while (true) {
-            if (SWOOLE_VERSION_ID < 40500) {
-                $recvData = '';
-                while (true) {
-                    $tmp = $socket->recv(8192, $timeout);
-                    if (!$tmp) {
-                        if ($tmp === '') {
-                            $this->ioException(SOCKET_ECONNRESET);
-                        }
-                        $this->ioException();
-                    }
-                    $recvData .= $tmp;
-                    if (FrameParser::hasFrame($recvData)) {
-                        break;
-                    }
+            $recvData = $socket->recvPacket($timeout);
+            if (!$recvData) {
+                if ($recvData === '') {
+                    $this->ioException(SOCKET_ECONNRESET);
                 }
-            } else {
-                $recvData = $socket->recvPacket($timeout);
-                if (!$recvData) {
-                    if ($recvData === '') {
-                        $this->ioException(SOCKET_ECONNRESET);
-                    }
-                    $this->ioException();
-                }
-                if (!FrameParser::hasFrame($recvData)) {
-                    $this->ioException(SOCKET_EPROTO);
-                }
+                $this->ioException();
             }
+            if (!FrameParser::hasFrame($recvData)) {
+                $this->ioException(SOCKET_EPROTO);
+            }
+
             do {
                 $records[] = $record = FrameParser::parseFrame($recvData);
             } while (strlen($recvData) !== 0);
@@ -118,8 +97,9 @@ class Client
                 };
             }
         }
-        /* never here */
-        exit(1);
+
+        // Code execution should never reach here. However, we still put an exit() statement here for safe purpose.
+        exit(1); // @phpstan-ignore deadCode.unreachable
     }
 
     public static function parseUrl(string $url): array
