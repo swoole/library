@@ -400,8 +400,7 @@ class HttpRequest extends Request
         return $this;
     }
 
-    /** @return $this */
-    public function withBody($body): Message
+    public function withBody($body): self
     {
         if (is_array($body)) {
             $body = http_build_query($body);
