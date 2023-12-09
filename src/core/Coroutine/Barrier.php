@@ -39,9 +39,6 @@ class Barrier
         }
     }
 
-    /**
-     * @deprecated This method will be removed in Swoole 5.2+. Use "new Barrier();" instead.
-     */
     public static function make(): self
     {
         return new self();
