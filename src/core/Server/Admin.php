@@ -961,6 +961,7 @@ class Admin
         $total += $result['manager'];
 
         $n = $server->setting['worker_num'] + $server->setting['task_worker_num'];
+        /** @var int $n */
         for ($i = 0; $i < $n; $i++) {
             $key          = 'worker-' . $i;
             $result[$key] = self::getProcessMemoryRealUsage($server->getWorkerPid($i));
@@ -973,7 +974,7 @@ class Admin
         // TODO: Support other OS
         if (PHP_OS_FAMILY === 'Linux') {
             preg_match('#MemTotal:\s+(\d+) kB#i', file_get_contents('/proc/meminfo'), $match);
-            $result['memory_size'] = $match[1] * 1024;
+            $result['memory_size'] = intval($match[1]) * 1024;
         }
 
         return self::json($result);
@@ -997,6 +998,7 @@ class Admin
         $total += $result['manager'][1] ?? 0;
 
         $n = $server->setting['worker_num'] + $server->setting['task_worker_num'];
+        /** @var int $n */
         for ($i = 0; $i < $n; $i++) {
             $key          = 'worker-' . $i;
             $result[$key] = self::getProcessCpuUsage($server->getWorkerPid($i))[1] ?? 0;

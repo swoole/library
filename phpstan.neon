@@ -2,3 +2,6 @@ parameters:
   reportUnmatchedIgnoredErrors: false
   ignoreErrors:
     - '#Call to an undefined static method Swoole\\Coroutine\\Socket::import\(\).#'
+    - '#Access to an undefined property Swoole\\Coroutine\\Socket::\$__ext_sockets_timeout.#'
+    - '#Access to an undefined property Swoole\\Coroutine\\Socket::\$__ext_sockets_nonblock.#'
+    - '#Access to an undefined property Swoole\\Coroutine\\Http\\ClientProxy::\$errCode.#'
