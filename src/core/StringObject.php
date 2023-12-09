@@ -13,14 +13,11 @@ namespace Swoole;
 
 class StringObject implements \Stringable
 {
-    protected string $string;
-
     /**
      * StringObject constructor.
      */
-    public function __construct(string $string = '')
+    public function __construct(protected string $string = '')
     {
-        $this->string = $string;
     }
 
     public function __toString(): string
@@ -28,9 +25,9 @@ class StringObject implements \Stringable
         return $this->string;
     }
 
-    public static function from(string $string = ''): self
+    public static function from(string $string = ''): static
     {
-        return new static($string);
+        return new static($string); // @phpstan-ignore new.static
     }
 
     public function length(): int
@@ -58,12 +55,9 @@ class StringObject implements \Stringable
         return strrpos($this->string, $needle, $offset);
     }
 
-    /**
-     * @return static
-     */
-    public function reverse(): self
+    public function reverse(): static
     {
-        return new static(strrev($this->string));
+        return new static(strrev($this->string)); // @phpstan-ignore new.static
     }
 
     /**
@@ -74,31 +68,22 @@ class StringObject implements \Stringable
         return stripos($this->string, $needle);
     }
 
-    /**
-     * @return static
-     */
-    public function lower(): self
+    public function lower(): static
     {
-        return new static(strtolower($this->string));
+        return new static(strtolower($this->string)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function upper(): self
+    public function upper(): static
     {
-        return new static(strtoupper($this->string));
+        return new static(strtoupper($this->string)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function trim(mixed $characters = ''): self
+    public function trim(mixed $characters = ''): static
     {
         if ($characters) {
-            return new static(trim($this->string, $characters));
+            return new static(trim($this->string, $characters)); // @phpstan-ignore new.static
         }
-        return new static(trim($this->string));
+        return new static(trim($this->string)); // @phpstan-ignore new.static
     }
 
     /**
@@ -106,7 +91,7 @@ class StringObject implements \Stringable
      */
     public function ltrim(): self
     {
-        return new static(ltrim($this->string));
+        return new static(ltrim($this->string)); // @phpstan-ignore new.static
     }
 
     /**
@@ -114,7 +99,7 @@ class StringObject implements \Stringable
      */
     public function rtrim(): self
     {
-        return new static(rtrim($this->string));
+        return new static(rtrim($this->string)); // @phpstan-ignore new.static
     }
 
     /**
@@ -122,32 +107,25 @@ class StringObject implements \Stringable
      */
     public function substr(int $offset, ?int $length = null)
     {
-        return new static(substr($this->string, ...func_get_args()));
+        return new static(substr($this->string, ...func_get_args())); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function repeat(int $times): self
+    public function repeat(int $times): static
     {
-        return new static(str_repeat($this->string, $times));
+        return new static(str_repeat($this->string, $times)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function append(mixed $str): self
+    public function append(mixed $str): static
     {
-        return new static($this->string .= $str);
+        return new static($this->string .= $str); // @phpstan-ignore new.static
     }
 
     /**
      * @param int|null $count
-     * @return static
      */
-    public function replace(string $search, string $replace, &$count = null): self
+    public function replace(string $search, string $replace, &$count = null): static
     {
-        return new static(str_replace($search, $replace, $this->string, $count));
+        return new static(str_replace($search, $replace, $this->string, $count)); // @phpstan-ignore new.static
     }
 
     public function startsWith(string $needle): bool
@@ -189,12 +167,9 @@ class StringObject implements \Stringable
         return $this->string[$index];
     }
 
-    /**
-     * @return static
-     */
-    public function chunkSplit(int $chunkLength = 76, string $chunkEnd = ''): self
+    public function chunkSplit(int $chunkLength = 76, string $chunkEnd = ''): static
     {
-        return new static(chunk_split($this->string, ...func_get_args()));
+        return new static(chunk_split($this->string, ...func_get_args())); // @phpstan-ignore new.static
     }
 
     public function chunk(int $splitLength = 1): ArrayObject

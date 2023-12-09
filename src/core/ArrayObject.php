@@ -43,9 +43,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         $this->array = $data;
     }
 
-    public static function from(array $array = []): self
+    public static function from(array $array = []): static
     {
-        return new static($array);
+        return new static($array); // @phpstan-ignore new.static
     }
 
     public function toArray(): array
@@ -286,12 +286,12 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 
     public function join(string $glue = ''): StringObject
     {
-        return static::detectStringType(implode($glue, $this->array));
+        return self::detectStringType(implode($glue, $this->array));
     }
 
     public function serialize(): StringObject
     {
-        return static::detectStringType(serialize($this->array));
+        return self::detectStringType(serialize($this->array));
     }
 
     /**
@@ -386,12 +386,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return array_pop($this->array);
     }
 
-    /**
-     * @return static
-     */
-    public function slice(mixed $offset, ?int $length = null, bool $preserve_keys = false): self
+    public function slice(mixed $offset, ?int $length = null, bool $preserve_keys = false): static
     {
-        return new static(array_slice($this->array, ...func_get_args()));
+        return new static(array_slice($this->array, ...func_get_args())); // @phpstan-ignore new.static
     }
 
     /**
@@ -415,11 +412,10 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 
     /**
      * @param array $args
-     * @return static
      */
-    public function map(callable $fn, ...$args): self
+    public function map(callable $fn, ...$args): static
     {
-        return new static(array_map($fn, $this->array, ...$args));
+        return new static(array_map($fn, $this->array, ...$args)); // @phpstan-ignore new.static
     }
 
     /**
@@ -433,68 +429,48 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 
     /**
      * @param array $args
-     * @return static
      */
-    public function keys(...$args): self
+    public function keys(...$args): static
     {
-        return new static(array_keys($this->array, ...$args));
+        return new static(array_keys($this->array, ...$args)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function values(): self
+    public function values(): static
     {
-        return new static(array_values($this->array));
+        return new static(array_values($this->array)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function column(mixed $column_key, mixed $index = null): self
+    public function column(mixed $column_key, mixed $index = null): static
     {
-        return new static(array_column($this->array, $column_key, $index));
+        return new static(array_column($this->array, $column_key, $index)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function unique(int $sort_flags = SORT_STRING): self
+    public function unique(int $sort_flags = SORT_STRING): static
     {
-        return new static(array_unique($this->array, $sort_flags));
+        return new static(array_unique($this->array, $sort_flags)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function reverse(bool $preserve_keys = false): self
+    public function reverse(bool $preserve_keys = false): static
     {
-        return new static(array_reverse($this->array, $preserve_keys));
+        return new static(array_reverse($this->array, $preserve_keys)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function chunk(int $size, bool $preserve_keys = false): self
+    public function chunk(int $size, bool $preserve_keys = false): static
     {
-        return new static(array_chunk($this->array, $size, $preserve_keys));
+        return new static(array_chunk($this->array, $size, $preserve_keys)); // @phpstan-ignore new.static
     }
 
     /**
      * Swap keys and values in an array.
-     * @return static
      */
-    public function flip(): self
+    public function flip(): static
     {
-        return new static(array_flip($this->array));
+        return new static(array_flip($this->array)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function filter(callable $fn, int $flag = 0): self
+    public function filter(callable $fn, int $flag = 0): static
     {
-        return new static(array_filter($this->array, $fn, $flag));
+        return new static(array_filter($this->array, $fn, $flag)); // @phpstan-ignore new.static
     }
 
     /**
@@ -653,10 +629,10 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     protected static function detectType(mixed $value)
     {
         if (is_string($value)) {
-            return static::detectStringType($value);
+            return static::detectStringType($value); // @phpstan-ignore new.static
         }
         if (is_array($value)) {
-            return static::detectArrayType($value);
+            return static::detectArrayType($value); // @phpstan-ignore new.static
         }
         return $value;
     }
@@ -666,11 +642,8 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return new StringObject($value);
     }
 
-    /**
-     * @return static
-     */
-    protected static function detectArrayType(array $value): self
+    protected static function detectArrayType(array $value): static
     {
-        return new static($value);
+        return new static($value); // @phpstan-ignore new.static
     }
 }

@@ -93,12 +93,10 @@ class Record implements \Stringable
      * Unpacks the message from the binary data buffer
      *
      * @param string $data Binary buffer with raw data
-     *
-     * @return static
      */
-    final public static function unpack(string $data): self
+    final public static function unpack(string $data): static
     {
-        $self = new static();
+        $self = new static(); // @phpstan-ignore new.static
         [
             $self->version,
             $self->type,
