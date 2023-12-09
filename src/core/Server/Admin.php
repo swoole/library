@@ -391,11 +391,12 @@ class Admin
         return self::$accessToken;
     }
 
-    public static function start(Server $server)
+    public static function start(Server $server): void
     {
         $admin_server_uri = swoole_string($server->setting['admin_server']);
         if ($admin_server_uri->startsWith('unix:/')) {
-            return swoole_error_log(SWOOLE_LOG_ERROR, "admin_server[{$server->setting['admin_server']}] is not supported");
+            swoole_error_log(SWOOLE_LOG_ERROR, "admin_server[{$server->setting['admin_server']}] is not supported");
+            return;
         }
 
         if ($admin_server_uri->contains('@')) {
@@ -424,7 +425,8 @@ class Admin
             $method = $req->getMethod();
 
             if ($method === 'OPTIONS') {
-                return $resp->end();
+                $resp->end();
+                return;
             }
 
             $token = self::getAccessToken();
