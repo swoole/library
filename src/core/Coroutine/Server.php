@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
+use Swoole\Constant;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Server\Connection;
 use Swoole\Exception;
@@ -115,7 +116,7 @@ class Server
             $conn = $socket->accept();
             if ($conn) {
                 $conn->setProtocol($this->setting);
-                if (SWOOLE_COROUTINE_SOCKET_HAVE_SSL_HANDSHAKE && $this->setting['open_ssl'] ?? false) {
+                if (SWOOLE_COROUTINE_SOCKET_HAVE_SSL_HANDSHAKE && !empty($this->setting[Constant::OPTION_OPEN_SSL])) {
                     $fn = static function ($fn, $connection) {
                         /* @var $connection Connection */
                         if (!$connection->exportSocket()->sslHandshake()) {
