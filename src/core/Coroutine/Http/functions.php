@@ -14,13 +14,12 @@ namespace Swoole\Coroutine\Http;
 use Swoole\Coroutine\Http\Client\Exception;
 
 /**
- * @param null $data
  * @throws Exception
  */
 function request(
     string $url,
     string $method,
-    $data = null,
+    mixed $data = null,
     ?array $options = null,
     ?array $headers = null,
     ?array $cookies = null

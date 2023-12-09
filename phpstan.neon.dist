@@ -1,5 +1,5 @@
 parameters:
-  level: 4
+  level: 5
   paths:
     - ./src
   excludePaths:
@@ -12,3 +12,5 @@ parameters:
     - '#Property Swoole\\Server::\$admin_server \(Swoole\\Coroutine\\Http\\Server\) does not accept null.#'
     - '#Return type \(Swoole\\StringObject\) of method Swoole\\ArrayObject::serialize\(\) should be compatible with return type \(string\|null\) of method Serializable::serialize\(\)#'
     - '#Property Swoole\\ConnectionPool::\$pool \(Swoole\\Coroutine\\Channel\) does not accept null.#'
+    - '#Parameter \#1 \$response of method Swoole\\Coroutine\\FastCGI\\Proxy::translateResponse\(\) expects Swoole\\FastCGI\\HttpResponse, Swoole\\FastCGI\\Response given.#'
+    - '#Parameter \#1 \$object of function spl_object_hash expects object, array given.#'
