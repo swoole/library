@@ -38,22 +38,25 @@ class MultibyteStringObject extends StringObject
         return mb_strrpos($this->string, $needle, $offset, $encoding);
     }
 
-    /**
-     * @return false|int
-     */
-    public function ipos(string $needle, ?string $encoding = null)
+    public function ipos(string $needle, int $offset = 0, ?string $encoding = null): int|false
     {
-        return mb_stripos($this->string, ...func_get_args());
+        return mb_stripos($this->string, $needle, $offset, $encoding);
     }
 
     /**
-     * @return static
+     * @todo First parameter will be renamed to $start in Swoole 5.2+.
+     * @todo This method will be refactored and marked as final in Swoole 5.2+.
+     *       1. It should use keyword self instead of static.
+     *       2. Don't use function func_get_args().
      */
-    public function substr(int $offset, ?int $length = null, ?string $encoding = null)
+    public function substr(int $offset, ?int $length = null, ?string $encoding = null): static
     {
-        return new static(mb_substr($this->string, ...func_get_args()));
+        return new static(mb_substr($this->string, ...func_get_args())); // @phpstan-ignore new.static
     }
 
+    /**
+     * @todo This method is not implemented correctly.
+     */
     public function chunk(int $splitLength = 1, ?int $limit = null): ArrayObject
     {
         return static::detectArrayType(mb_split($this->string, ...func_get_args()));
