@@ -60,7 +60,7 @@ class PDOStatementProxy extends ObjectProxy
                     || $this->parent->inTransaction()
                 ) {
                     /* '00000' means “no error.”, as specified by ANSI SQL and ODBC. */
-                    if (!empty($errorInfo) && $errorInfo[0] !== '00000') {
+                    if ($errorInfo[0] !== '00000') {
                         $exception            = new \PDOException($errorInfo[2], $errorInfo[1]);
                         $exception->errorInfo = $errorInfo;
                         throw $exception;

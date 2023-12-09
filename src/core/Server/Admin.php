@@ -512,7 +512,7 @@ class Admin
                 $resp->end($result);
             }
         });
-        $admin_server->handle('/', function (Request $req, Response $resp) use ($server) {
+        $admin_server->handle('/', function (Request $req, Response $resp): void {
             $resp->status(404);
         });
         $server->admin_server = $admin_server;
@@ -520,10 +520,9 @@ class Admin
     }
 
     /**
-     * @param $server Server
      * @return false|string
      */
-    public static function handlerGetResources($server, mixed $msg)
+    public static function handlerGetResources()
     {
         $resources = get_resources();
         $list      = [];
@@ -639,22 +638,18 @@ class Admin
     public static function handlerGetClassInfo($server, $msg)
     {
         $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
-        if (empty($json['class_name']) && empty($json['interface_name'])) {
-            return self::json(['error' => 'require class_name or interface_name'], 4004);
-        }
-
         if (!empty($json['class_name'])) {
             if (!class_exists($json['class_name'], false) && !interface_exists($json['class_name'], false)) {
                 return self::json("{$json['class_name']} not exists", 4003);
             }
             $name = $json['class_name'];
-        }
-
-        if (!empty($json['interface_name'])) {
+        } elseif (!empty($json['interface_name'])) {
             if (!interface_exists($json['interface_name'], false)) {
                 return self::json("{$json['interface_name']} not exists", 4003);
             }
             $name = $json['interface_name'];
+        } else {
+            return self::json(['error' => 'require class_name or interface_name'], 4004);
         }
 
         $class = new \ReflectionClass($name);
@@ -747,9 +742,6 @@ class Admin
         $tmpParentClass = $class->getParentClass();
         $parentClass    = $tmpParentClass ? $tmpParentClass->getName() : '';
 
-        $tmpInterface = $class->getInterfaceNames();
-        $interface    = $tmpInterface ?? [];
-
         $data = [
             'filename'         => $filename,
             'constants'        => $constants,
@@ -758,7 +750,7 @@ class Admin
             'staticMethods'    => $staticMethods,
             'methods'          => $methods,
             'parentClass'      => $parentClass,
-            'interface'        => $interface,
+            'interface'        => $class->getInterfaceNames(),
         ];
         return self::json($data);
     }
