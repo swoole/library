@@ -7,5 +7,6 @@
 /composer.lock
 /Dockerfile.bak
 /html/*
+/phpstan.neon
 /phpunit.xml
 /vendor
