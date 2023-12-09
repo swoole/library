@@ -592,10 +592,10 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     protected static function detectType(mixed $value)
     {
         if (is_string($value)) {
-            return static::detectStringType($value); // @phpstan-ignore new.static
+            return static::detectStringType($value);
         }
         if (is_array($value)) {
-            return static::detectArrayType($value); // @phpstan-ignore new.static
+            return static::detectArrayType($value);
         }
         return $value;
     }

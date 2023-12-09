@@ -54,7 +54,7 @@ class Client
      */
     public function execute(Request $request, float $timeout = -1): Response
     {
-        if (!$this->socket) {
+        if (!isset($this->socket)) {
             $this->socket = $socket = new Socket($this->af, SOCK_STREAM, IPPROTO_IP);
             $socket->setProtocol([
                 'open_ssl'              => $this->ssl,
