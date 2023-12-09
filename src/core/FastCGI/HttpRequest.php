@@ -13,7 +13,7 @@ namespace Swoole\FastCGI;
 
 class HttpRequest extends Request
 {
-    protected $params = [
+    protected array $params = [
         'REQUEST_SCHEME'    => 'http',
         'REQUEST_METHOD'    => 'GET',
         'DOCUMENT_ROOT'     => '',

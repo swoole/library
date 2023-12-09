@@ -20,38 +20,28 @@ class Record implements \Stringable
 {
     /**
      * Identifies the FastCGI protocol version.
-     *
-     * @var int
      */
-    protected $version = FastCGI::VERSION_1;
+    protected int $version = FastCGI::VERSION_1;
 
     /**
      * Identifies the FastCGI record type, i.e. the general function that the record performs.
-     *
-     * @var int
      */
-    protected $type = FastCGI::UNKNOWN_TYPE;
+    protected int $type = FastCGI::UNKNOWN_TYPE;
 
     /**
      * Identifies the FastCGI request to which the record belongs.
-     *
-     * @var int
      */
-    protected $requestId = FastCGI::DEFAULT_REQUEST_ID;
+    protected int $requestId = FastCGI::DEFAULT_REQUEST_ID;
 
     /**
      * Reserved byte for future proposes
-     *
-     * @var int
      */
-    protected $reserved = 0;
+    protected int $reserved = 0;
 
     /**
      * The number of bytes in the contentData component of the record.
-     *
-     * @var int
      */
-    private $contentLength = 0;
+    private int $contentLength = 0;
 
     /**
      * The number of bytes in the paddingData component of the record.

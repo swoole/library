@@ -20,12 +20,8 @@ use Swoole\ConnectionPool;
  */
 class RedisPool extends ConnectionPool
 {
-    /** @var RedisConfig */
-    protected $config;
-
-    public function __construct(RedisConfig $config, int $size = self::DEFAULT_SIZE)
+    public function __construct(protected RedisConfig $config, int $size = self::DEFAULT_SIZE)
     {
-        $this->config = $config;
         parent::__construct(function () {
             $redis = new \Redis();
             /* Compatible with different versions of Redis extension as much as possible */

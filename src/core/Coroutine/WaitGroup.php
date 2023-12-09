@@ -13,11 +13,11 @@ namespace Swoole\Coroutine;
 
 class WaitGroup
 {
-    protected $chan;
+    protected Channel $chan;
 
-    protected $count = 0;
+    protected int $count = 0;
 
-    protected $waiting = false;
+    protected bool $waiting = false;
 
     public function __construct(int $delta = 0)
     {
