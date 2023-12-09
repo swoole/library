@@ -39,10 +39,10 @@ class MysqliPool extends ConnectionPool
                 $this->config->getPort(),
                 $this->config->getUnixSocket()
             );
-            $mysqli->set_charset($this->config->getCharset());
             if ($mysqli->connect_errno) {
                 throw new MysqliException($mysqli->connect_error, $mysqli->connect_errno);
             }
+            $mysqli->set_charset($this->config->getCharset());
             return $mysqli;
         }, $size, MysqliProxy::class);
     }
