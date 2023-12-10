@@ -3,14 +3,16 @@ name: Unit Tests
 on: [ push, pull_request, workflow_dispatch ]
 
 jobs:
-  ci:
+  # Run unit tests with Swoole 5.0, Swoole 5.1, and latest code of Swoole.
+  unit-tests:
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: true
       matrix:
         php: ["8.0", "8.1", "8.2"]
+        swoole-prefix: ["5.0-", "5.1-", ""]
 
-    name: Under PHP ${{ matrix.php }}
+    name: Run Tests Using Image ${{ matrix.swoole-prefix }}php${{ matrix.php }}
 
     steps:
       - name: Checkout
@@ -18,12 +20,12 @@ jobs:
 
       - name: Setup Services
         run: |
-          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:php${{ matrix.php }}/g" ./Dockerfile
+          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:${{ matrix.swoole-prefix }}php${{ matrix.php }}/g" ./Dockerfile
           docker-compose up -d
           docker ps -a
           docker-compose exec -T app php -v
           docker-compose exec -T app php --ri swoole
-          docker-compose exec -T app composer install -n --no-progress
+          docker-compose exec -T app composer install -n -q --no-progress
 
       - name: Run Unit Tests
         run: docker-compose exec -T app composer test
