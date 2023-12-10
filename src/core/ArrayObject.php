@@ -386,9 +386,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return array_pop($this->array);
     }
 
-    public function slice(mixed $offset, ?int $length = null, bool $preserve_keys = false): static
+    public function slice(int $offset, ?int $length = null, bool $preserve_keys = false): static
     {
-        return new static(array_slice($this->array, ...func_get_args())); // @phpstan-ignore new.static
+        return new static(array_slice($this->array, $offset, $length, $preserve_keys)); // @phpstan-ignore new.static
     }
 
     /**

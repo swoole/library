@@ -78,7 +78,7 @@ class StringObject implements \Stringable
         return new static(strtoupper($this->string)); // @phpstan-ignore new.static
     }
 
-    public function trim(mixed $characters = ''): static
+    public function trim(string $characters = ''): static
     {
         if ($characters) {
             return new static(trim($this->string, $characters)); // @phpstan-ignore new.static
