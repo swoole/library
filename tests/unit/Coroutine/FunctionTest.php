@@ -72,8 +72,11 @@ class FunctionTest extends TestCase
             Runtime::setHookFlags(0);
             $end = microtime(true);
             $this->assertEquals(count($results), 4);
-            $this->assertGreaterThan(1, $end - $start);
-            $this->assertLessThan(1.2, $end - $start);
+            self::assertThat(
+                $end - $start,
+                $this->logicalAnd(self::greaterThan(1), self::lessThan(1.2)),
+                'Those batch tasks should take barely over a second to finish.'
+            );
 
             $this->assertEquals($results['gethostbyname'], gethostbyname('localhost'));
             $this->assertEquals($results['file_get_contents'], file_get_contents(__FILE__));
@@ -105,8 +108,11 @@ class FunctionTest extends TestCase
             $end = microtime(true);
 
             $this->assertEquals(count($results), $c);
-            $this->assertGreaterThan(0.2, $end - $start);
-            $this->assertLessThan(0.22, $end - $start);
+            self::assertThat(
+                $end - $start,
+                $this->logicalAnd(self::greaterThan(0.2), self::lessThan(0.22)),
+                'Four invocations of the callback function should take barely over 0.2 second to finish.'
+            );
         });
     }
 

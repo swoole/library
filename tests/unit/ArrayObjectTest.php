@@ -19,13 +19,13 @@ use PHPUnit\Framework\TestCase;
  */
 class ArrayObjectTest extends TestCase
 {
-    private \Swoole\ArrayObject $data;
+    private ArrayObject $data;
 
-    private \Swoole\ArrayObject $data_2;
+    private ArrayObject $data_2;
 
-    private \Swoole\ArrayObject $data_3;
+    private ArrayObject $data_3;
 
-    private \Swoole\ArrayObject $data_4;
+    private ArrayObject $data_4;
 
     private array $control_data;
 

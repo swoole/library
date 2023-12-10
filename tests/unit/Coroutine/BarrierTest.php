@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole\Coroutine;
 
 use PHPUnit\Framework\TestCase;
+use Swoole\Coroutine;
 
 /**
  * @internal
@@ -30,7 +31,7 @@ class BarrierTest extends TestCase
             $N       = 4;
             $st      = microtime(true);
             foreach (range(1, $N) as $i) {
-                \Swoole\Coroutine::create(function () use ($barrier, &$count) {
+                Coroutine::create(function () use ($barrier, &$count) {
                     System::sleep(0.5);
                     $count++;
                 });
@@ -53,7 +54,7 @@ class BarrierTest extends TestCase
             $N       = 4;
             $st      = microtime(true);
             foreach (range(1, $N) as $i) {
-                \Swoole\Coroutine::create(function () use ($barrier, &$count) {
+                Coroutine::create(function () use ($barrier, &$count) {
                     System::sleep(0.5);
                     $count++;
                 });
@@ -61,10 +62,10 @@ class BarrierTest extends TestCase
             Barrier::wait($barrier, 0.1);
             $et = microtime(true);
 
-            $this->assertEquals(0, $count, 'None of the four child coroutines finishes execution when timeout happens; the counter remains as 0.');
-            $this->assertThat(
+            self::assertEquals(0, $count, 'None of the four child coroutines finishes execution when timeout happens; the counter remains as 0.');
+            self::assertThat(
                 $et - $st,
-                $this->logicalAnd($this->greaterThan(0.10), $this->lessThan(0.15)),
+                $this->logicalAnd(self::greaterThan(0.10), self::lessThan(0.15)),
                 'The parent coroutine stops waiting when timeout happens.'
             );
         });
@@ -82,13 +83,13 @@ class BarrierTest extends TestCase
             $count   = 0;
             $N       = 4;
             foreach (range(1, $N) as $i) {
-                \Swoole\Coroutine::create(function () use ($barrier, &$count) {
+                Coroutine::create(function () use ($barrier, &$count) {
                     $count++;
                 });
             }
             Barrier::wait($barrier);
 
-            $this->assertSame($N, $count, 'The parent coroutine keeps running without switching execution to child coroutines.');
+            self::assertSame($N, $count, 'The parent coroutine keeps running without switching execution to child coroutines.');
         });
     }
 
@@ -102,7 +103,7 @@ class BarrierTest extends TestCase
         run(function () {
             $barrier = Barrier::make();
             Barrier::wait($barrier);
-            $this->assertNull($barrier, 'To check if there is any possible PHP warnings/errors.');
+            self::assertNull($barrier, 'To check if there is any possible PHP warnings/errors.');
         });
     }
 
@@ -116,13 +117,13 @@ class BarrierTest extends TestCase
         run(function () {
             $barrier = Barrier::make();
             $count   = 0;
-            \Swoole\Coroutine::create(function () use (&$barrier, &$count) {
+            Coroutine::create(function () use (&$barrier, &$count) {
                 unset($barrier);
                 $count++;
             });
             Barrier::wait($barrier);
 
-            $this->assertEquals(1, $count, 'Have the Barrier object destroyed unexpected in a child coroutine.');
+            self::assertEquals(1, $count, 'Have the Barrier object destroyed unexpected in a child coroutine.');
         });
     }
 
@@ -137,7 +138,7 @@ class BarrierTest extends TestCase
             $barrier = Barrier::make();
             $count   = 0;
             $st      = microtime(true);
-            \Swoole\Coroutine::create(function () use (&$barrier, &$count) {
+            Coroutine::create(function () use (&$barrier, &$count) {
                 unset($barrier);
                 System::sleep(0.5);
                 $count++;
@@ -145,8 +146,8 @@ class BarrierTest extends TestCase
             Barrier::wait($barrier);
             $et = microtime(true);
 
-            $this->assertEquals(0, $count, 'The counter does not change since the child coroutine not yet finished.');
-            $this->lessThan(0.25);
+            self::assertEquals(0, $count, 'The counter does not change since the child coroutine not yet finished.');
+            self::assertLessThan(0.25, $et - $st, 'The parent coroutine continues exeuction without waiting the child to finish.');
         });
     }
 }
