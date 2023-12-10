@@ -1,12 +1,30 @@
-/.idea
-/.php_cs
-/.php_cs.cache
-/.phplint.cache/
-/.phplint-cache
-/.phpunit.result.cache
+# Ignore Eclipse/Zend Studio project files.
+/.buildpath
+/.project
+/.settings
+
+# Ignore PhpStorm files.
+/.idea/
+
+# Ignore files under Mac.
+.DS_Store
+
+# Ignore Composer files.
 /composer.lock
+/composer.phar
+/vendor/*
+
+# Ignore PHPUnit files.
+/.phpunit.result.cache
+/phpunit.xml
+
+# Ignore PHPStan files.
+/phpstan.neon
+
+# Ignore test output.
+/.phplint-cache
+/.phplint.cache/*
+
+# Ignore project files.
 /Dockerfile.bak
 /html/*
-/phpstan.neon
-/phpunit.xml
-/vendor
