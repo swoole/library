@@ -32,25 +32,31 @@ if (SWOOLE_USE_SHORTNAME) { // @phpstan-ignore if.alwaysTrue
 
 class SwooleLibrary
 {
-    public static $options = [];
+    /**
+     * @var array<string, mixed>
+     */
+    public static array $options = [];
 }
 
-function swoole_library_set_options(array $options)
+/**
+ * @param array<string, mixed> $options
+ */
+function swoole_library_set_options(array $options): void
 {
     SwooleLibrary::$options = $options;
 }
 
-function swoole_library_get_options()
+function swoole_library_get_options(): array
 {
     return SwooleLibrary::$options;
 }
 
-function swoole_library_set_option(string $key, $value)
+function swoole_library_set_option(string $key, mixed $value): void
 {
     SwooleLibrary::$options[$key] = $value;
 }
 
-function swoole_library_get_option(string $key)
+function swoole_library_get_option(string $key): mixed
 {
     return SwooleLibrary::$options[$key] ?? null;
 }
