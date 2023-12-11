@@ -11,10 +11,10 @@ declare(strict_types=1);
 
 namespace Swoole\Server;
 
+use Swoole\Constant;
+use Swoole\Coroutine;
 use Swoole\Server;
 use Swoole\Timer;
-
-use function Swoole\Coroutine\go;
 
 class Helper
 {
@@ -266,10 +266,10 @@ class Helper
     {
     }
 
-    public static function onStart(Server $server)
+    public static function onStart(Server $server): void
     {
-        if (!empty($server->setting['admin_server'])) {
-            go(function () use ($server) {
+        if (!empty($server->setting[Constant::OPTION_ADMIN_SERVER])) {
+            Coroutine::create(function () use ($server): void {
                 Admin::start($server);
             });
         }

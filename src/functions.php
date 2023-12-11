@@ -158,23 +158,3 @@ function swoole_container_cpu_num()
     }
     return intval(floor($cpu_num));
 }
-
-if (!function_exists('array_key_last')) {
-    function array_key_last(array $array)
-    {
-        if (!empty($array)) {
-            return key(array_slice($array, -1, 1, true));
-        }
-        return null;
-    }
-}
-
-if (!function_exists('array_key_first')) {
-    function array_key_first(array $array)
-    {
-        foreach ($array as $key => $unused) {
-            return $key;
-        }
-        return null;
-    }
-}

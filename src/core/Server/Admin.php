@@ -180,8 +180,7 @@ class Admin
             'gc_status',
             $accepted_process_types,
             function (Server $server, string $msg) {
-                $status = function_exists('gc_status') ? gc_status() : [];
-                return self::json($status);
+                return self::json(gc_status());
             }
         );
 
@@ -528,7 +527,7 @@ class Admin
         $list      = [];
         foreach ($resources as $r) {
             $info = [
-                'id'   => function_exists('get_resource_id') ? get_resource_id($r) : intval($r),
+                'id'   => get_resource_id($r),
                 'type' => get_resource_type($r),
             ];
             if ($info['type'] == 'stream') {
@@ -547,16 +546,14 @@ class Admin
         $info = [
             'id'                => $server->getWorkerId(),
             'pid'               => $server->getWorkerPid(),
-            'gc_status'         => function_exists('gc_status') ? gc_status() : [],
+            'gc_status'         => gc_status(),
             'memory_usage'      => memory_get_usage(),
             'memory_real_usage' => memory_get_usage(true),
             'process_status'    => self::getProcessStatus(),
             'coroutine_stats'   => Coroutine::stats(),
             'timer_stats'       => Timer::stats(),
+            'vm_status'         => swoole_get_vm_status(),
         ];
-        if (function_exists('swoole_get_vm_status')) {
-            $info['vm_status'] = swoole_get_vm_status();
-        }
         return self::json($info);
     }
 
@@ -611,9 +608,6 @@ class Admin
 
     public static function handlerGetObjects(Server $server, string $msg)
     {
-        if (!function_exists('swoole_get_objects')) {
-            return self::json(['require ext-swoole_plus'], 5000);
-        }
         $list    = [];
         $objects = swoole_get_objects();
         foreach ($objects as $o) {
@@ -861,10 +855,6 @@ class Admin
 
     public static function handlerGetObjectByHandle(Server $server, string $msg)
     {
-        if (!function_exists('swoole_get_object_by_handle')) {
-            return self::json(['require ext-swoole_plus'], 5000);
-        }
-
         $json = json_decode($msg, true, 512, JSON_THROW_ON_ERROR);
         if (empty($json) || empty($json['object_id']) || empty($json['object_hash'])) {
             return self::json(['error' => 'Params Error!'], 4004);
