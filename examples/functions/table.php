@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 $table = swoole_table(100, 'a:f, b:i, c: s:600, d : f');
 var_dump($table);

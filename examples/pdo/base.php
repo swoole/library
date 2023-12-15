@@ -14,7 +14,7 @@ use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
 use Swoole\Runtime;
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 const N = 1024;
 

@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 $str = _mbstring('我是中国人');
 var_dump((string) $str->substr(0));

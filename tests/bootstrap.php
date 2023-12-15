@@ -17,7 +17,7 @@ Coroutine::set([
 ]);
 
 if (!defined('SWOOLE_LIBRARY')) {
-    require __DIR__ . '/../vendor/autoload.php';
+    require dirname(__DIR__) . '/vendor/autoload.php';
 }
 
 if (!defined('MYSQL_SERVER_HOST')) {

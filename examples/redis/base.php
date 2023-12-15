@@ -14,7 +14,7 @@ use Swoole\Database\RedisConfig;
 use Swoole\Database\RedisPool;
 use Swoole\Runtime;
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 const N = 1024;
 

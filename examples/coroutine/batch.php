@@ -13,7 +13,7 @@ use Swoole\Coroutine;
 
 use function Swoole\Coroutine\batch;
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 Coroutine::set(['hook_flags' => SWOOLE_HOOK_ALL]);
 

@@ -13,7 +13,7 @@ use Swoole\Coroutine;
 
 use function Swoole\Coroutine\map;
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 Coroutine::set(['hook_flags' => SWOOLE_HOOK_ALL]);
 

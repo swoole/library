@@ -14,7 +14,7 @@ use Swoole\Database\MysqliConfig;
 use Swoole\Database\MysqliPool;
 use Swoole\Runtime;
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 const C = 64;
 

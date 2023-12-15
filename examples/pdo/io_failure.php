@@ -14,7 +14,7 @@ use Swoole\Coroutine;
 use Swoole\Database\PDOProxy;
 use Swoole\Runtime;
 
-require __DIR__ . '/../bootstrap.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 const C = 64;
 

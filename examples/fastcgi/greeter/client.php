@@ -13,7 +13,7 @@ use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
 use Swoole\FastCGI\HttpRequest;
 
-require __DIR__ . '/../../bootstrap.php';
+require dirname(__DIR__) . '/../bootstrap.php';
 
 Coroutine\run(function () {
     try {
