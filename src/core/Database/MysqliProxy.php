@@ -24,20 +24,16 @@ class MysqliProxy extends ObjectProxy
     /** @var \mysqli */
     protected $__object;
 
-    /** @var string */
-    protected $charsetContext;
+    protected string $charsetContext;
 
-    /** @var array|null */
-    protected $setOptContext;
+    protected array $setOptContext = [];
 
-    /** @var array|null */
-    protected $changeUserContext;
+    protected array $changeUserContext;
 
     /** @var callable */
     protected $constructor;
 
-    /** @var int */
-    protected $round = 0;
+    protected int $round = 0;
 
     public function __construct(callable $constructor)
     {
@@ -83,15 +79,13 @@ class MysqliProxy extends ObjectProxy
         parent::__construct($constructor());
         $this->round++;
         /* restore context */
-        if ($this->charsetContext) {
+        if (!empty($this->charsetContext)) {
             $this->__object->set_charset($this->charsetContext);
         }
-        if ($this->setOptContext) {
-            foreach ($this->setOptContext as $opt => $val) {
-                $this->__object->set_opt($opt, $val);
-            }
+        foreach ($this->setOptContext as $opt => $val) {
+            $this->__object->set_opt($opt, $val);
         }
-        if ($this->changeUserContext) {
+        if (!empty($this->changeUserContext)) {
             $this->__object->change_user(...$this->changeUserContext);
         }
     }
@@ -113,7 +107,7 @@ class MysqliProxy extends ObjectProxy
         return $this->__object->set_charset($charset);
     }
 
-    public function change_user(string $user, string $password, string $database): bool
+    public function change_user(string $user, string $password, ?string $database): bool
     {
         $this->changeUserContext = [$user, $password, $database];
         return $this->__object->change_user($user, $password, $database);

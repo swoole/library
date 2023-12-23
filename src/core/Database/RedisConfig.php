@@ -13,36 +13,28 @@ namespace Swoole\Database;
 
 class RedisConfig
 {
-    /** @var string */
-    protected $host = '127.0.0.1';
+    protected string $host = '127.0.0.1';
 
-    /** @var int */
-    protected $port = 6379;
+    protected int $port = 6379;
 
-    /** @var float */
-    protected $timeout = 0.0;
+    protected float $timeout = 0.0;
 
-    /** @var string */
-    protected $reserved = '';
+    protected string $reserved = '';
 
-    /** @var int */
-    protected $retry_interval = 0;
+    protected int $retry_interval = 0;
 
-    /** @var float */
-    protected $read_timeout = 0.0;
+    protected float $read_timeout = 0.0;
 
-    /** @var string */
-    protected $auth = '';
+    protected string $auth = '';
 
-    /** @var int */
-    protected $dbIndex = 0;
+    protected int $dbIndex = 0;
 
-    public function getHost()
+    public function getHost(): string
     {
         return $this->host;
     }
 
-    public function withHost($host): self
+    public function withHost(string $host): self
     {
         $this->host = $host;
         return $this;

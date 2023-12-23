@@ -16,8 +16,7 @@ class PDOProxy extends ObjectProxy
     /** @var \PDO */
     protected $__object;
 
-    /** @var array|null */
-    protected $setAttributeContext;
+    protected array $setAttributeContext = [];
 
     /** @var callable */
     protected $constructor;
@@ -73,10 +72,8 @@ class PDOProxy extends ObjectProxy
         $this->__object->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $this->round++;
         /* restore context */
-        if ($this->setAttributeContext) {
-            foreach ($this->setAttributeContext as $attribute => $value) {
-                $this->__object->setAttribute($attribute, $value);
-            }
+        foreach ($this->setAttributeContext as $attribute => $value) {
+            $this->__object->setAttribute($attribute, $value);
         }
     }
 

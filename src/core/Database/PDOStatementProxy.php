@@ -16,20 +16,15 @@ class PDOStatementProxy extends ObjectProxy
     /** @var \PDOStatement */
     protected $__object;
 
-    /** @var array|null */
-    protected $setAttributeContext;
+    protected array $setAttributeContext = [];
 
-    /** @var array|null */
-    protected $setFetchModeContext;
+    protected array $setFetchModeContext;
 
-    /** @var array|null */
-    protected $bindParamContext;
+    protected array $bindParamContext = [];
 
-    /** @var array|null */
-    protected $bindColumnContext;
+    protected array $bindColumnContext = [];
 
-    /** @var array|null */
-    protected $bindValueContext;
+    protected array $bindValueContext = [];
 
     /** @var \PDO|PDOProxy */
     protected $parent;
@@ -57,28 +52,20 @@ class PDOStatementProxy extends ObjectProxy
                 $parent         = $this->parent->__getObject();
                 $this->__object = $parent->prepare($this->__object->queryString);
 
-                if ($this->setAttributeContext) {
-                    foreach ($this->setAttributeContext as $attribute => $value) {
-                        $this->__object->setAttribute($attribute, $value);
-                    }
+                foreach ($this->setAttributeContext as $attribute => $value) {
+                    $this->__object->setAttribute($attribute, $value);
                 }
-                if ($this->setFetchModeContext) {
+                if (!empty($this->setFetchModeContext)) {
                     $this->__object->setFetchMode(...$this->setFetchModeContext);
                 }
-                if ($this->bindParamContext) {
-                    foreach ($this->bindParamContext as $param => $item) {
-                        $this->__object->bindParam($param, ...$item);
-                    }
+                foreach ($this->bindParamContext as $param => $item) {
+                    $this->__object->bindParam($param, ...$item);
                 }
-                if ($this->bindColumnContext) {
-                    foreach ($this->bindColumnContext as $column => $item) {
-                        $this->__object->bindColumn($column, ...$item);
-                    }
+                foreach ($this->bindColumnContext as $column => $item) {
+                    $this->__object->bindColumn($column, ...$item);
                 }
-                if ($this->bindValueContext) {
-                    foreach ($this->bindValueContext as $value => $item) {
-                        $this->__object->bindParam($value, ...$item);
-                    }
+                foreach ($this->bindValueContext as $value => $item) {
+                    $this->__object->bindParam($value, ...$item);
                 }
                 $ret = $this->__object->{$name}(...$arguments);
             } else {

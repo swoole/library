@@ -18,23 +18,18 @@ class MysqliStatementProxy extends ObjectProxy
     /** @var \mysqli_stmt */
     protected $__object;
 
-    /** @var string|null */
-    protected $queryString;
+    protected ?string $queryString;
 
-    /** @var array|null */
-    protected $attrSetContext;
+    protected array $attrSetContext = [];
 
-    /** @var array|null */
-    protected $bindParamContext;
+    protected array $bindParamContext;
 
-    /** @var array|null */
-    protected $bindResultContext;
+    protected array $bindResultContext;
 
     /** @var \Mysqli|MysqliProxy */
     protected $parent;
 
-    /** @var int */
-    protected $parentRound;
+    protected int $parentRound;
 
     public function __construct(\mysqli_stmt $object, ?string $queryString, MysqliProxy $parent)
     {
@@ -66,16 +61,14 @@ class MysqliStatementProxy extends ObjectProxy
                 if ($this->__object === false) {
                     throw new MysqliException($parent->error, $parent->errno);
                 }
-                if ($this->bindParamContext) {
+                if (!empty($this->bindParamContext)) {
                     $this->__object->bind_param($this->bindParamContext[0], ...$this->bindParamContext[1]);
                 }
-                if ($this->bindResultContext) {
+                if (!empty($this->bindResultContext)) {
                     $this->__object->bind_result($this->bindResultContext);
                 }
-                if ($this->attrSetContext) {
-                    foreach ($this->attrSetContext as $attr => $value) {
-                        $this->__object->attr_set($attr, $value);
-                    }
+                foreach ($this->attrSetContext as $attr => $value) {
+                    $this->__object->attr_set($attr, $value);
                 }
                 continue;
             }
