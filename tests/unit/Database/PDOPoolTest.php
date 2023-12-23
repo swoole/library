@@ -87,11 +87,7 @@ class PDOPoolTest extends TestCase
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
-            $pdo->exec(
-                <<<'EOF'
-create table test(id int);  
-EOF
-            );
+            $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
             $pool->put($pdo);
 
             $waitGroup = new WaitGroup();
@@ -133,11 +129,8 @@ EOF
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
-            $pdo->exec(
-                <<<'EOF'
-create table test(id INTEGER)  
-EOF
-            );
+            $pdo->exec('DROP TABLE test PURGE');
+            $pdo->exec('CREATE TABLE test(id INTEGER)');
             $pool->put($pdo);
 
             $waitGroup = new WaitGroup();
@@ -174,11 +167,7 @@ EOF
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
-            $pdo->exec(
-                <<<'EOF'
-create table test(id int);  
-EOF
-            );
+            $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
             $pool->put($pdo);
 
             $waitGroup = new WaitGroup();
