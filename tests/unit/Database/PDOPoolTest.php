@@ -129,7 +129,13 @@ class PDOPoolTest extends TestCase
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
-            $pdo->exec('DROP TABLE test PURGE');
+            try {
+                $pdo->exec('DROP TABLE test PURGE');
+            } catch (\PDOException $e) {
+                if (!str_contains($e->getMessage(), 'ORA-00942')) { // ORA-00942: table or view does not exist
+                    throw $e;
+                }
+            }
             $pdo->exec('CREATE TABLE test(id INTEGER)');
             $pool->put($pdo);
 
