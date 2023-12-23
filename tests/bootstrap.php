@@ -28,6 +28,22 @@ if (!defined('MYSQL_SERVER_HOST')) {
     define('MYSQL_SERVER_DB', 'test');
 }
 
+if (!defined('PGSQL_SERVER_HOST')) {
+    define('PGSQL_SERVER_HOST', 'pgsql');
+    define('PGSQL_SERVER_PORT', 5432);
+    define('PGSQL_SERVER_USER', 'root');
+    define('PGSQL_SERVER_PWD', 'root');
+    define('PGSQL_SERVER_DB', 'test');
+}
+
+if (!defined('ORACLE_SERVER_HOST')) {
+    define('ORACLE_SERVER_HOST', 'oracle');
+    define('ORACLE_SERVER_PORT', 1521);
+    define('ORACLE_SERVER_USER', 'system');
+    define('ORACLE_SERVER_PWD', 'oracle');
+    define('ORACLE_SERVER_DB', 'xe');
+}
+
 if (!defined('REDIS_SERVER_HOST')) {
     define('REDIS_SERVER_HOST', 'redis');
     define('REDIS_SERVER_PORT', 6379);
