@@ -11,27 +11,24 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PDOException;
-use PDOStatement;
-
 class PDOStatementProxy extends ObjectProxy
 {
-    /** @var PDOStatement */
+    /** @var \PDOStatement */
     protected $__object;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $setAttributeContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $setFetchModeContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $bindParamContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $bindColumnContext;
 
-    /** @var null|array */
+    /** @var array|null */
     protected $bindValueContext;
 
     /** @var \PDO|PDOProxy */
@@ -40,10 +37,10 @@ class PDOStatementProxy extends ObjectProxy
     /** @var int */
     protected $parentRound;
 
-    public function __construct(PDOStatement $object, PDOProxy $parent)
+    public function __construct(\PDOStatement $object, PDOProxy $parent)
     {
         parent::__construct($object);
-        $this->parent = $parent;
+        $this->parent      = $parent;
         $this->parentRound = $parent->getRound();
     }
 
@@ -51,13 +48,13 @@ class PDOStatementProxy extends ObjectProxy
     {
         try {
             $ret = $this->__object->{$name}(...$arguments);
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
             if (!$this->parent->inTransaction() && DetectsLostConnections::causedByLostConnection($e)) {
                 if ($this->parent->getRound() === $this->parentRound) {
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent = $this->parent->__getObject();
+                $parent         = $this->parent->__getObject();
                 $this->__object = $parent->prepare($this->__object->queryString);
 
                 if ($this->setAttributeContext) {

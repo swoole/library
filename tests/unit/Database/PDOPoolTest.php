@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PDO;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\WaitGroup;
@@ -43,7 +42,8 @@ class PDOPoolTest extends TestCase
                 ->withDbName(MYSQL_SERVER_DB)
                 ->withCharset('utf8mb4')
                 ->withUsername(MYSQL_SERVER_USER)
-                ->withPassword(MYSQL_SERVER_PWD);
+                ->withPassword(MYSQL_SERVER_PWD)
+            ;
 
             $pool = new PDOPool($config, 2);
             for ($n = 5; $n--;) {
@@ -52,11 +52,11 @@ class PDOPoolTest extends TestCase
                     try {
                         $statement = $pdo->prepare('SELECT :n as n');
                         $statement->execute([':n' => $n]);
-                        $row = $statement->fetch(PDO::FETCH_ASSOC);
+                        $row = $statement->fetch(\PDO::FETCH_ASSOC);
                         // simulate error happens
                         $statement = $pdo->prepare('KILL CONNECTION_ID()');
                         $statement->execute();
-                    } catch (\PDOException $th) {
+                    } catch (\PDOException) {
                         // do nothing
                     }
                     $pdo = null;
@@ -82,7 +82,8 @@ class PDOPoolTest extends TestCase
                 ->withPort(PGSQL_SERVER_PORT)
                 ->withDbName(PGSQL_SERVER_DB)
                 ->withUsername(PGSQL_SERVER_USER)
-                ->withPassword(PGSQL_SERVER_PWD);
+                ->withPassword(PGSQL_SERVER_PWD)
+            ;
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
@@ -97,13 +98,13 @@ EOF
             for ($i = 0; $i < 30; $i++) {
                 go(function () use ($pool, $i, $waitGroup) {
                     $waitGroup->add();
-                    $pdo = $pool->get();
+                    $pdo       = $pool->get();
                     $statement = $pdo->prepare('INSERT INTO test VALUES(?)');
                     $statement->execute([$i]);
 
                     $statement = $pdo->prepare('SELECT id FROM test where id = ?');
                     $statement->execute([$i]);
-                    $result = $statement->fetch(PDO::FETCH_ASSOC);
+                    $result = $statement->fetch(\PDO::FETCH_ASSOC);
                     $this->assertEquals($result['id'], $i);
                     $pool->put($pdo);
                     $waitGroup->done();
@@ -127,7 +128,8 @@ EOF
                 ->withDbName(ORACLE_SERVER_DB)
                 ->withCharset('AL32UTF8')
                 ->withUsername(ORACLE_SERVER_USER)
-                ->withPassword(ORACLE_SERVER_PWD);
+                ->withPassword(ORACLE_SERVER_PWD)
+            ;
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
@@ -142,13 +144,13 @@ EOF
             for ($i = 0; $i < 30; $i++) {
                 go(function () use ($pool, $i, $waitGroup) {
                     $waitGroup->add();
-                    $pdo = $pool->get();
+                    $pdo       = $pool->get();
                     $statement = $pdo->prepare('INSERT INTO test VALUES(?)');
                     $statement->execute([$i]);
 
                     $statement = $pdo->prepare('SELECT id FROM test where id = ?');
                     $statement->execute([$i]);
-                    $result = $statement->fetch(PDO::FETCH_ASSOC);
+                    $result = $statement->fetch(\PDO::FETCH_ASSOC);
                     $this->assertEquals($result['ID'], $i);
                     $pool->put($pdo);
                     $waitGroup->done();
@@ -167,7 +169,8 @@ EOF
         run(function () {
             $config = (new PDOConfig())
                 ->withDriver('sqlite')
-                ->withHost('sqlite::memory:');
+                ->withHost('sqlite::memory:')
+            ;
             $pool = new PDOPool($config, 10);
 
             $pdo = $pool->get();
@@ -182,13 +185,13 @@ EOF
             for ($i = 0; $i < 30; $i++) {
                 go(function () use ($pool, $i, $waitGroup) {
                     $waitGroup->add();
-                    $pdo = $pool->get();
+                    $pdo       = $pool->get();
                     $statement = $pdo->prepare('INSERT INTO test VALUES(?)');
                     $statement->execute([$i]);
 
                     $statement = $pdo->prepare('SELECT id FROM test where id = ?');
                     $statement->execute([$i]);
-                    $result = $statement->fetch(PDO::FETCH_ASSOC);
+                    $result = $statement->fetch(\PDO::FETCH_ASSOC);
                     $this->assertEquals($result['id'], $i);
                     $pool->put($pdo);
                     $waitGroup->done();
