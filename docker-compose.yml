@@ -38,13 +38,13 @@ services:
 
   php-fpm:
     container_name: swoole-library-php-fpm
-    image: php:7.4-fpm
+    image: php:8.2-fpm
     volumes:
       - .:/var/www
 
   wordpress:
     container_name: swoole-library-wordpress
-    image: wordpress:php7.4-fpm
+    image: wordpress:php8.2-fpm
     links:
       - mysql
     environment:
@@ -62,7 +62,7 @@ services:
 
   mysql:
     container_name: swoole-library-mysql
-    image: mysql:5.7
+    image: mysql:8.2
     environment:
       MYSQL_DATABASE: test
       MYSQL_USER: username
@@ -87,7 +87,7 @@ services:
 
   redis:
     container_name: swoole-library-redis
-    image: redis:5.0
+    image: redis:6.2
 
   nacos:
     container_name: swoole-library-nacos
