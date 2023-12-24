@@ -26,7 +26,9 @@ jobs:
           docker-compose exec -T app composer install -n
 
       - name: Run Unit Tests
-        run: docker-compose exec -T app composer test
+        run: |
+          sleep 40s
+          docker-compose exec -T app composer test
 
       - name: Stop and Remove Docker Containers
         run: docker-compose down
