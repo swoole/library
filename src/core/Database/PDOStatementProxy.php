@@ -26,8 +26,7 @@ class PDOStatementProxy extends ObjectProxy
 
     protected array $bindValueContext = [];
 
-    /** @var \PDO|PDOProxy */
-    protected $parent;
+    protected PDOProxy $parent;
 
     /** @var int */
     protected $parentRound;

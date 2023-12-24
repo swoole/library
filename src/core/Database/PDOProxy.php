@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
+/**
+ * @method \PDO __getObject()
+ */
 class PDOProxy extends ObjectProxy
 {
     /** @var \PDO */

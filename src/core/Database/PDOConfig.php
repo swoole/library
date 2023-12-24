@@ -49,7 +49,7 @@ class PDOConfig
         return $this->host;
     }
 
-    public function withHost($host): self
+    public function withHost(string $host): self
     {
         $this->host = $host;
         return $this;

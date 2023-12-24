@@ -13,6 +13,9 @@ namespace Swoole\Database;
 
 class DetectsLostConnections
 {
+    /**
+     * @var array<string>
+     */
     private const ERROR_MESSAGES = [
         'server has gone away',
         'no connection to the server',
@@ -69,7 +72,7 @@ class DetectsLostConnections
     {
         $message = $e->getMessage();
         foreach (self::ERROR_MESSAGES as $needle) {
-            if ($needle !== '' && mb_strpos($message, $needle) !== false) {
+            if (mb_strpos($message, $needle) !== false) {
                 return true;
             }
         }

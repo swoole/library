@@ -26,8 +26,7 @@ class MysqliStatementProxy extends ObjectProxy
 
     protected array $bindResultContext;
 
-    /** @var \Mysqli|MysqliProxy */
-    protected $parent;
+    protected MysqliProxy $parent;
 
     protected int $parentRound;
 
