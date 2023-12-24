@@ -15,14 +15,25 @@ Fixed:
 Changed:
 
 * MR swoole/library#160 : Allow to pass array key/index to the callback function of function _\Swoole\Coroutine::map()_. (by @maxiaozhi )
+* Improved type declarations and return types.
 
 ## 5.1.1 (2023-11-26)
 
 Built-in PHP library included in [Swoole v5.1.1](https://github.com/swoole/swoole-src/releases/tag/v5.1.1).
 
+This release is the same as Swoole Library [v5.1.0](https://github.com/swoole/library/releases/tag/v5.1.0).
+
 ## 5.1.0 (2023-09-28)
 
 Built-in PHP library included in [Swoole v5.1.0](https://github.com/swoole/swoole-src/releases/tag/v5.1.0).
+
+Added:
+
+* MR swoole/library#163 : support database connection pools of _ODBC_, _SQLite_, _PostgreSQL_, and _Oracle_ via PDO. (by @NathanFreeman )
+
+Fixed:
+
+* Issue swoole/library#156 : PDO Exceptions thrown from Swoole Library should be the same as those from PHP. (by @NathanFreeman )
 
 ## 5.0.3 (2023-04-26)
 
