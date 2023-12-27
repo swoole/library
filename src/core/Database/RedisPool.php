@@ -50,7 +50,7 @@ class RedisPool extends ConnectionPool
 
             /* Set Redis options. */
             if ($this->config->getPrefix() !== '') {
-                $redis->setOption(Redis::OPT_PREFIX, $this->config->getPrefix());
+                $redis->setOption(\Redis::OPT_PREFIX, $this->config->getPrefix());
             }
 
             return $redis;
