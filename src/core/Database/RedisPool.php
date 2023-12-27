@@ -47,6 +47,12 @@ class RedisPool extends ConnectionPool
             if ($this->config->getDbIndex() !== 0) {
                 $redis->select($this->config->getDbIndex());
             }
+
+            /* Set Redis options. */
+            if ($this->config->getPrefix() !== '') {
+                $redis->setOption(Redis::OPT_PREFIX, $this->config->getPrefix());
+            }
+
             return $redis;
         }, $size);
     }
