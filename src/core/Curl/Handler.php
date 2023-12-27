@@ -357,7 +357,7 @@ final class Handler implements \Stringable
     }
 
     /**
-     * @throws Swoole\Curl\Exception
+     * @throws Exception
      */
     private function setOption(int $opt, mixed $value): bool
     {
