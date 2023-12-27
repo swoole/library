@@ -29,6 +29,8 @@ class RedisConfig
 
     protected int $dbIndex = 0;
 
+    protected string $prefix = '';
+
     public function getHost(): string
     {
         return $this->host;
@@ -114,6 +116,17 @@ class RedisConfig
     public function withDbIndex(int $dbIndex): self
     {
         $this->dbIndex = $dbIndex;
+        return $this;
+    }
+
+    public function getPrefix(): string
+    {
+        return $this->prefix;
+    }
+
+    public function withPrefix(string $prefix): self
+    {
+        $this->prefix = $prefix;
         return $this;
     }
 }
