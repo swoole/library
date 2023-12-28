@@ -1,0 +1,54 @@
+name: Build Swoole
+
+on: [ push, pull_request, workflow_dispatch ]
+
+jobs:
+  build-swoole:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.0", "8.1", "8.2", "8.3"]
+
+    name: PHP ${{ matrix.php }} - Swoole
+
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2, phpize
+          coverage: none
+
+      - name: Download Latest Swoole
+        run: |
+          set -ex
+          mkdir swoole
+          curl -sfL https://github.com/swoole/swoole-src/archive/master.tar.gz -o swoole.tar.gz
+          tar xfz swoole.tar.gz --strip-components=1 -C swoole
+
+      - name: Checkout Source Code of Swoole Library
+        uses: actions/checkout@v4
+        with:
+          path: './swoole/library'
+
+      - name: Build Swoole
+        run: |
+          set -ex
+
+          cd swoole
+          composer install -d ./tools -n -q --no-progress
+
+          cat ext-src/php_swoole_library.h | grep '/* $Id:' # the commit # of Swoole Library used in Swoole.
+          php ./tools/build-library.php
+          cat ext-src/php_swoole_library.h | grep '/* $Id:' # the commit # of current Swoole Library.
+
+          phpize
+          ./configure
+          make -j$(nproc)
+          sudo make install
+
+          echo "extension=swoole" | sudo tee "$(php-config --ini-dir)/ext-swoole.ini"
+
+      - name: Check Swoole Installation
+        run: php -v && php --ri swoole
