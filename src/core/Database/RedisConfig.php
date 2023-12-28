@@ -29,7 +29,7 @@ class RedisConfig
 
     protected int $dbIndex = 0;
 
-    protected string $prefix = '';
+    protected array $options = [];
 
     public function getHost(): string
     {
@@ -119,14 +119,20 @@ class RedisConfig
         return $this;
     }
 
-    public function getPrefix(): string
+    public function withOption(int $option, mixed $value): self
     {
-        return $this->prefix;
+        $this->options[$option] = $value;
+        return $this;
     }
 
-    public function withPrefix(string $prefix): self
+    public function setOptions(array $options): self
     {
-        $this->prefix = $prefix;
+        $this->options = $options;
         return $this;
+    }
+
+    public function getOptions(): array
+    {
+        return $this->options;
     }
 }
