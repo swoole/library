@@ -29,6 +29,9 @@ class RedisConfig
 
     protected int $dbIndex = 0;
 
+    /**
+     * @var array<int, mixed>
+     */
     protected array $options = [];
 
     public function getHost(): string
@@ -119,18 +122,31 @@ class RedisConfig
         return $this;
     }
 
+    /**
+     * Add a configurable option.
+     */
     public function withOption(int $option, mixed $value): self
     {
         $this->options[$option] = $value;
         return $this;
     }
 
+    /**
+     * Add/override configurable options.
+     *
+     * @param array<int, mixed> $options
+     */
     public function setOptions(array $options): self
     {
         $this->options = $options;
         return $this;
     }
 
+    /**
+     * Get configurable options.
+     *
+     * @return array<int, mixed>
+     */
     public function getOptions(): array
     {
         return $this->options;

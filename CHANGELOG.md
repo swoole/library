@@ -15,6 +15,7 @@ Fixed:
 Changed:
 
 * MR swoole/library#160 : Allow to pass array key/index to the callback function of function _\Swoole\Coroutine::map()_. (by @maxiaozhi )
+* MR swoole/library#166 : Support configurable options for _Redis_. (by @sy-records )
 * Improved type declarations and return types.
 
 ## 5.1.1 (2023-11-26)
