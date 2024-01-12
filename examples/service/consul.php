@@ -16,7 +16,7 @@ use function Swoole\Coroutine\run;
 const SERVICE_NAME = 'test_service';
 
 run(function () {
-    $c = new \Swoole\NameResolver\Consul('http://127.0.0.1:8500');
+    $c = new Swoole\NameResolver\Consul('http://127.0.0.1:8500');
     $c->join('test_service', '127.0.0.1', 9502);
     var_dump($c->resolve(SERVICE_NAME));
 });
