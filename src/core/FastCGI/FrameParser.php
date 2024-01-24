@@ -12,6 +12,17 @@ declare(strict_types=1);
 namespace Swoole\FastCGI;
 
 use Swoole\FastCGI;
+use Swoole\FastCGI\Record\AbortRequest;
+use Swoole\FastCGI\Record\BeginRequest;
+use Swoole\FastCGI\Record\Data;
+use Swoole\FastCGI\Record\EndRequest;
+use Swoole\FastCGI\Record\GetValues;
+use Swoole\FastCGI\Record\GetValuesResult;
+use Swoole\FastCGI\Record\Params;
+use Swoole\FastCGI\Record\Stderr;
+use Swoole\FastCGI\Record\Stdin;
+use Swoole\FastCGI\Record\Stdout;
+use Swoole\FastCGI\Record\UnknownType;
 
 /**
  * Utility class to simplify parsing of FastCGI protocol data.
@@ -24,17 +35,17 @@ class FrameParser
      * @var array
      */
     protected static $classMapping = [
-        FastCGI::BEGIN_REQUEST     => FastCGI\Record\BeginRequest::class,
-        FastCGI::ABORT_REQUEST     => FastCGI\Record\AbortRequest::class,
-        FastCGI::END_REQUEST       => FastCGI\Record\EndRequest::class,
-        FastCGI::PARAMS            => FastCGI\Record\Params::class,
-        FastCGI::STDIN             => FastCGI\Record\Stdin::class,
-        FastCGI::STDOUT            => FastCGI\Record\Stdout::class,
-        FastCGI::STDERR            => FastCGI\Record\Stderr::class,
-        FastCGI::DATA              => FastCGI\Record\Data::class,
-        FastCGI::GET_VALUES        => FastCGI\Record\GetValues::class,
-        FastCGI::GET_VALUES_RESULT => FastCGI\Record\GetValuesResult::class,
-        FastCGI::UNKNOWN_TYPE      => FastCGI\Record\UnknownType::class,
+        FastCGI::BEGIN_REQUEST     => BeginRequest::class,
+        FastCGI::ABORT_REQUEST     => AbortRequest::class,
+        FastCGI::END_REQUEST       => EndRequest::class,
+        FastCGI::PARAMS            => Params::class,
+        FastCGI::STDIN             => Stdin::class,
+        FastCGI::STDOUT            => Stdout::class,
+        FastCGI::STDERR            => Stderr::class,
+        FastCGI::DATA              => Data::class,
+        FastCGI::GET_VALUES        => GetValues::class,
+        FastCGI::GET_VALUES_RESULT => GetValuesResult::class,
+        FastCGI::UNKNOWN_TYPE      => UnknownType::class,
     ];
 
     /**

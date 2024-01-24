@@ -14,6 +14,8 @@ namespace Swoole\Coroutine\FastCGI;
 use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
 use Swoole\Http;
+use Swoole\Http\Request as SwooleHttpRequest;
+use Swoole\Http\Response as SwooleHttpResponse;
 
 class Proxy
 {
@@ -109,7 +111,7 @@ class Proxy
     public function translateRequest($userRequest): HttpRequest
     {
         $request = new HttpRequest();
-        if ($userRequest instanceof \Swoole\Http\Request) {
+        if ($userRequest instanceof SwooleHttpRequest) {
             $server   = $userRequest->server;
             $headers  = $userRequest->header;
             $pathInfo = $userRequest->server['path_info'];
@@ -155,7 +157,7 @@ class Proxy
 
     public function translateResponse(HttpResponse $response, $userResponse): void
     {
-        if ($userResponse instanceof \Swoole\Http\Response) {
+        if ($userResponse instanceof SwooleHttpResponse) {
             $userResponse->status($response->getStatusCode(), $response->getReasonPhrase());
             $userResponse->header = $response->getHeaders();
             $userResponse->cookie = $response->getSetCookieHeaderLines();
@@ -187,7 +189,7 @@ class Proxy
     /* @return bool ['hit' => true, 'miss' => false] */
     public function staticFileFiltrate(HttpRequest $request, $userResponse): bool
     {
-        if ($userResponse instanceof \Swoole\Http\Response) {
+        if ($userResponse instanceof SwooleHttpResponse) {
             $extension = pathinfo($request->getScriptFilename(), PATHINFO_EXTENSION);
             if ($extension !== 'php') {
                 $realPath = realpath($request->getScriptFilename());

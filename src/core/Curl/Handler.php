@@ -409,7 +409,7 @@ final class Handler implements \Stringable
                 break;
             case CURLOPT_PROXYTYPE:
                 if ($value !== CURLPROXY_HTTP and $value !== CURLPROXY_SOCKS5) {
-                    throw new Swoole\Curl\Exception('swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE values: CURLPROXY_HTTP, CURLPROXY_SOCKS5');
+                    throw new CurlException('swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE values: CURLPROXY_HTTP, CURLPROXY_SOCKS5');
                 }
                 $this->proxyType = $value;
                 break;
@@ -466,7 +466,7 @@ final class Handler implements \Stringable
                 break;
             case CURLOPT_IPRESOLVE:
                 if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V4) {
-                    throw new Swoole\Curl\Exception('swoole_curl_setopt(): Only support following CURLOPT_IPRESOLVE values: CURL_IPRESOLVE_WHATEVER, CURL_IPRESOLVE_V4');
+                    throw new CurlException('swoole_curl_setopt(): Only support following CURLOPT_IPRESOLVE values: CURL_IPRESOLVE_WHATEVER, CURL_IPRESOLVE_V4');
                 }
                 break;
             case CURLOPT_TCP_NODELAY:
@@ -676,7 +676,7 @@ final class Handler implements \Stringable
                 $this->method = 'GET';
                 break;
             default:
-                throw new Swoole\Curl\Exception("swoole_curl_setopt(): option[{$opt}] is not supported");
+                throw new CurlException("swoole_curl_setopt(): option[{$opt}] is not supported");
         }
         return true;
     }
