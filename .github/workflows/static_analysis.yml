@@ -22,7 +22,7 @@ jobs:
           SWOOLE_CONFIGURE_OPTS: --enable-mysqlnd --enable-swoole-pgsql --enable-openssl --enable-sockets --enable-swoole-curl
 
       - name: Install PHPStan
-        uses: nick-invision/retry@v2
+        uses: nick-invision/retry@v3
         with:
           timeout_minutes: 5
           max_attempts: 5
