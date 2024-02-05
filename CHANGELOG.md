@@ -1,3 +1,9 @@
+## 5.2.0 (TBD)
+
+Changed:
+
+* Refactor: Rename parameter in method `\Swoole\Database\PDOStatementProxy::setFetchMode()` for consistency.
+
 ## 5.1.2 (2024-01-24)
 
 Built-in PHP library included in [Swoole v5.1.2](https://github.com/swoole/swoole-src/releases/tag/v5.1.2).
