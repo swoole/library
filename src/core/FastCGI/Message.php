@@ -58,7 +58,7 @@ class Message
         return $this->body;
     }
 
-    public function withBody($body): self
+    public function withBody(string|\Stringable $body): self
     {
         $this->body = (string) $body;
         return $this;

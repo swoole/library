@@ -33,7 +33,7 @@ class HttpResponse extends Response
     public function __construct(array $records = [])
     {
         parent::__construct($records);
-        $body = (string) $this->getBody();
+        $body = $this->getBody();
         if (strlen($body) === 0) {
             return;
         }
