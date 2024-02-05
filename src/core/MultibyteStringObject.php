@@ -46,9 +46,9 @@ class MultibyteStringObject extends StringObject
     /**
      * @see https://www.php.net/mb_substr
      */
-    public function substr(int $start, ?int $length = null, ?string $encoding = null): self
+    public function substr(int $start, ?int $length = null, ?string $encoding = null): static
     {
-        return new self(mb_substr($this->string, $start, $length, $encoding));
+        return new static(mb_substr($this->string, $start, $length, $encoding)); // @phpstan-ignore new.static
     }
 
     /**
