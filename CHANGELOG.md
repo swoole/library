@@ -3,6 +3,8 @@
 Changed:
 
 * Refactor: Rename parameter in method `\Swoole\Database\PDOStatementProxy::setFetchMode()` for consistency.
+* Refactor: Rename parameter in method `\Swoole\MultibyteStringObject::substr()` for consistency.
+* Refactor: Enhance method `\Swoole\FastCGI\Message::withBody()` with explicit parameter type.
 
 ## 5.1.2 (2024-01-24)
 

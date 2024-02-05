@@ -44,14 +44,11 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @todo First parameter will be renamed to $start in Swoole 5.2+.
-     * @todo This method will be refactored and marked as final in Swoole 5.2+.
-     *       1. It should use keyword self instead of static.
-     *       2. Don't use function func_get_args().
+     * @see https://www.php.net/mb_substr
      */
-    public function substr(int $offset, ?int $length = null, ?string $encoding = null): static
+    public function substr(int $start, ?int $length = null, ?string $encoding = null): self
     {
-        return new static(mb_substr($this->string, ...func_get_args())); // @phpstan-ignore new.static
+        return new self(mb_substr($this->string, $start, $length, $encoding));
     }
 
     /**

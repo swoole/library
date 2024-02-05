@@ -107,7 +107,7 @@ class StringObject implements \Stringable
      */
     public function substr(int $offset, ?int $length = null)
     {
-        return new static(substr($this->string, ...func_get_args())); // @phpstan-ignore new.static
+        return new static(substr($this->string, $offset, $length)); // @phpstan-ignore new.static
     }
 
     public function repeat(int $times): static
