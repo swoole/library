@@ -1,5 +1,7 @@
 ## 5.1.2 (2024-01-24)
 
+Built-in PHP library included in [Swoole v5.1.2](https://github.com/swoole/swoole-src/releases/tag/v5.1.2).
+
 Removed:
 
 * Dropped support for PHP 7 (from PHP 7.2 to 7.4). PHP 7 is not supported in Swoole v5.0.0 and later; there is no need to support PHP 7 in Swoole Library anymore.
