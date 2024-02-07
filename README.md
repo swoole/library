@@ -7,30 +7,28 @@
 
 ## Dockerized Local Development
 
-First, run the following command to install development packages using _Composer_:
+First, run one of the following commands to install development packages using _Composer_:
 
 ```bash
-composer install --ignore-platform-reqs
-# or,
-docker compose run --rm composer install --ignore-platform-reqs
+docker run --rm -v "$(pwd)":/var/www -ti phpswoole/swoole composer update -n
+
+# or, use the official Composer Docker image:
+docker run --rm -v "$(pwd)":/app -ti composer update -n --ignore-platform-reqs
+
+# or, use the local Composer if installed:
+composer update -n --ignore-platform-reqs
 ```
 
-Next, you need to build the base image:
-
-```bash
-docker compose build image
-```
-
-Then run the next command to start Docker containers:
+Next, you need to start Docker containers:
 
 ```bash
 docker compose up -d
 ```
 
-Alternatively, if you need to rebuild the service(s) and to restart the containers:
+Alternatively, if you need to rebuild some Docker image and to restart the containers:
 
 ```bash
-docker compose build image --no-cache
+docker compose build --progress plain --no-cache
 docker compose up -d --force-recreate
 ```
 
