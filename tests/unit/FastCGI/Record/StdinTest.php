@@ -20,20 +20,22 @@ use Swoole\FastCGI;
  */
 class StdinTest extends TestCase
 {
-    protected static $rawMessage = '01050001000404007465737400000000';
+    protected static string $rawMessage = '01050001000404007465737400000000';
 
     public function testPacking(): void
     {
         $request = new Stdin('test');
-        $this->assertEquals($request->getContentData(), 'test');
-        $this->assertEquals($request->getType(), FastCGI::STDIN);
+        $this->assertEquals('test', $request->getContentData());
+        $this->assertEquals(FastCGI::STDIN, $request->getType());
         $this->assertSame(self::$rawMessage, bin2hex((string) $request));
     }
 
     public function testUnpacking(): void
     {
-        $request = Stdin::unpack(hex2bin(self::$rawMessage));
-        $this->assertEquals($request->getType(), FastCGI::STDIN);
-        $this->assertEquals($request->getContentData(), 'test');
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = Stdin::unpack($binaryData);
+        $this->assertEquals(FastCGI::STDIN, $request->getType());
+        $this->assertEquals('test', $request->getContentData());
     }
 }

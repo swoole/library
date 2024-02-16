@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class BeginRequestTest extends TestCase
 {
-    protected static $rawMessage = '01010001000800000001010000000000';
+    protected static string $rawMessage = '01010001000800000001010000000000';
 
     public function testPacking(): void
     {
@@ -34,7 +34,9 @@ class BeginRequestTest extends TestCase
 
     public function testUnpacking(): void
     {
-        $request = BeginRequest::unpack(hex2bin(self::$rawMessage));
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = BeginRequest::unpack($binaryData);
 
         $this->assertEquals(FastCGI::BEGIN_REQUEST, $request->getType());
         $this->assertEquals(FastCGI::RESPONDER, $request->getRole());

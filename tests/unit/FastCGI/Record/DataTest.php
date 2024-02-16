@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class DataTest extends TestCase
 {
-    protected static $rawMessage = '01080001000404007465737400000000';
+    protected static string $rawMessage = '01080001000404007465737400000000';
 
     public function testPacking(): void
     {
@@ -32,7 +32,9 @@ class DataTest extends TestCase
 
     public function testUnpacking(): void
     {
-        $request = Data::unpack(hex2bin(self::$rawMessage));
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = Data::unpack($binaryData);
         $this->assertEquals(FastCGI::DATA, $request->getType());
         $this->assertEquals('test', $request->getContentData());
     }

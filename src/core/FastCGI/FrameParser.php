@@ -32,9 +32,9 @@ class FrameParser
     /**
      * Mapping of constants to the classes
      *
-     * @var array
+     * @phpstan-var array<int, class-string>
      */
-    protected static $classMapping = [
+    protected static array $classMapping = [
         FastCGI::BEGIN_REQUEST     => BeginRequest::class,
         FastCGI::ABORT_REQUEST     => AbortRequest::class,
         FastCGI::END_REQUEST       => EndRequest::class,
@@ -50,17 +50,19 @@ class FrameParser
 
     /**
      * Checks if the buffer contains a valid frame to parse
-     *
-     * @param string $buffer Binary buffer
      */
-    public static function hasFrame(string $buffer): bool
+    public static function hasFrame(string $binaryBuffer): bool
     {
-        $bufferLength = strlen($buffer);
+        $bufferLength = strlen($binaryBuffer);
         if ($bufferLength < FastCGI::HEADER_LEN) {
             return false;
         }
 
-        $fastInfo = unpack(FastCGI::HEADER_FORMAT, $buffer);
+        /** @phpstan-var false|array{version: int, type: int, requestId: int, contentLength: int, paddingLength: int} */
+        $fastInfo = unpack(FastCGI::HEADER_FORMAT, $binaryBuffer);
+        if ($fastInfo === false) {
+            throw new \RuntimeException('Can not unpack data from the binary buffer');
+        }
         if ($bufferLength < FastCGI::HEADER_LEN + $fastInfo['contentLength'] + $fastInfo['paddingLength']) {
             return false;
         }
@@ -71,28 +73,30 @@ class FrameParser
     /**
      * Parses a frame from the binary buffer
      *
-     * @param string $buffer Binary buffer
-     *
      * @return Record One of the corresponding FastCGI record
      */
-    public static function parseFrame(string &$buffer): Record
+    public static function parseFrame(string &$binaryBuffer): Record
     {
-        $bufferLength = strlen($buffer);
+        $bufferLength = strlen($binaryBuffer);
         if ($bufferLength < FastCGI::HEADER_LEN) {
             throw new \RuntimeException('Not enough data in the buffer to parse');
         }
-        $recordHeader = unpack(FastCGI::HEADER_FORMAT, $buffer);
-        $recordType   = $recordHeader['type'];
+        /** @phpstan-var false|array{version: int, type: int, requestId: int, contentLength: int, paddingLength: int} */
+        $recordHeader = unpack(FastCGI::HEADER_FORMAT, $binaryBuffer);
+        if ($recordHeader === false) {
+            throw new \RuntimeException('Can not unpack data from the binary buffer');
+        }
+        $recordType = $recordHeader['type'];
         if (!isset(self::$classMapping[$recordType])) {
             throw new \DomainException("Invalid FastCGI record type {$recordType} received");
         }
 
         /** @var Record $className */
         $className = self::$classMapping[$recordType];
-        $record    = $className::unpack($buffer);
+        $record    = $className::unpack($binaryBuffer);
 
-        $offset = FastCGI::HEADER_LEN + $record->getContentLength() + $record->getPaddingLength();
-        $buffer = substr($buffer, $offset);
+        $offset       = FastCGI::HEADER_LEN + $record->getContentLength() + $record->getPaddingLength();
+        $binaryBuffer = substr($binaryBuffer, $offset);
 
         return $record;
     }

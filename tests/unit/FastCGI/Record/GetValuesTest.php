@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class GetValuesTest extends TestCase
 {
-    protected static $rawMessage = '01090001001107000f00464347495f4d5058535f434f4e4e5300000000000000';
+    protected static string $rawMessage = '01090001001107000f00464347495f4d5058535f434f4e4e5300000000000000';
 
     public function testPacking(): void
     {
@@ -33,7 +33,9 @@ class GetValuesTest extends TestCase
 
     public function testUnpacking(): void
     {
-        $request = GetValues::unpack(hex2bin(self::$rawMessage));
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = GetValues::unpack($binaryData);
 
         $this->assertEquals(FastCGI::GET_VALUES, $request->getType());
         $this->assertEquals(['FCGI_MPXS_CONNS' => ''], $request->getValues());

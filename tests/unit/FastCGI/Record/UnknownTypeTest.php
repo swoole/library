@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class UnknownTypeTest extends TestCase
 {
-    protected static $rawMessage = '010b0001000800002a57544621000000';
+    protected static string $rawMessage = '010b0001000800002a57544621000000';
 
     public function testPacking(): void
     {
@@ -33,7 +33,9 @@ class UnknownTypeTest extends TestCase
 
     public function testUnpacking(): void
     {
-        $request = UnknownType::unpack(hex2bin(self::$rawMessage));
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = UnknownType::unpack($binaryData);
 
         $this->assertEquals(FastCGI::UNKNOWN_TYPE, $request->getType());
         $this->assertEquals(42, $request->getUnrecognizedType());

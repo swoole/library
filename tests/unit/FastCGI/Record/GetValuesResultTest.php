@@ -20,22 +20,24 @@ use Swoole\FastCGI;
  */
 class GetValuesResultTest extends TestCase
 {
-    protected static $rawMessage = '010a0001001206000f01464347495f4d5058535f434f4e4e5331000000000000';
+    protected static string $rawMessage = '010a0001001206000f01464347495f4d5058535f434f4e4e5331000000000000';
 
     public function testPacking(): void
     {
-        $request = new GetValuesResult(['FCGI_MPXS_CONNS' => 1]);
+        $request = new GetValuesResult(['FCGI_MPXS_CONNS' => '1']);
         $this->assertEquals(FastCGI::GET_VALUES_RESULT, $request->getType());
-        $this->assertEquals(['FCGI_MPXS_CONNS' => 1], $request->getValues());
+        $this->assertEquals(['FCGI_MPXS_CONNS' => '1'], $request->getValues());
 
         $this->assertSame(self::$rawMessage, bin2hex((string) $request));
     }
 
     public function testUnpacking(): void
     {
-        $request = GetValuesResult::unpack(hex2bin(self::$rawMessage));
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = GetValuesResult::unpack($binaryData);
 
         $this->assertEquals(FastCGI::GET_VALUES_RESULT, $request->getType());
-        $this->assertEquals(['FCGI_MPXS_CONNS' => 1], $request->getValues());
+        $this->assertEquals(['FCGI_MPXS_CONNS' => '1'], $request->getValues());
     }
 }

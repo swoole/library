@@ -20,7 +20,7 @@ use Swoole\FastCGI;
  */
 class AbortRequestTest extends TestCase
 {
-    protected static $rawMessage = '0102000100000000';
+    protected static string $rawMessage = '0102000100000000';
 
     public function testPacking(): void
     {
@@ -33,7 +33,9 @@ class AbortRequestTest extends TestCase
 
     public function testUnpacking(): void
     {
-        $request = AbortRequest::unpack(hex2bin(self::$rawMessage));
+        /** @var string $binaryData */
+        $binaryData = hex2bin(self::$rawMessage);
+        $request    = AbortRequest::unpack($binaryData);
         $this->assertEquals(FastCGI::ABORT_REQUEST, $request->getType());
         $this->assertEquals(1, $request->getRequestId());
     }
