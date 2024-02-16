@@ -17,8 +17,6 @@ use Swoole\FastCGI\FrameParser;
 use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
 use Swoole\FastCGI\Record\EndRequest;
-use Swoole\FastCGI\Record\Stderr;
-use Swoole\FastCGI\Record\Stdout;
 use Swoole\FastCGI\Request;
 use Swoole\FastCGI\Response;
 
@@ -93,11 +91,8 @@ class Client
                     $this->socket->close();
                     $this->socket = null;
                 }
-                /* @var array<Stdout|Stderr|EndRequest> $records */
-                return match (true) {
-                    $request instanceof HttpRequest => new HttpResponse($records),
-                    default                         => new Response($records),
-                };
+                // @phpstan-ignore argument.type,argument.type
+                return ($request instanceof HttpRequest) ? new HttpResponse($records) : new Response($records);
             }
         }
 
