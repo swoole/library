@@ -1,11 +1,15 @@
 ## 5.2.0 (TBD)
 
+Fixed:
+
+* Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse().
+
 Changed:
 
 * Refactor: Rename parameter in method `\Swoole\Database\PDOStatementProxy::setFetchMode()` for consistency.
 * Refactor: Rename parameter in method `\Swoole\MultibyteStringObject::substr()` for consistency.
 * Refactor: Enhance method `\Swoole\FastCGI\Message::withBody()` with explicit parameter type.
-* Cumulative updates from package [lisachenko/protocol-fcgi].
+* FastCGI: Make constructor argument required for records. ([commit](https://github.com/swoole/library/commit/497bb74eaad51f661c91bc936f976b8660ce716c))
 
 ## 5.1.2 (2024-01-24)
 
@@ -51,5 +55,3 @@ Fixed:
 ## 5.0.3 (2023-04-26)
 
 Built-in PHP library included in [Swoole v5.0.3](https://github.com/swoole/swoole-src/releases/tag/v5.0.3).
-
-[lisachenko/protocol-fcgi]: https://github.com/lisachenko/protocol-fcgi

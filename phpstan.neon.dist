@@ -8,7 +8,6 @@ parameters:
     - '#Call to an undefined static method Swoole\\Coroutine\\Socket::import\(\).#'
     - '#Access to an undefined property Swoole\\Coroutine\\Socket::\$__ext_sockets_timeout.#'
     - '#Access to an undefined property Swoole\\Coroutine\\Socket::\$__ext_sockets_nonblock.#'
-    - '#Access to an undefined property Swoole\\Coroutine\\Http\\ClientProxy::\$errCode.#'
     - '#Property Swoole\\Server::\$admin_server \(Swoole\\Coroutine\\Http\\Server\) does not accept null.#'
     - '#Return type \(Swoole\\StringObject\) of method Swoole\\ArrayObject::serialize\(\) should be compatible with return type \(string\|null\) of method Serializable::serialize\(\)#'
     - '#Parameter \#1 \$object of function spl_object_hash expects object, array given.#'

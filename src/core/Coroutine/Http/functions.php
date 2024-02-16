@@ -58,15 +58,9 @@ function request_with_http_client(
     if ($data) {
         $client->setData($data);
     }
-    if (is_array($options)) {
-        $client->set($options);
-    }
-    if (is_array($headers)) {
-        $client->setHeaders($headers);
-    }
-    if (is_array($cookies)) {
-        $client->setCookies($cookies);
-    }
+    $client->set($options ?: []);
+    $client->setHeaders($headers ?: []);
+    $client->setCookies($cookies ?: []);
     $request_url = swoole_array_default_value($info, 'path', '/');
     if (!empty($info['query'])) {
         $request_url .= '?' . $info['query'];
