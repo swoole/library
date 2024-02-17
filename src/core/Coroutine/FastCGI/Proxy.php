@@ -159,7 +159,7 @@ class Proxy
         $userResponse->end($response->getBody());
     }
 
-    public function pass($userRequest, $userResponse): void
+    public function pass(SwooleHttpRequest|HttpRequest $userRequest, SwooleHttpResponse $userResponse): void
     {
         if (!$userRequest instanceof HttpRequest) {
             $request = $this->translateRequest($userRequest);
@@ -173,8 +173,7 @@ class Proxy
                 return;
             }
         }
-        $client   = new Client($this->host, $this->port);
-        $response = $client->execute($request, $this->timeout);
+        $response = (new Client($this->host, $this->port))->execute($request, $this->timeout);
         $this->translateResponse($response, $userResponse);
     }
 
