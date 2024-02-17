@@ -2,7 +2,7 @@
 
 Fixed:
 
-* Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse().
+* Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse(). ([commit](https://github.com/swoole/library/commit/7a6396e45f4d4517a049584a746285d6501cf71d))
 
 Changed:
 

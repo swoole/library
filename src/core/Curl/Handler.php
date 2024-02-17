@@ -204,10 +204,10 @@ final class Handler implements \Stringable
         return $this->transfer;
     }
 
-    public function close()
+    public function close(): void
     {
         if (!$this->isAvailable()) {
-            return false;
+            return;
         }
         foreach ($this as &$property) {
             $property = null;
