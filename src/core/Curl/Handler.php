@@ -176,14 +176,14 @@ final class Handler implements \Stringable
         return $this->isAvailable() ? $this->info : false;
     }
 
-    public function errno()
+    public function errno(): int
     {
-        return $this->isAvailable() ? $this->errCode : false;
+        return $this->isAvailable() ? $this->errCode : 0;
     }
 
-    public function error()
+    public function error(): string
     {
-        return $this->isAvailable() ? $this->errMsg : false;
+        return $this->isAvailable() ? $this->errMsg : '';
     }
 
     public function reset()
