@@ -3,12 +3,15 @@
 Fixed:
 
 * Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse(). ([commit](https://github.com/swoole/library/commit/7a6396e45f4d4517a049584a746285d6501cf71d))
+* Fix the implementation of method `\Swoole\MultibyteStringObject::chunk()`.
 
 Changed:
 
 * Refactor: Rename parameter in method `\Swoole\Database\PDOStatementProxy::setFetchMode()` for consistency.
 * Refactor: Rename parameter in method `\Swoole\MultibyteStringObject::substr()` for consistency.
 * Refactor: Enhance method `\Swoole\FastCGI\Message::withBody()` with explicit parameter type.
+* Refactor: Rename parameter and default value of method `\Swoole\StringObject::chunkSplit()` for consistency.
+* Refactor: Rename parameter in method `\Swoole\StringObject::chunk()` for consistency.
 * FastCGI: Make constructor argument required for records. ([commit](https://github.com/swoole/library/commit/497bb74eaad51f661c91bc936f976b8660ce716c))
 
 ## 5.1.2 (2024-01-24)

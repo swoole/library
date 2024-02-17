@@ -52,10 +52,11 @@ class MultibyteStringObject extends StringObject
     }
 
     /**
-     * @todo This method is not implemented correctly.
+     * {@inheritDoc}
+     * @see https://www.php.net/mb_str_split
      */
-    public function chunk(int $splitLength = 1, ?int $limit = null): ArrayObject
+    public function chunk(int $length = 1): ArrayObject
     {
-        return static::detectArrayType(mb_split($this->string, ...func_get_args()));
+        return static::detectArrayType(mb_str_split($this->string, $length));
     }
 }
