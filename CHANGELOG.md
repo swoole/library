@@ -3,15 +3,16 @@
 Fixed:
 
 * Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse(). ([commit](https://github.com/swoole/library/commit/7a6396e45f4d4517a049584a746285d6501cf71d))
-* Fix the implementation of method `\Swoole\MultibyteStringObject::chunk()`.
+* Fix the implementation of method `\Swoole\MultibyteStringObject::chunk()`. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
+* Connection pool in Swoole does not support in-memory or temporary SQLite databases.
 
 Changed:
 
 * Refactor: Rename parameter in method `\Swoole\Database\PDOStatementProxy::setFetchMode()` for consistency.
 * Refactor: Rename parameter in method `\Swoole\MultibyteStringObject::substr()` for consistency.
 * Refactor: Enhance method `\Swoole\FastCGI\Message::withBody()` with explicit parameter type.
-* Refactor: Rename parameter and default value of method `\Swoole\StringObject::chunkSplit()` for consistency.
-* Refactor: Rename parameter in method `\Swoole\StringObject::chunk()` for consistency.
+* Refactor: Rename parameter and default value of method `\Swoole\StringObject::chunkSplit()` for consistency. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
+* Refactor: Rename parameter in method `\Swoole\StringObject::chunk()` for consistency. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
 * FastCGI: Make constructor argument required for records. ([commit](https://github.com/swoole/library/commit/497bb74eaad51f661c91bc936f976b8660ce716c))
 
 ## 5.1.2 (2024-01-24)

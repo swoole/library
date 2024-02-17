@@ -60,6 +60,16 @@ class PDOPool extends ConnectionPool
                 $dsn = 'oci:dbname=' . ($this->config->hasUnixSocket() ? $this->config->getUnixSocket() : $this->config->getHost()) . ':' . $this->config->getPort() . '/' . $this->config->getDbname() . ';charset=' . $this->config->getCharset();
                 break;
             case 'sqlite':
+                // There are three types of SQLite databases: databases on disk, databases in memory, and temporary
+                // databases (which are deleted when the connections are closed). It doesn't make sense to use
+                // connection pool for the latter two types of databases, because each connection connects to a
+                //different in-memory or temporary SQLite database.
+                if ($this->config->getDbname() === '') {
+                    throw new \Exception('Connection pool in Swoole does not support temporary SQLite databases.');
+                }
+                if ($this->config->getDbname() === ':memory:') {
+                    throw new \Exception('Connection pool in Swoole does not support creating SQLite databases in memory.');
+                }
                 $dsn = 'sqlite:' . $this->config->getDbname();
                 break;
             default:

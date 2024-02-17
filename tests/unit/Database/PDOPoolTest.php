@@ -29,6 +29,25 @@ class PDOPoolTest extends TestCase
 {
     use HookFlagsTrait;
 
+    protected static $sqliteDatabaseFile;
+
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        self::$sqliteDatabaseFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'swoole_pdo_pool_sqlite_test.db';
+        if (file_exists(self::$sqliteDatabaseFile)) {
+            unlink(self::$sqliteDatabaseFile);
+        }
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        if (file_exists(self::$sqliteDatabaseFile)) {
+            unlink(self::$sqliteDatabaseFile);
+        }
+        parent::tearDownAfterClass();
+    }
+
     public function testPutWhenErrorHappens()
     {
         self::saveHookFlags();
@@ -108,6 +127,7 @@ class PDOPoolTest extends TestCase
             }
 
             $waitGroup->wait();
+            $pool->close();
             self::restoreHookFlags();
         });
     }
@@ -157,6 +177,7 @@ class PDOPoolTest extends TestCase
             }
 
             $waitGroup->wait();
+            $pool->close();
             self::restoreHookFlags();
         });
     }
@@ -166,11 +187,8 @@ class PDOPoolTest extends TestCase
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
         run(function () {
-            $config = (new PDOConfig())
-                ->withDriver('sqlite')
-                ->withHost('sqlite::memory:')
-            ;
-            $pool = new PDOPool($config, 10);
+            $config = (new PDOConfig())->withDriver('sqlite')->withDbname(self::$sqliteDatabaseFile);
+            $pool   = new PDOPool($config, 10);
 
             $pdo = $pool->get();
             $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
@@ -194,6 +212,7 @@ class PDOPoolTest extends TestCase
             }
 
             $waitGroup->wait();
+            $pool->close();
             self::restoreHookFlags();
         });
     }
