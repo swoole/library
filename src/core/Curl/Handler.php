@@ -21,7 +21,10 @@ use Swoole\Http\Status;
 
 final class Handler implements \Stringable
 {
-    private ?Client $client;
+    /**
+     * @var Client|null
+     */
+    private $client;
 
     private $info = [
         'url'                     => '',
@@ -302,7 +305,7 @@ final class Handler implements \Stringable
             $urlInfo['port'] = intval($urlInfo['port']);
         }
         $port = $urlInfo['port'];
-        if ($this->client) {
+        if (isset($this->client)) {
             $oldUrlInfo = $this->urlInfo;
             if (($host !== $oldUrlInfo['host']) || ($port !== $oldUrlInfo['port']) || ($scheme !== $oldUrlInfo['scheme'])) {
                 /* target changed */
@@ -318,7 +321,7 @@ final class Handler implements \Stringable
         $this->info['primary_port'] = $port;
         if (!isset($this->urlInfo['port']) || $this->urlInfo['port'] !== $port) {
             $this->urlInfo['port'] = $port;
-            if ($this->client) {
+            if (isset($this->client)) {
                 /* target changed */
                 $this->create();
             }
@@ -383,7 +386,7 @@ final class Handler implements \Stringable
                 $this->clientOptions[Constant::OPTION_KEEP_ALIVE] = !$value;
                 break;
             case CURLOPT_RETURNTRANSFER:
-                $this->returnTransfer = $value;
+                $this->returnTransfer = (bool) $value;
                 $this->transfer       = '';
                 break;
             case CURLOPT_ENCODING:
@@ -690,7 +693,7 @@ final class Handler implements \Stringable
             $this->setError(CURLE_URL_MALFORMAT, 'No URL set or URL using bad/illegal format');
             return false;
         }
-        if (!$this->client) {
+        if (!isset($this->client)) {
             $this->create();
         }
         while (true) {

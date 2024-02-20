@@ -4,7 +4,7 @@ Fixed:
 
 * Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse(). ([commit](https://github.com/swoole/library/commit/7a6396e45f4d4517a049584a746285d6501cf71d))
 * Fix the implementation of method `\Swoole\MultibyteStringObject::chunk()`. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
-* Connection pool in Swoole does not support in-memory or temporary SQLite databases.
+* Connection pool in Swoole does not support in-memory or temporary SQLite databases. ([commit](https://github.com/swoole/library/commit/eaf6a43f2fdd403e7d4968fd6f4bd0d1b05e48c3))
 
 Changed:
 

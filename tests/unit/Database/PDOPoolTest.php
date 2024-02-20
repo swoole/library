@@ -29,7 +29,7 @@ class PDOPoolTest extends TestCase
 {
     use HookFlagsTrait;
 
-    protected static $sqliteDatabaseFile;
+    protected static string $sqliteDatabaseFile;
 
     public static function setUpBeforeClass(): void
     {
