@@ -21,10 +21,7 @@ use Swoole\Http\Status;
 
 final class Handler implements \Stringable
 {
-    /**
-     * @var Client
-     */
-    private $client;
+    private ?Client $client;
 
     private $info = [
         'url'                     => '',
@@ -96,13 +93,13 @@ final class Handler implements \Stringable
 
     private $nobody = false;
 
-    /** @var callable */
+    /** @var callable|null */
     private $headerFunction;
 
-    /** @var callable */
+    /** @var callable|null */
     private $readFunction;
 
-    /** @var callable */
+    /** @var callable|null */
     private $writeFunction;
 
     private $noProgress = true;
@@ -209,7 +206,7 @@ final class Handler implements \Stringable
         if (!$this->isAvailable()) {
             return;
         }
-        foreach ($this as &$property) {
+        foreach ($this as &$property) { // @phpstan-ignore foreach.nonIterable
             $property = null;
         }
         $this->closed = true;
@@ -924,7 +921,7 @@ final class Handler implements \Stringable
         }
 
         if ($this->writeFunction) {
-            if (!is_callable($this->writeFunction)) {
+            if (!is_callable($this->writeFunction)) { // @phpstan-ignore booleanNot.alwaysFalse
                 trigger_error('curl_exec(): Could not call the CURLOPT_WRITEFUNCTION', E_USER_WARNING);
                 $this->setError(CURLE_WRITE_ERROR, 'Failure writing output to destination');
                 return false;

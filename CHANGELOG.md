@@ -13,6 +13,7 @@ Changed:
 * Refactor: Enhance method `\Swoole\FastCGI\Message::withBody()` with explicit parameter type.
 * Refactor: Rename parameter and default value of method `\Swoole\StringObject::chunkSplit()` for consistency. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
 * Refactor: Rename parameter in method `\Swoole\StringObject::chunk()` for consistency. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
+* Refactor: Method `\Swoole\ArrayObject::serialize()` returns string instead of stringable object. ([commit](https://github.com/swoole/library/commit/7a08418b2470284418b49268a5469931315a3fdc))
 * FastCGI: Make constructor argument required for records. ([commit](https://github.com/swoole/library/commit/497bb74eaad51f661c91bc936f976b8660ce716c))
 
 ## 5.1.2 (2024-01-24)

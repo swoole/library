@@ -2,12 +2,3 @@ parameters:
   level: 5
   paths:
     - ./src
-  excludePaths:
-    - src/core/Curl/Handler.php
-  ignoreErrors:
-    - '#Call to an undefined static method Swoole\\Coroutine\\Socket::import\(\).#'
-    - '#Access to an undefined property Swoole\\Coroutine\\Socket::\$__ext_sockets_timeout.#'
-    - '#Access to an undefined property Swoole\\Coroutine\\Socket::\$__ext_sockets_nonblock.#'
-    - '#Property Swoole\\Server::\$admin_server \(Swoole\\Coroutine\\Http\\Server\) does not accept null.#'
-    - '#Return type \(Swoole\\StringObject\) of method Swoole\\ArrayObject::serialize\(\) should be compatible with return type \(string\|null\) of method Serializable::serialize\(\)#'
-    - '#Parameter \#1 \$object of function spl_object_hash expects object, array given.#'

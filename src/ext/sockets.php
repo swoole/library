@@ -212,9 +212,9 @@ function swoole_socket_set_block(Socket $socket)
         return false;
     }
     if (isset($socket->__ext_sockets_nonblock) and $socket->__ext_sockets_nonblock) {
-        $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, $socket->__ext_sockets_timeout);
+        $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, $socket->__ext_sockets_timeout); // @phpstan-ignore property.notFound
     }
-    $socket->__ext_sockets_nonblock = false;
+    $socket->__ext_sockets_nonblock = false; // @phpstan-ignore property.notFound
     return true;
 }
 
@@ -226,8 +226,8 @@ function swoole_socket_set_nonblock(Socket $socket)
     if (isset($socket->__ext_sockets_nonblock) and $socket->__ext_sockets_nonblock) {
         return true;
     }
-    $socket->__ext_sockets_nonblock = true;
-    $socket->__ext_sockets_timeout  = $socket->getOption(SOL_SOCKET, SO_RCVTIMEO);
+    $socket->__ext_sockets_nonblock = true; // @phpstan-ignore property.notFound
+    $socket->__ext_sockets_timeout  = $socket->getOption(SOL_SOCKET, SO_RCVTIMEO); // @phpstan-ignore property.notFound
     $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, ['sec' => 0, 'usec' => 1000]);
     return true;
 }
@@ -246,7 +246,10 @@ function swoole_socket_create_pair(
     return false;
 }
 
-function swoole_socket_import_stream($stream)
+/**
+ * @since 5.0.0
+ */
+function swoole_socket_import_stream(mixed $stream): Socket|false
 {
-    return Socket::import($stream);
+    return Socket::import($stream); // @phpstan-ignore staticMethod.notFound
 }
