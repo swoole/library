@@ -23,21 +23,17 @@ use Swoole\FastCGI\Record\Stdout;
  */
 class HttpResponseTest extends TestCase
 {
-    /**
-     * @var string
-     */
-    protected $poweredBy = 'PHP/' . PHP_VERSION;
-
-    public function dataHeaders(): array
+    public static function dataHeaders(): array
     {
+        $poweredBy = 'PHP/' . PHP_VERSION;
         return [
             [
                 [
-                    'X-Powered-By' => $this->poweredBy,
+                    'X-Powered-By' => $poweredBy,
                     'Content-Type' => 'text/html; charset=UTF-8',
                     'Link'         => '<http://127.0.0.1/wp-json/>; rel="https://api.w.org/"',
                 ],
-                "X-Powered-By: {$this->poweredBy}
+                "X-Powered-By: {$poweredBy}
 Content-Type: text/html; charset=UTF-8
 Link: <http://127.0.0.1/wp-json/>; rel=\"https://api.w.org/\"
 
@@ -75,7 +71,7 @@ Hello world!',
         self::assertSame($expectedHeaders, (new HttpResponse([new Stdout($contentData), new EndRequest()]))->getHeaders(), $message);
     }
 
-    public function dataHeadersFromFPM(): array
+    public static function dataHeadersFromFPM(): array
     {
         return [
             [
@@ -132,7 +128,7 @@ Hello world!',
 
                 /*
                  * Unit tests run in the Swoole image, thus we can't get the PHP-FPM version directly when running tests.
-                 * Here we we override expected HTTP header "X-Powered-By" with whatever returned from PHP-FPM.
+                 * Here we override expected HTTP header "X-Powered-By" with whatever returned from PHP-FPM.
                  */
                 $expectedHeaders['X-Powered-By'] = $response->getHeaders()['X-Powered-By'];
                 self::assertSame($expectedHeaders, $response->getHeaders(), $message);
@@ -140,7 +136,7 @@ Hello world!',
         );
     }
 
-    public function dataStatus(): array
+    public static function dataStatus(): array
     {
         return [
             [
@@ -190,7 +186,7 @@ Hello world!',
         self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
     }
 
-    public function dataStatusFromFPM(): array
+    public static function dataStatusFromFPM(): array
     {
         return [
             [

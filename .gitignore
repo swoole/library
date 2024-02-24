@@ -4,6 +4,7 @@
 /vendor/*
 
 # Ignore PHPUnit files.
+/.phpunit.cache
 /.phpunit.result.cache
 /phpunit.xml
 

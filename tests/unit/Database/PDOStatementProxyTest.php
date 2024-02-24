@@ -35,7 +35,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
-    public function dataSetFetchMode(): array
+    public static function dataSetFetchMode(): array
     {
         return [
             [
