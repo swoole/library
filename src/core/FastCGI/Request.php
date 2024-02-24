@@ -27,7 +27,7 @@ class Request extends Message implements \Stringable
         $paramsFrame       = new Params($this->getParams());
         $paramsEofFrame    = new Params([]);
         if (empty($body)) {
-            $message = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}}";
+            $message = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}";
         } else {
             $stdinList = [];
             while (true) {
@@ -40,7 +40,7 @@ class Request extends Message implements \Stringable
             }
             $stdinList[] = new Stdin('');
             $stdin       = implode('', $stdinList);
-            $message     = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}{$stdin}}";
+            $message     = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}{$stdin}";
         }
         return $message;
     }
