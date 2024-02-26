@@ -12,7 +12,7 @@ declare(strict_types=1);
 use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
 
-require dirname(__DIR__) . '/../bootstrap.php';
+require dirname(__DIR__, 2) . '/bootstrap.php';
 
 Coroutine\run(function () {
     try {

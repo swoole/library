@@ -9,6 +9,7 @@ services:
       - mysql
       - nacos
       - oracle
+      - php-fpm
       - pgsql
       - redis
       - wordpress
