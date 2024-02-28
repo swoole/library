@@ -13,7 +13,7 @@ namespace Swoole\Coroutine\Http;
 
 class ClientProxy
 {
-    public function __construct(private string $body, private int $statusCode, private array $headers, private array $cookies)
+    public function __construct(private string $body, private int $statusCode, private ?array $headers, private ?array $cookies)
     {
     }
 
