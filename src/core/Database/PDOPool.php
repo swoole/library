@@ -13,6 +13,7 @@ namespace Swoole\Database;
 
 use PDO;
 use Swoole\ConnectionPool;
+use Swoole\Exception\TimeoutException;
 
 /**
  * @method void put(PDO|PDOProxy $connection)
@@ -33,9 +34,15 @@ class PDOPool extends ConnectionPool
 
     public function get(float $timeout = -1)
     {
+        /* @var \Swoole\Database\PDOProxy|bool $pdo */
         $pdo = parent::get($timeout);
-        /* @var \Swoole\Database\PDOProxy $pdo */
+
+        if ($pdo === false) {
+            throw new TimeoutException();
+        }
+
         $pdo->reset();
+
         return $pdo;
     }
 
