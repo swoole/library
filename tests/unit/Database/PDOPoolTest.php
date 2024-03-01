@@ -14,6 +14,7 @@ namespace Swoole\Database;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\WaitGroup;
+use Swoole\Exception\TimeoutException;
 use Swoole\Tests\HookFlagsTrait;
 
 use function Swoole\Coroutine\go;
@@ -215,5 +216,40 @@ class PDOPoolTest extends TestCase
             $pool->close();
             self::restoreHookFlags();
         });
+    }
+
+    public function testTimeoutException()
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        run(function () use (&$timeoutOccured) {
+            $config = (new PDOConfig())
+                ->withHost(MYSQL_SERVER_HOST)
+                ->withPort(MYSQL_SERVER_PORT)
+                ->withDbName(MYSQL_SERVER_DB)
+                ->withCharset('utf8mb4')
+                ->withUsername(MYSQL_SERVER_USER)
+                ->withPassword(MYSQL_SERVER_PWD)
+            ;
+
+            $pool = new PDOPool($config, 1);
+            $timeoutOccured = false;
+            go(function () use ($pool, &$timeoutOccured) {
+                try {
+                    $pool->get(2);
+                } catch (TimeoutException) {
+                    $timeoutOccured = true;
+                }
+            });
+
+            go(function () use ($pool) {
+                $pdo = $pool->get(1);
+                $pdo->exec('SELECT SLEEP(2)');
+            });
+        });
+
+        $this->assertTrue($timeoutOccured);
+
+        self::restoreHookFlags();
     }
 }
