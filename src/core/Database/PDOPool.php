@@ -13,7 +13,6 @@ namespace Swoole\Database;
 
 use PDO;
 use Swoole\ConnectionPool;
-use Swoole\Exception\TimeoutException;
 
 /**
  * @method void put(PDO|PDOProxy $connection)
@@ -44,7 +43,7 @@ class PDOPool extends ConnectionPool
         /* @var \Swoole\Database\PDOProxy|false $pdo */
         $pdo = parent::get($timeout);
         if ($pdo === false) {
-            throw new TimeoutException('Failed to get a PDO connection: The pool is at full capacity, yet all connections are currently in use.');
+            return false;
         }
 
         $pdo->reset();

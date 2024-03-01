@@ -14,7 +14,6 @@ namespace Swoole\Database;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\WaitGroup;
-use Swoole\Exception\TimeoutException;
 use Swoole\Tests\HookFlagsTrait;
 
 use function Swoole\Coroutine\go;
@@ -222,8 +221,7 @@ class PDOPoolTest extends TestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        $failed = false;
-        run(function () use (&$failed) {
+        run(function () {
             $config = (new PDOConfig())
                 ->withHost(MYSQL_SERVER_HOST)
                 ->withPort(MYSQL_SERVER_PORT)
@@ -241,22 +239,15 @@ class PDOPoolTest extends TestCase
                 $waitGroup->done();
             });
 
-            go(function () use ($pool, $waitGroup, &$failed) {
+            go(function () use ($pool, $waitGroup) {
                 Coroutine::sleep(0.1); // Sleep for 0.1 second to ensure the 1st connection is in use by the 1st coroutine.
-                try {
-                    $pool->get(0.5); // Try to get a 2nd connection from the pool within 0.5 seconds.
-                } catch (TimeoutException) {
-                    $failed = true;
-                } finally {
-                    $waitGroup->done();
-                }
+                self::assertFalse($pool->get(0.5), 'Failed to get a 2nd connection from the pool within 0.5 seconds');
+                $waitGroup->done();
             });
 
             $waitGroup->wait();
             $pool->close();
             self::restoreHookFlags();
-
-            self::assertTrue($failed, 'Failed to get a 2nd connection from the pool within 0.5 seconds');
         });
     }
 }

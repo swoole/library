@@ -24,7 +24,6 @@ return [
         'core/StringObject.php',
         'core/MultibyteStringObject.php',
         'core/Exception/ArrayKeyNotExists.php',
-        'core/Exception/TimeoutException.php',
         'core/ArrayObject.php',
         'core/ObjectProxy.php',
         'core/Coroutine/WaitGroup.php',
