@@ -218,11 +218,12 @@ class PDOPoolTest extends TestCase
         });
     }
 
-    public function testTimeoutException()
+    public function testTimeoutException(): void
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () use (&$timeoutOccured) {
+        $failed = false;
+        run(function () use (&$failed) {
             $config = (new PDOConfig())
                 ->withHost(MYSQL_SERVER_HOST)
                 ->withPort(MYSQL_SERVER_PORT)
@@ -232,24 +233,30 @@ class PDOPoolTest extends TestCase
                 ->withPassword(MYSQL_SERVER_PWD)
             ;
 
-            $pool = new PDOPool($config, 1);
-            $timeoutOccured = false;
-            go(function () use ($pool, &$timeoutOccured) {
+            $pool      = new PDOPool($config, 1);
+            $waitGroup = new WaitGroup(2); // A wait group to wait for the next 2 coroutines to finish.
+
+            go(function () use ($pool, $waitGroup) {
+                $pool->get()->exec('SELECT SLEEP(1)'); // Hold the connection for 1 second before putting it back into the pool.
+                $waitGroup->done();
+            });
+
+            go(function () use ($pool, $waitGroup, &$failed) {
+                Coroutine::sleep(0.1); // Sleep for 0.1 second to ensure the 1st connection is in use by the 1st coroutine.
                 try {
-                    $pool->get(2);
+                    $pool->get(0.5); // Try to get a 2nd connection from the pool within 0.5 seconds.
                 } catch (TimeoutException) {
-                    $timeoutOccured = true;
+                    $failed = true;
+                } finally {
+                    $waitGroup->done();
                 }
             });
 
-            go(function () use ($pool) {
-                $pdo = $pool->get(1);
-                $pdo->exec('SELECT SLEEP(2)');
-            });
+            $waitGroup->wait();
+            $pool->close();
+            self::restoreHookFlags();
+
+            self::assertTrue($failed, 'Failed to get a 2nd connection from the pool within 0.5 seconds');
         });
-
-        $this->assertTrue($timeoutOccured);
-
-        self::restoreHookFlags();
     }
 }

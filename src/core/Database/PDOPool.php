@@ -32,13 +32,19 @@ class PDOPool extends ConnectionPool
         }, $size, PDOProxy::class);
     }
 
+    /**
+     * Get a PDO connection from the pool. The PDO connection (a PDO object) is wrapped in a PDOProxy object returned.
+     *
+     * @param float $timeout > 0 means waiting for the specified number of seconds. other means no waiting.
+     * @return PDOProxy|false Returns a PDOProxy object from the pool, or false if the pool is full and the timeout is reached.
+     *                        {@inheritDoc}
+     */
     public function get(float $timeout = -1)
     {
-        /* @var \Swoole\Database\PDOProxy|bool $pdo */
+        /* @var \Swoole\Database\PDOProxy|false $pdo */
         $pdo = parent::get($timeout);
-
         if ($pdo === false) {
-            throw new TimeoutException();
+            throw new TimeoutException('Failed to get a PDO connection: The pool is at full capacity, yet all connections are currently in use.');
         }
 
         $pdo->reset();
