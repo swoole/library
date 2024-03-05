@@ -11,9 +11,9 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\WaitGroup;
+use Swoole\Tests\DatabaseTestCase;
 use Swoole\Tests\HookFlagsTrait;
 
 use function Swoole\Coroutine\go;
@@ -25,28 +25,9 @@ use function Swoole\Coroutine\run;
  * @internal
  * @coversNothing
  */
-class PDOPoolTest extends TestCase
+class PDOPoolTest extends DatabaseTestCase
 {
     use HookFlagsTrait;
-
-    protected static string $sqliteDatabaseFile;
-
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        self::$sqliteDatabaseFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'swoole_pdo_pool_sqlite_test.db';
-        if (file_exists(self::$sqliteDatabaseFile)) {
-            unlink(self::$sqliteDatabaseFile);
-        }
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        if (file_exists(self::$sqliteDatabaseFile)) {
-            unlink(self::$sqliteDatabaseFile);
-        }
-        parent::tearDownAfterClass();
-    }
 
     public function testPutWhenErrorHappens()
     {
@@ -55,16 +36,7 @@ class PDOPoolTest extends TestCase
         $expect = ['0', '1', '2', '3', '4'];
         $actual = [];
         Coroutine\run(function () use (&$actual) {
-            $config = (new PDOConfig())
-                ->withHost(MYSQL_SERVER_HOST)
-                ->withPort(MYSQL_SERVER_PORT)
-                ->withDbName(MYSQL_SERVER_DB)
-                ->withCharset('utf8mb4')
-                ->withUsername(MYSQL_SERVER_USER)
-                ->withPassword(MYSQL_SERVER_PWD)
-            ;
-
-            $pool = new PDOPool($config, 2);
+            $pool = self::getPdoMysqlPool(2);
             for ($n = 5; $n--;) {
                 Coroutine::create(function () use ($pool, $n, &$actual) {
                     $pdo = $pool->get();
@@ -95,17 +67,8 @@ class PDOPoolTest extends TestCase
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
         run(function () {
-            $config = (new PDOConfig())
-                ->withDriver('pgsql')
-                ->withHost(PGSQL_SERVER_HOST)
-                ->withPort(PGSQL_SERVER_PORT)
-                ->withDbName(PGSQL_SERVER_DB)
-                ->withUsername(PGSQL_SERVER_USER)
-                ->withPassword(PGSQL_SERVER_PWD)
-            ;
-            $pool = new PDOPool($config, 10);
-
-            $pdo = $pool->get();
+            $pool = self::getPdoPgsqlPool(10);
+            $pdo  = $pool->get();
             $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
             $pool->put($pdo);
 
@@ -137,18 +100,8 @@ class PDOPoolTest extends TestCase
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
         run(function () {
-            $config = (new PDOConfig())
-                ->withDriver('oci')
-                ->withHost(ORACLE_SERVER_HOST)
-                ->withPort(ORACLE_SERVER_PORT)
-                ->withDbName(ORACLE_SERVER_DB)
-                ->withCharset('AL32UTF8')
-                ->withUsername(ORACLE_SERVER_USER)
-                ->withPassword(ORACLE_SERVER_PWD)
-            ;
-            $pool = new PDOPool($config, 10);
-
-            $pdo = $pool->get();
+            $pool = self::getPdoOraclePool(10);
+            $pdo  = $pool->get();
             try {
                 $pdo->exec('DROP TABLE test PURGE');
             } catch (\PDOException $e) {
@@ -187,10 +140,8 @@ class PDOPoolTest extends TestCase
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
         run(function () {
-            $config = (new PDOConfig())->withDriver('sqlite')->withDbname(self::$sqliteDatabaseFile);
-            $pool   = new PDOPool($config, 10);
-
-            $pdo = $pool->get();
+            $pool = self::getPdoSqlitePool(10);
+            $pdo  = $pool->get();
             $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
             $pool->put($pdo);
 
@@ -222,16 +173,7 @@ class PDOPoolTest extends TestCase
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
         run(function () {
-            $config = (new PDOConfig())
-                ->withHost(MYSQL_SERVER_HOST)
-                ->withPort(MYSQL_SERVER_PORT)
-                ->withDbName(MYSQL_SERVER_DB)
-                ->withCharset('utf8mb4')
-                ->withUsername(MYSQL_SERVER_USER)
-                ->withPassword(MYSQL_SERVER_PWD)
-            ;
-
-            $pool      = new PDOPool($config, 1);
+            $pool      = self::getPdoMysqlPool(1);
             $waitGroup = new WaitGroup(2); // A wait group to wait for the next 2 coroutines to finish.
 
             go(function () use ($pool, $waitGroup) {

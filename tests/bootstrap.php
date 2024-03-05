@@ -9,15 +9,16 @@
 
 declare(strict_types=1);
 
+use Swoole\Constant;
 use Swoole\Coroutine;
 
 Coroutine::set([
-    'log_level'   => SWOOLE_LOG_INFO,
-    'trace_flags' => 0,
+    Constant::OPTION_LOG_LEVEL   => SWOOLE_LOG_INFO,
+    Constant::OPTION_TRACE_FLAGS => 0,
 ]);
 
 if (!defined('SWOOLE_LIBRARY')) {
-    require dirname(__DIR__) . '/vendor/autoload.php';
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
 }
 
 if (!defined('MYSQL_SERVER_HOST')) {

@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use Swoole\Database\MysqliProxy;
+use Swoole\Database\ObjectProxy;
+use Swoole\Database\PDOProxy;
 use Swoole\Tests\DatabaseTestCase;
 
 /**
@@ -21,30 +24,39 @@ use Swoole\Tests\DatabaseTestCase;
  */
 class ObjectProxyTest extends DatabaseTestCase
 {
-    public function tearDown(): void
+    /**
+     * @return array<array<ObjectProxy>>
+     */
+    public static function dateClone(): array
     {
-        parent::tearDown();
-        $this->addToAssertionCount(2); // Add those in method $this->testClone().
+        return [
+            [[self::class, 'getMysqliPool'], MysqliProxy::class],
+            [[self::class, 'getPdoMysqlPool'], PDOProxy::class],
+            [[self::class, 'getPdoOraclePool'], PDOProxy::class],
+            [[self::class, 'getPdoPgsqlPool'], PDOProxy::class],
+            [[self::class, 'getPdoSqlitePool'], PDOProxy::class],
+        ];
     }
 
     /**
+     * @param class-string<ObjectProxy> $class
+     * @dataProvider dateClone
      * @covers \Swoole\Database\ObjectProxy::__clone()
      */
-    public function testClone()
+    public function testClone(callable $callback, string $class): void
     {
-        Coroutine\run(function () {
-            $dbs = [
-                $this->getPdoPool()->get(),
-                $this->getMysqliPool()->get(),
-            ];
+        Coroutine\run(function () use ($callback, $class): void {
+            $pool = $callback();
+            self::assertInstanceOf(ConnectionPool::class, $pool);
+            /** @var ConnectionPool $pool */
+            $proxy = $pool->get();
+            self::assertInstanceOf($class, $proxy);
 
-            foreach ($dbs as $db) {
-                try {
-                    var_dump(clone $db);
-                } catch (\Error $e) {
-                    if ($e->getMessage() != 'Trying to clone an uncloneable database proxy object') {
-                        throw $e;
-                    }
+            try {
+                clone $proxy;
+            } catch (\Error $e) {
+                if ($e->getMessage() != 'Trying to clone an uncloneable database proxy object') {
+                    throw $e;
                 }
             }
         });

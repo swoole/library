@@ -29,7 +29,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
     {
         Coroutine\run(function () {
             self::assertFalse(
-                $this->getPdoPool()->get()->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(\PDO::FETCH_ASSOC),
+                self::getPdoMysqlPool()->get()->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(\PDO::FETCH_ASSOC),
                 'FALSE is returned if no results found.'
             );
         });
@@ -75,7 +75,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
     public function testSetFetchMode(array $expected, array $args, string $message)
     {
         Coroutine\run(function () use ($expected, $args, $message) {
-            $stmt = $this->getPdoPool()->get()->query(
+            $stmt = self::getPdoMysqlPool()->get()->query(
                 'SELECT
                  *
                  FROM (
@@ -95,7 +95,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
     public function testBindParam()
     {
         Coroutine\run(function () {
-            $stmt  = $this->getPdoPool()->get()->prepare('SHOW TABLES like ?');
+            $stmt  = self::getPdoMysqlPool()->get()->prepare('SHOW TABLES like ?');
             $table = 'NON_EXISTING_TABLE_NAME';
             $stmt->bindParam(1, $table, \PDO::PARAM_STR);
             $stmt->execute();
