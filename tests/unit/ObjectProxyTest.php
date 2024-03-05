@@ -25,35 +25,69 @@ use Swoole\Tests\DatabaseTestCase;
 class ObjectProxyTest extends DatabaseTestCase
 {
     /**
-     * @return array<array<ObjectProxy>>
+     * @return array<array{0: callable, 1: class-string, 2: class-string<ObjectProxy>|null}>
      */
-    public static function dateClone(): array
+    public static function dataDatabaseObjectProxy(): array
     {
         return [
-            [[self::class, 'getMysqliPool'], MysqliProxy::class],
-            [[self::class, 'getPdoMysqlPool'], PDOProxy::class],
-            [[self::class, 'getPdoOraclePool'], PDOProxy::class],
-            [[self::class, 'getPdoPgsqlPool'], PDOProxy::class],
-            [[self::class, 'getPdoSqlitePool'], PDOProxy::class],
+            [[self::class, 'getMysqliPool'], \mysqli::class, MysqliProxy::class],
+            [[self::class, 'getPdoMysqlPool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getPdoOraclePool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getPdoPgsqlPool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getPdoSqlitePool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getRedisPool'], \Redis::class],
         ];
     }
 
     /**
-     * @param class-string<ObjectProxy> $class
-     * @dataProvider dateClone
+     * @param class-string $expectedObjectClass
+     * @param class-string<ObjectProxy>|null $expectedProxyClass
+     * @dataProvider dataDatabaseObjectProxy
      * @covers \Swoole\Database\ObjectProxy::__clone()
      */
-    public function testClone(callable $callback, string $class): void
+    public function testDatabaseObjectProxy(callable $callback, string $expectedObjectClass, ?string $expectedProxyClass = null): void
     {
-        Coroutine\run(function () use ($callback, $class): void {
+        Coroutine\run(function () use ($callback, $expectedObjectClass, $expectedProxyClass): void {
             $pool = $callback();
             self::assertInstanceOf(ConnectionPool::class, $pool);
             /** @var ConnectionPool $pool */
-            $proxy = $pool->get();
-            self::assertInstanceOf($class, $proxy);
+            $conn = $pool->get();
 
+            if (is_null($expectedProxyClass)) { // Proxy class not in use?
+                self::assertInstanceOf($expectedObjectClass, $conn);
+            } else {
+                self::assertInstanceOf($expectedProxyClass, $conn);
+                self::assertInstanceOf($expectedObjectClass, $conn->__getObject());
+            }
+        });
+    }
+
+    /**
+     * @return array<array<callable>>
+     */
+    public static function dataUncloneableDatabaseProxyObject(): array
+    {
+        return [
+            [[self::class, 'getMysqliPool']],
+            [[self::class, 'getPdoMysqlPool']],
+            [[self::class, 'getPdoOraclePool']],
+            [[self::class, 'getPdoPgsqlPool']],
+            [[self::class, 'getPdoSqlitePool']],
+        ];
+    }
+
+    /**
+     * @depends testDatabaseObjectProxy
+     * @dataProvider dataUncloneableDatabaseProxyObject
+     * @covers \Swoole\Database\ObjectProxy::__clone()
+     */
+    public function testUncloneableDatabaseProxyObject(callable $callback): void
+    {
+        Coroutine\run(function () use ($callback): void {
+            /** @var ConnectionPool $pool */
+            $pool = $callback();
             try {
-                clone $proxy;
+                clone $pool->get();
             } catch (\Error $e) {
                 if ($e->getMessage() != 'Trying to clone an uncloneable database proxy object') {
                     throw $e;
