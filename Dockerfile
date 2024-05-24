@@ -3,9 +3,9 @@ FROM phpswoole/swoole
 RUN apt update  \
     && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git \
     && wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip \
-    && unzip instantclient-basiclite-linuxx64.zip && rm instantclient-basiclite-linuxx64.zip \
+    && unzip instantclient-basiclite-linuxx64.zip && rm -rf META-INF instantclient-basiclite-linuxx64.zip \
     && wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxx64.zip \
-    && unzip instantclient-sdk-linuxx64.zip && rm instantclient-sdk-linuxx64.zip \
+    && unzip instantclient-sdk-linuxx64.zip       && rm -rf META-INF instantclient-sdk-linuxx64.zip \
     && mv instantclient_*_* ./instantclient \
     && rm ./instantclient/sdk/include/ldap.h \
     && echo DISABLE_INTERRUPT=on > ./instantclient/network/admin/sqlnet.ora \
@@ -15,14 +15,8 @@ RUN apt update  \
     && export ORACLE_HOME=instantclient,/usr/local/instantclient \
     && apt install -y sqlite3 libsqlite3-dev libpq-dev \
     && pecl update-channels \
-    && docker-php-ext-install mysqli \
-    && docker-php-ext-enable mysqli \
-    && docker-php-ext-install pdo_pgsql \
-    && docker-php-ext-enable pdo_pgsql \
-    && docker-php-ext-install pdo_oci \
-    && docker-php-ext-enable pdo_oci \
-    && docker-php-ext-install pdo_sqlite \
-    && docker-php-ext-enable pdo_sqlite \
+    && docker-php-ext-install mysqli pdo_oci pdo_pgsql pdo_sqlite \
+    && docker-php-ext-enable  mysqli pdo_oci pdo_pgsql pdo_sqlite \
     && git clone https://github.com/swoole/swoole-src.git \
     && cd ./swoole-src \
     && phpize \
