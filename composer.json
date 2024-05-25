@@ -17,7 +17,7 @@
     },
     "require": {
         "php": ">=8.1",
-        "ext-swoole": ">=6.0"
+        "ext-swoole": ">=5.1"
     },
     "require-dev": {
         "ext-sockets": "*",
