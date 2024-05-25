@@ -11,12 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(WaitGroup::class)]
 class WaitGroupTest extends TestCase
 {
     public function testWait()

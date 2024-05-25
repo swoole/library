@@ -11,14 +11,15 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\FastCGI\Record\BeginRequest;
 use Swoole\FastCGI\Record\Params;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(FrameParser::class)]
 class FrameParserTest extends TestCase
 {
     public function testHasFrame(): void

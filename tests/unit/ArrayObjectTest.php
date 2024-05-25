@@ -11,12 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(ArrayObject::class)]
 class ArrayObjectTest extends TestCase
 {
     private ArrayObject $data;
@@ -29,12 +30,6 @@ class ArrayObjectTest extends TestCase
 
     private array $control_data;
 
-    /**
-     * ArrayObjectTest constructor.
-     * @covers \Swoole\ArrayObject::each()
-     * @covers \Swoole\ArrayObject::split()
-     * @param string $dataName
-     */
     public function __construct(?string $name = null, array $data = [], $dataName = '')
     {
         $_data      = '11, 33, 22, 44,12,32,55, 23,19,23';
@@ -63,19 +58,11 @@ class ArrayObjectTest extends TestCase
         parent::__construct($name, $data, $dataName);
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::toArray()
-     */
     public function testToArray()
     {
         $this->assertEquals($this->data->toArray(), $this->control_data);
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::each()
-     * @covers \Swoole\ArrayObject::sort()
-     * @covers \Swoole\ArrayObject::unique()
-     */
     public function testMix()
     {
         $datao = clone $this->data;
@@ -88,17 +75,11 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data, $expectResult);
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::serialize()
-     */
     public function testSerialize()
     {
         $this->assertEquals(serialize($this->data->toArray()), $this->data->serialize());
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::unique()
-     */
     public function testUnique()
     {
         $data         = $this->data->unique()->toArray();

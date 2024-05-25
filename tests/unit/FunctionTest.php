@@ -11,18 +11,17 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @internal
  * @coversNothing
  */
+#[CoversFunction('swoole_library_get_options')]
+#[CoversFunction('swoole_library_set_options')]
 class FunctionTest extends TestCase
 {
-    /**
-     * @covers ::swoole_library_get_options
-     * @covers ::swoole_library_set_options
-     */
     public function testOptions()
     {
         $options = [__METHOD__ => uniqid()];
@@ -30,10 +29,6 @@ class FunctionTest extends TestCase
         $this->assertEquals($options, swoole_library_get_options());
     }
 
-    /**
-     * @covers ::swoole_library_get_option
-     * @covers ::swoole_library_set_option
-     */
     public function testOption()
     {
         $option = uniqid();

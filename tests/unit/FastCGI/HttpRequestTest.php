@@ -11,20 +11,20 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(HttpRequest::class)]
 class HttpRequestTest extends TestCase
 {
     /**
      * To test the Keep-Alive header when sending multiple requests to a FastCGI server.
      *
-     * @covers \Swoole\FastCGI\HttpRequest
      * @see https://github.com/swoole/library/pull/169 Fix broken requests when keep-alive is turned on in the FastCGI client.
      */
     public function testKeepAlive(): void

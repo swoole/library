@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\Curl;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Tests\HookFlagsTrait;
@@ -19,9 +21,9 @@ use Swoole\Tests\HookFlagsTrait;
  * Class HandlerTest
  *
  * @internal
- * @coversNothing
- * @runTestsInSeparateProcesses
  */
+#[CoversClass(Handler::class)]
+#[RunTestsInSeparateProcesses]
 class HandlerTest extends TestCase
 {
     use HookFlagsTrait;
@@ -44,9 +46,6 @@ class HandlerTest extends TestCase
         self::setHookFlags(SWOOLE_HOOK_CURL);
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testRedirect()
     {
         Coroutine\run(function () {
@@ -62,9 +61,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::__toString()
-     */
     public function testToString()
     {
         Coroutine\run(function () {
@@ -73,9 +69,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testCustomHost()
     {
         Coroutine\run(function () {
@@ -90,9 +83,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testHeaderName()
     {
         Coroutine\run(function () {
@@ -109,9 +99,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testWriteFunction()
     {
         Coroutine\run(function () {
@@ -132,9 +119,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testResolve()
     {
         Coroutine\run(function () {
@@ -157,9 +141,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testInvalidResolve()
     {
         Coroutine\run(function () {
@@ -180,9 +161,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testResolve2()
     {
         Coroutine\run(function () {
@@ -204,9 +182,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testInvalidResolve2()
     {
         Coroutine\run(function () {
@@ -227,9 +202,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testInvalidResolve3()
     {
         Coroutine\run(function () {
@@ -250,9 +222,6 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
     public function testResolve3()
     {
         Coroutine\run(function () {

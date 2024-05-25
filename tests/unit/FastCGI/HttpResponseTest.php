@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
@@ -19,8 +21,8 @@ use Swoole\FastCGI\Record\Stdout;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(HttpResponse::class)]
 class HttpResponseTest extends TestCase
 {
     public static function dataHeaders(): array
@@ -61,10 +63,7 @@ Hello world!',
         ];
     }
 
-    /**
-     * @dataProvider dataHeaders
-     * @covers \Swoole\FastCGI\HttpResponse
-     */
+    #[DataProvider('dataHeaders')]
     public function testHeaders(array $expectedHeaders, string $contentData, string $message): void
     {
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
@@ -115,10 +114,7 @@ Hello world!',
         ];
     }
 
-    /**
-     * @dataProvider dataHeadersFromFPM
-     * @covers \Swoole\FastCGI\HttpResponse
-     */
+    #[DataProvider('dataHeadersFromFPM')]
     public function testHeadersFromFPM(array $expectedHeaders, string $filename, string $message): void
     {
         Coroutine\run(
@@ -174,10 +170,7 @@ Hello world!',
         ];
     }
 
-    /**
-     * @dataProvider dataStatus
-     * @covers \Swoole\FastCGI\HttpResponse
-     */
+    #[DataProvider('dataStatus')]
     public function testStatus(int $expectedStatusCode, string $expectedReasonPhrase, string $contentData): void
     {
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
@@ -216,10 +209,7 @@ Hello world!',
         ];
     }
 
-    /**
-     * @dataProvider dataStatusFromFPM
-     * @covers \Swoole\FastCGI\HttpResponse
-     */
+    #[DataProvider('dataStatusFromFPM')]
     public function testStatusFromFPM(int $expectedStatusCode, string $expectedReasonPhrase, string $filename): void
     {
         Coroutine\run(

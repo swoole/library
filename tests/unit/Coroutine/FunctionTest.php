@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
+use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
 use Swoole\Runtime;
 
@@ -18,6 +19,10 @@ use Swoole\Runtime;
  * @internal
  * @coversNothing
  */
+#[CoversFunction('Swoole\Coroutine\batch')]
+#[CoversFunction('Swoole\Coroutine\go')]
+#[CoversFunction('Swoole\Coroutine\parallel')]
+#[CoversFunction('Swoole\Coroutine\map')]
 class FunctionTest extends TestCase
 {
     public function testBatchTimeout()

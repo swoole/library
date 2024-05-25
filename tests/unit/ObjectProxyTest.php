@@ -11,17 +11,18 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Depends;
 use Swoole\Database\MysqliProxy;
 use Swoole\Database\ObjectProxy;
 use Swoole\Database\PDOProxy;
 use Swoole\Tests\DatabaseTestCase;
 
 /**
- * Class ObjectProxyTest
- *
  * @internal
- * @coversNothing
  */
+#[CoversClass(ObjectProxy::class)]
 class ObjectProxyTest extends DatabaseTestCase
 {
     /**
@@ -42,9 +43,8 @@ class ObjectProxyTest extends DatabaseTestCase
     /**
      * @param class-string $expectedObjectClass
      * @param class-string<ObjectProxy>|null $expectedProxyClass
-     * @dataProvider dataDatabaseObjectProxy
-     * @covers \Swoole\Database\ObjectProxy::__clone()
      */
+    #[DataProvider('dataDatabaseObjectProxy')]
     public function testDatabaseObjectProxy(callable $callback, string $expectedObjectClass, ?string $expectedProxyClass = null): void
     {
         Coroutine\run(function () use ($callback, $expectedObjectClass, $expectedProxyClass): void {
@@ -76,11 +76,8 @@ class ObjectProxyTest extends DatabaseTestCase
         ];
     }
 
-    /**
-     * @depends testDatabaseObjectProxy
-     * @dataProvider dataUncloneableDatabaseProxyObject
-     * @covers \Swoole\Database\ObjectProxy::__clone()
-     */
+    #[Depends('testDatabaseObjectProxy')]
+    #[DataProvider('dataUncloneableDatabaseProxyObject')]
     public function testUncloneableDatabaseProxyObject(callable $callback): void
     {
         Coroutine\run(function () use ($callback): void {

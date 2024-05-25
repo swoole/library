@@ -11,14 +11,17 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 use function Swoole\Coroutine\run;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(NameResolver\Consul::class)]
+#[CoversClass(NameResolver\Nacos::class)]
+#[CoversClass(NameResolver\Redis::class)]
 class NameResolverTest extends TestCase
 {
     public function testRedis()

@@ -11,20 +11,17 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Swoole\Coroutine;
 use Swoole\Tests\DatabaseTestCase;
 
 /**
- * Class PDOStatementProxyTest
- *
  * @internal
- * @coversNothing
  */
+#[CoversClass(PDOStatementProxy::class)]
 class PDOStatementProxyTest extends DatabaseTestCase
 {
-    /**
-     * @covers \Swoole\Database\PDOStatementProxy::__call()
-     */
     public function testRun()
     {
         Coroutine\run(function () {
@@ -68,10 +65,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
         ];
     }
 
-    /**
-     * @dataProvider dataSetFetchMode
-     * @covers \Swoole\Database\PDOStatementProxy::setFetchMode
-     */
+    #[DataProvider('dataSetFetchMode')]
     public function testSetFetchMode(array $expected, array $args, string $message)
     {
         Coroutine\run(function () use ($expected, $args, $message) {
@@ -89,9 +83,6 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Database\PDOStatementProxy::bindParam()
-     */
     public function testBindParam()
     {
         Coroutine\run(function () {

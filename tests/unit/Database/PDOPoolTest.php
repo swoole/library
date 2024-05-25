@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use Swoole\Coroutine;
 use Swoole\Coroutine\WaitGroup;
 use Swoole\Tests\DatabaseTestCase;
@@ -23,8 +24,8 @@ use function Swoole\Coroutine\run;
  * Class PDOPoolTest
  *
  * @internal
- * @coversNothing
  */
+#[CoversClass(PDOPool::class)]
 class PDOPoolTest extends DatabaseTestCase
 {
     use HookFlagsTrait;

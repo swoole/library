@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
+use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
 use Swoole\Constant;
 use Swoole\Coroutine;
@@ -22,6 +23,8 @@ use function Swoole\Coroutine\Http\post;
  * @internal
  * @coversNothing
  */
+#[CoversFunction('Swoole\Coroutine\Http\get')]
+#[CoversFunction('Swoole\Coroutine\Http\post')]
 class HttpFunctionTest extends TestCase
 {
     public function testGet()
