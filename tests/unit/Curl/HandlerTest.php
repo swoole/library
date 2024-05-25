@@ -46,7 +46,7 @@ class HandlerTest extends TestCase
         self::setHookFlags(SWOOLE_HOOK_CURL);
     }
 
-    public function testRedirect()
+    public function testRedirect(): void
     {
         Coroutine\run(function () {
             $ch = curl_init('http://alturl.com/6xb2v');
@@ -61,7 +61,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testToString()
+    public function testToString(): void
     {
         Coroutine\run(function () {
             $ch = curl_init();
@@ -69,7 +69,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testCustomHost()
+    public function testCustomHost(): void
     {
         Coroutine\run(function () {
             $ip = Coroutine::gethostbyname('httpbin.org');
@@ -83,7 +83,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testHeaderName()
+    public function testHeaderName(): void
     {
         Coroutine\run(function () {
             $ch = curl_init('http://httpbin.org/get');
@@ -99,7 +99,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testWriteFunction()
+    public function testWriteFunction(): void
     {
         Coroutine\run(function () {
             $url = 'https://httpbin.org/get';
@@ -119,7 +119,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testResolve()
+    public function testResolve(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -141,7 +141,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testInvalidResolve()
+    public function testInvalidResolve(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -161,7 +161,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testResolve2()
+    public function testResolve2(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -182,7 +182,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testInvalidResolve2()
+    public function testInvalidResolve2(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -202,7 +202,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testInvalidResolve3()
+    public function testInvalidResolve3(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -222,7 +222,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testResolve3()
+    public function testResolve3(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -243,7 +243,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testOptPrivate()
+    public function testOptPrivate(): void
     {
         Coroutine\run(function () {
             $url     = 'https://httpbin.org/get';

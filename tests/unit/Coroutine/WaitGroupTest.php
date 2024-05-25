@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(WaitGroup::class)]
 class WaitGroupTest extends TestCase
 {
-    public function testWait()
+    public function testWait(): void
     {
         run(function () {
             $wg = new WaitGroup(4);

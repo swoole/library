@@ -22,7 +22,7 @@ use Swoole\Coroutine;
 #[CoversClass(ProcessManager::class)]
 class ProcessManagerTest extends TestCase
 {
-    public function testAdd()
+    public function testAdd(): void
     {
         $pm     = new ProcessManager();
         $atomic = new Atomic(0);
@@ -42,7 +42,7 @@ class ProcessManagerTest extends TestCase
         $pm->start();
     }
 
-    public function testAddDisableCoroutine()
+    public function testAddDisableCoroutine(): void
     {
         $pm = new ProcessManager();
 
@@ -54,7 +54,7 @@ class ProcessManagerTest extends TestCase
         $pm->start();
     }
 
-    public function testAddEnableCoroutine()
+    public function testAddEnableCoroutine(): void
     {
         $pm = new ProcessManager();
 
@@ -66,7 +66,7 @@ class ProcessManagerTest extends TestCase
         $pm->start();
     }
 
-    public function testAddBatch()
+    public function testAddBatch(): void
     {
         $pm = new ProcessManager();
 

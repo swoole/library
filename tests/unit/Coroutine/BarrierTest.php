@@ -21,7 +21,7 @@ use Swoole\Coroutine;
 #[CoversClass(Barrier::class)]
 class BarrierTest extends TestCase
 {
-    public function testWait()
+    public function testWait(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -41,7 +41,7 @@ class BarrierTest extends TestCase
         });
     }
 
-    public function testWaitTimeout()
+    public function testWaitTimeout(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -69,7 +69,7 @@ class BarrierTest extends TestCase
     /**
      * Test without execution switching between coroutines.
      */
-    public function testNoCoroutineSwitching()
+    public function testNoCoroutineSwitching(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -89,7 +89,7 @@ class BarrierTest extends TestCase
     /**
      * Test without any child coroutines created. Ideally we shouldn't use the Barrier class this way.
      */
-    public function testWithoutAnyChildCoroutines()
+    public function testWithoutAnyChildCoroutines(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -101,7 +101,7 @@ class BarrierTest extends TestCase
     /**
      * Test with the Barrier object destroyed in a child coroutine. Ideally we shouldn't use the Barrier class this way.
      */
-    public function testUnexpectedDestroy()
+    public function testUnexpectedDestroy(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -119,7 +119,7 @@ class BarrierTest extends TestCase
     /**
      * Test with the Barrier object destroyed in a child coroutine following by a coroutine switching. Ideally we shouldn't use the Barrier class this way.
      */
-    public function testUnexpectedDestroyWithCoroutineSwitching()
+    public function testUnexpectedDestroyWithCoroutineSwitching(): void
     {
         run(function () {
             $barrier = Barrier::make();

@@ -30,7 +30,7 @@ class PDOPoolTest extends DatabaseTestCase
 {
     use HookFlagsTrait;
 
-    public function testPutWhenErrorHappens()
+    public function testPutWhenErrorHappens(): void
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);

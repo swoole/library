@@ -20,45 +20,45 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(MultibyteStringObject::class)]
 class MultibyteStringObjectTest extends TestCase
 {
-    public function testLength()
+    public function testLength(): void
     {
         $str    = 'hello world';
         $length = swoole_mbstring($str)->length();
         $this->assertEquals(strlen($str), $length);
     }
 
-    public function testIndexOf()
+    public function testIndexOf(): void
     {
         $this->assertEquals(swoole_mbstring('hello swoole and hello world')->indexOf('swoole'), 6);
     }
 
-    public function testLastIndexOf()
+    public function testLastIndexOf(): void
     {
         $this->assertEquals(swoole_mbstring('hello swoole and hello world')->lastIndexOf('hello'), 17);
     }
 
-    public function testPos()
+    public function testPos(): void
     {
         $this->assertEquals(swoole_mbstring('hello swoole and hello world')->pos('and'), 13);
     }
 
-    public function testRPos()
+    public function testRPos(): void
     {
         $this->assertEquals(swoole_mbstring('hello swoole and hello world')->rpos('hello'), 17);
     }
 
-    public function testIPos()
+    public function testIPos(): void
     {
         $this->assertEquals(swoole_mbstring('hello swoole AND hello world')->ipos('and'), 13);
     }
 
-    public function testSubstr()
+    public function testSubstr(): void
     {
         $this->assertEquals(swoole_mbstring('hello swoole and hello world')
             ->substr(4, 8)->toString(), 'o swoole');
     }
 
-    public function chunk()
+    public function chunk(): void
     {
         $r            = swoole_mbstring('hello swoole and hello world')->chunk(5)->toArray();
         $expectResult = [

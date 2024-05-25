@@ -22,7 +22,7 @@ use Swoole\Tests\DatabaseTestCase;
 #[CoversClass(PDOStatementProxy::class)]
 class PDOStatementProxyTest extends DatabaseTestCase
 {
-    public function testRun()
+    public function testRun(): void
     {
         Coroutine\run(function () {
             self::assertFalse(
@@ -66,7 +66,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
     }
 
     #[DataProvider('dataSetFetchMode')]
-    public function testSetFetchMode(array $expected, array $args, string $message)
+    public function testSetFetchMode(array $expected, array $args, string $message): void
     {
         Coroutine\run(function () use ($expected, $args, $message) {
             $stmt = self::getPdoMysqlPool()->get()->query(
@@ -83,7 +83,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
-    public function testBindParam()
+    public function testBindParam(): void
     {
         Coroutine\run(function () {
             $stmt  = self::getPdoMysqlPool()->get()->prepare('SHOW TABLES like ?');

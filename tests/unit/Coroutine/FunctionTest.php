@@ -25,7 +25,7 @@ use Swoole\Runtime;
 #[CoversFunction('Swoole\Coroutine\map')]
 class FunctionTest extends TestCase
 {
-    public function testBatchTimeout()
+    public function testBatchTimeout(): void
     {
         run(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
@@ -57,7 +57,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testBatch()
+    public function testBatch(): void
     {
         run(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
@@ -90,7 +90,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testGo()
+    public function testGo(): void
     {
         run(function () {
             $cid = go(function () {
@@ -100,7 +100,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testParallel()
+    public function testParallel(): void
     {
         run(function () {
             $start   = microtime(true);
@@ -121,7 +121,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testMap()
+    public function testMap(): void
     {
         run(function () {
             $start   = microtime(true);

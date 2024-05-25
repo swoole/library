@@ -27,7 +27,7 @@ use function Swoole\Coroutine\Http\post;
 #[CoversFunction('Swoole\Coroutine\Http\post')]
 class HttpFunctionTest extends TestCase
 {
-    public function testGet()
+    public function testGet(): void
     {
         run(function () {
             Coroutine::create(function () {
@@ -40,45 +40,45 @@ class HttpFunctionTest extends TestCase
         });
     }
 
-    public function testPost()
+    public function testPost(): void
     {
         run(function () {
             $this->fun3();
         });
     }
 
-    public function testCurlGet()
+    public function testCurlGet(): void
     {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'curl');
         $this->fun1();
         $this->fun2();
     }
 
-    public function testCurlPost()
+    public function testCurlPost(): void
     {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'curl');
         $this->fun3();
     }
 
-    public function testStreamGet()
+    public function testStreamGet(): void
     {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun1();
         $this->fun2();
     }
 
-    public function testStreamPost()
+    public function testStreamPost(): void
     {
         swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'stream');
         $this->fun3();
     }
 
-    private function fun1()
+    private function fun1(): void
     {
         self::assertSame(200, get('http://httpbin.org')->getStatusCode(), 'Test HTTP GET without query strings.');
     }
 
-    private function fun2()
+    private function fun2(): void
     {
         $data = get('http://httpbin.org/get?hello=world');
         $body = json_decode($data->getBody(), null, 512, JSON_THROW_ON_ERROR);
@@ -86,7 +86,7 @@ class HttpFunctionTest extends TestCase
         self::assertSame('world', $body->args->hello);
     }
 
-    private function fun3()
+    private function fun3(): void
     {
         $random_data = base64_encode(random_bytes(128));
         $data        = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);

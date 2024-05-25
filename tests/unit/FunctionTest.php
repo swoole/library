@@ -22,14 +22,14 @@ use PHPUnit\Framework\TestCase;
 #[CoversFunction('swoole_library_set_options')]
 class FunctionTest extends TestCase
 {
-    public function testOptions()
+    public function testOptions(): void
     {
         $options = [__METHOD__ => uniqid()];
         swoole_library_set_options($options);
         $this->assertEquals($options, swoole_library_get_options());
     }
 
-    public function testOption()
+    public function testOption(): void
     {
         $option = uniqid();
         swoole_library_set_option(__METHOD__, $option);
