@@ -11,22 +11,18 @@ declare(strict_types=1);
 
 namespace Swoole\Process;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\Atomic;
 use Swoole\Coroutine;
 
 /**
- * Class ProcessManagerTest
- *
  * @internal
- * @coversNothing
  */
+#[CoversClass(ProcessManager::class)]
 class ProcessManagerTest extends TestCase
 {
-    /**
-     * @covers \Swoole\Process\ProcessManager::add
-     */
-    public function testAdd()
+    public function testAdd(): void
     {
         $pm     = new ProcessManager();
         $atomic = new Atomic(0);
@@ -46,10 +42,7 @@ class ProcessManagerTest extends TestCase
         $pm->start();
     }
 
-    /**
-     * @covers \Swoole\Process\ProcessManager::add
-     */
-    public function testAddDisableCoroutine()
+    public function testAddDisableCoroutine(): void
     {
         $pm = new ProcessManager();
 
@@ -61,10 +54,7 @@ class ProcessManagerTest extends TestCase
         $pm->start();
     }
 
-    /**
-     * @covers \Swoole\Process\ProcessManager::add
-     */
-    public function testAddEnableCoroutine()
+    public function testAddEnableCoroutine(): void
     {
         $pm = new ProcessManager();
 
@@ -76,10 +66,7 @@ class ProcessManagerTest extends TestCase
         $pm->start();
     }
 
-    /**
-     * @covers \Swoole\Process\ProcessManager::addBatch
-     */
-    public function testAddBatch()
+    public function testAddBatch(): void
     {
         $pm = new ProcessManager();
 

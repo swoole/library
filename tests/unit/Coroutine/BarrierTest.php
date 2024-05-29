@@ -11,19 +11,17 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(Barrier::class)]
 class BarrierTest extends TestCase
 {
-    /**
-     * @covers \Swoole\Coroutine\Barrier
-     */
-    public function testWait()
+    public function testWait(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -43,10 +41,7 @@ class BarrierTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Coroutine\Barrier
-     */
-    public function testWaitTimeout()
+    public function testWaitTimeout(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -73,10 +68,8 @@ class BarrierTest extends TestCase
 
     /**
      * Test without execution switching between coroutines.
-     *
-     * @covers \Swoole\Coroutine\Barrier
      */
-    public function testNoCoroutineSwitching()
+    public function testNoCoroutineSwitching(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -95,10 +88,8 @@ class BarrierTest extends TestCase
 
     /**
      * Test without any child coroutines created. Ideally we shouldn't use the Barrier class this way.
-     *
-     * @covers \Swoole\Coroutine\Barrier
      */
-    public function testWithoutAnyChildCoroutines()
+    public function testWithoutAnyChildCoroutines(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -109,10 +100,8 @@ class BarrierTest extends TestCase
 
     /**
      * Test with the Barrier object destroyed in a child coroutine. Ideally we shouldn't use the Barrier class this way.
-     *
-     * @covers \Swoole\Coroutine\Barrier
      */
-    public function testUnexpectedDestroy()
+    public function testUnexpectedDestroy(): void
     {
         run(function () {
             $barrier = Barrier::make();
@@ -129,10 +118,8 @@ class BarrierTest extends TestCase
 
     /**
      * Test with the Barrier object destroyed in a child coroutine following by a coroutine switching. Ideally we shouldn't use the Barrier class this way.
-     *
-     * @covers \Swoole\Coroutine\Barrier
      */
-    public function testUnexpectedDestroyWithCoroutineSwitching()
+    public function testUnexpectedDestroyWithCoroutineSwitching(): void
     {
         run(function () {
             $barrier = Barrier::make();

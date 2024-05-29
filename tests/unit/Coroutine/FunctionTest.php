@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
+use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
 use Swoole\Runtime;
 
@@ -18,9 +19,13 @@ use Swoole\Runtime;
  * @internal
  * @coversNothing
  */
+#[CoversFunction('Swoole\Coroutine\batch')]
+#[CoversFunction('Swoole\Coroutine\go')]
+#[CoversFunction('Swoole\Coroutine\parallel')]
+#[CoversFunction('Swoole\Coroutine\map')]
 class FunctionTest extends TestCase
 {
-    public function testBatchTimeout()
+    public function testBatchTimeout(): void
     {
         run(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
@@ -52,7 +57,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testBatch()
+    public function testBatch(): void
     {
         run(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
@@ -85,7 +90,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testGo()
+    public function testGo(): void
     {
         run(function () {
             $cid = go(function () {
@@ -95,7 +100,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testParallel()
+    public function testParallel(): void
     {
         run(function () {
             $start   = microtime(true);
@@ -116,7 +121,7 @@ class FunctionTest extends TestCase
         });
     }
 
-    public function testMap()
+    public function testMap(): void
     {
         run(function () {
             $start   = microtime(true);

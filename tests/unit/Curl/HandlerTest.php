@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\Curl;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Tests\HookFlagsTrait;
@@ -19,9 +21,9 @@ use Swoole\Tests\HookFlagsTrait;
  * Class HandlerTest
  *
  * @internal
- * @coversNothing
- * @runTestsInSeparateProcesses
  */
+#[CoversClass(Handler::class)]
+#[RunTestsInSeparateProcesses]
 class HandlerTest extends TestCase
 {
     use HookFlagsTrait;
@@ -44,10 +46,7 @@ class HandlerTest extends TestCase
         self::setHookFlags(SWOOLE_HOOK_CURL);
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testRedirect()
+    public function testRedirect(): void
     {
         Coroutine\run(function () {
             $ch = curl_init('http://alturl.com/6xb2v');
@@ -62,10 +61,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::__toString()
-     */
-    public function testToString()
+    public function testToString(): void
     {
         Coroutine\run(function () {
             $ch = curl_init();
@@ -73,10 +69,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testCustomHost()
+    public function testCustomHost(): void
     {
         Coroutine\run(function () {
             $ip = Coroutine::gethostbyname('httpbin.org');
@@ -90,10 +83,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testHeaderName()
+    public function testHeaderName(): void
     {
         Coroutine\run(function () {
             $ch = curl_init('http://httpbin.org/get');
@@ -109,10 +99,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testWriteFunction()
+    public function testWriteFunction(): void
     {
         Coroutine\run(function () {
             $url = 'https://httpbin.org/get';
@@ -132,10 +119,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testResolve()
+    public function testResolve(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -157,10 +141,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testInvalidResolve()
+    public function testInvalidResolve(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -180,10 +161,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testResolve2()
+    public function testResolve2(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -204,10 +182,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testInvalidResolve2()
+    public function testInvalidResolve2(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -227,10 +202,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testInvalidResolve3()
+    public function testInvalidResolve3(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -250,10 +222,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Curl\Handler::execute()
-     */
-    public function testResolve3()
+    public function testResolve3(): void
     {
         Coroutine\run(function () {
             $host = 'httpbin.org';
@@ -274,7 +243,7 @@ class HandlerTest extends TestCase
         });
     }
 
-    public function testOptPrivate()
+    public function testOptPrivate(): void
     {
         Coroutine\run(function () {
             $url     = 'https://httpbin.org/get';

@@ -11,13 +11,14 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI\Record;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\FastCGI;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(UnknownType::class)]
 class UnknownTypeTest extends TestCase
 {
     protected static string $rawMessage = '010b0001000800002a57544621000000';

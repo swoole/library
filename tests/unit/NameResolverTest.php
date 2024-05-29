@@ -11,30 +11,33 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 use function Swoole\Coroutine\run;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(NameResolver\Consul::class)]
+#[CoversClass(NameResolver\Nacos::class)]
+#[CoversClass(NameResolver\Redis::class)]
 class NameResolverTest extends TestCase
 {
-    public function testRedis()
+    public function testRedis(): void
     {
         $ns = new NameResolver\Redis(REDIS_SERVER_URL);
         $this->fun1($ns);
     }
 
-    public function testConsul()
+    public function testConsul(): void
     {
         swoole_library_set_option('http_client_driver', 'curl');
         $ns = new NameResolver\Consul(CONSUL_AGENT_URL);
         $this->fun1($ns);
     }
 
-    public function testNacos()
+    public function testNacos(): void
     {
         if (GITHUB_ACTIONS) {
             $this->markTestSkipped('Nacos is not available.');
@@ -44,7 +47,7 @@ class NameResolverTest extends TestCase
         $this->fun1($ns);
     }
 
-    public function testLookup()
+    public function testLookup(): void
     {
         if (!function_exists('swoole_name_resolver_lookup')) {
             $this->markTestSkipped('Swoole v4.9 or later is required.');
@@ -62,7 +65,7 @@ class NameResolverTest extends TestCase
         $this->assertTrue(swoole_name_resolver_remove($ns));
     }
 
-    public function testRedisCo()
+    public function testRedisCo(): void
     {
         run(function () {
             $ns = new NameResolver\Redis(REDIS_SERVER_URL);
@@ -70,7 +73,7 @@ class NameResolverTest extends TestCase
         });
     }
 
-    public function testConsulCo()
+    public function testConsulCo(): void
     {
         run(function () {
             $ns = new NameResolver\Consul(CONSUL_AGENT_URL);
@@ -78,7 +81,7 @@ class NameResolverTest extends TestCase
         });
     }
 
-    public function testNacosCo()
+    public function testNacosCo(): void
     {
         if (GITHUB_ACTIONS) {
             $this->markTestSkipped('Nacos is not available.');
@@ -89,7 +92,7 @@ class NameResolverTest extends TestCase
         });
     }
 
-    private function fun1(NameResolver $ns)
+    private function fun1(NameResolver $ns): void
     {
         $service_name = uniqid() . '.service';
         $ip           = '127.0.0.1';

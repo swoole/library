@@ -26,7 +26,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: composer require phpstan/phpstan=^1.11.x-dev -n -q --no-progress
+          command: composer require phpstan/phpstan=~1.11.0 -n -q --no-progress
 
       - name: Run Static Analysis
         run: ./vendor/bin/phpstan analyse --no-progress --memory-limit 2G

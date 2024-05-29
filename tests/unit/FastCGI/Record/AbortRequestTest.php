@@ -11,13 +11,14 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI\Record;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\FastCGI;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(AbortRequest::class)]
 class AbortRequestTest extends TestCase
 {
     protected static string $rawMessage = '0102000100000000';

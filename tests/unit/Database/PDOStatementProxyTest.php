@@ -11,21 +11,18 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Swoole\Coroutine;
 use Swoole\Tests\DatabaseTestCase;
 
 /**
- * Class PDOStatementProxyTest
- *
  * @internal
- * @coversNothing
  */
+#[CoversClass(PDOStatementProxy::class)]
 class PDOStatementProxyTest extends DatabaseTestCase
 {
-    /**
-     * @covers \Swoole\Database\PDOStatementProxy::__call()
-     */
-    public function testRun()
+    public function testRun(): void
     {
         Coroutine\run(function () {
             self::assertFalse(
@@ -68,11 +65,8 @@ class PDOStatementProxyTest extends DatabaseTestCase
         ];
     }
 
-    /**
-     * @dataProvider dataSetFetchMode
-     * @covers \Swoole\Database\PDOStatementProxy::setFetchMode
-     */
-    public function testSetFetchMode(array $expected, array $args, string $message)
+    #[DataProvider('dataSetFetchMode')]
+    public function testSetFetchMode(array $expected, array $args, string $message): void
     {
         Coroutine\run(function () use ($expected, $args, $message) {
             $stmt = self::getPdoMysqlPool()->get()->query(
@@ -89,10 +83,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
-    /**
-     * @covers \Swoole\Database\PDOStatementProxy::bindParam()
-     */
-    public function testBindParam()
+    public function testBindParam(): void
     {
         Coroutine\run(function () {
             $stmt  = self::getPdoMysqlPool()->get()->prepare('SHOW TABLES like ?');

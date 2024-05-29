@@ -11,13 +11,14 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Swoole\FastCGI;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(Record::class)]
 class RecordTest extends TestCase
 {
     // from the wireshark captured traffic

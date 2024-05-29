@@ -11,12 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @internal
- * @coversNothing
  */
+#[CoversClass(ArrayObject::class)]
 class ArrayObjectTest extends TestCase
 {
     private ArrayObject $data;
@@ -29,12 +30,6 @@ class ArrayObjectTest extends TestCase
 
     private array $control_data;
 
-    /**
-     * ArrayObjectTest constructor.
-     * @covers \Swoole\ArrayObject::each()
-     * @covers \Swoole\ArrayObject::split()
-     * @param string $dataName
-     */
     public function __construct(?string $name = null, array $data = [], $dataName = '')
     {
         $_data      = '11, 33, 22, 44,12,32,55, 23,19,23';
@@ -63,20 +58,12 @@ class ArrayObjectTest extends TestCase
         parent::__construct($name, $data, $dataName);
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::toArray()
-     */
-    public function testToArray()
+    public function testToArray(): void
     {
         $this->assertEquals($this->data->toArray(), $this->control_data);
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::each()
-     * @covers \Swoole\ArrayObject::sort()
-     * @covers \Swoole\ArrayObject::unique()
-     */
-    public function testMix()
+    public function testMix(): void
     {
         $datao = clone $this->data;
         $data  = $datao->sort()->unique()->toArray();
@@ -88,18 +75,12 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data, $expectResult);
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::serialize()
-     */
-    public function testSerialize()
+    public function testSerialize(): void
     {
         $this->assertEquals(serialize($this->data->toArray()), $this->data->serialize());
     }
 
-    /**
-     * @covers \Swoole\ArrayObject::unique()
-     */
-    public function testUnique()
+    public function testUnique(): void
     {
         $data         = $this->data->unique()->toArray();
         $copy_data    = $this->control_data;
@@ -108,7 +89,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data, $expectResult);
     }
 
-    public function testTraverse()
+    public function testTraverse(): void
     {
         $newArray = [];
         foreach ($this->data as $value) {
@@ -117,7 +98,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($this->control_data, $newArray);
     }
 
-    public function testRemove()
+    public function testRemove(): void
     {
         $data1 = swoole_array_list('hello', 'world', 'swoole');
         $data2 = $data1->toArray();
@@ -128,7 +109,7 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testFilter()
+    public function testFilter(): void
     {
         $data = $this->data->filter(fn ($v) => $v > 20);
 
@@ -142,17 +123,17 @@ class ArrayObjectTest extends TestCase
         $this->assertFalse($find);
     }
 
-    public function testOffsetExists()
+    public function testOffsetExists(): void
     {
         $this->assertEquals($this->data->offsetExists(9), isset($this->control_data[9]));
     }
 
-    public function testSearch()
+    public function testSearch(): void
     {
         $this->assertEquals($this->data_2->search('swoole'), 2);
     }
 
-    public function testValues()
+    public function testValues(): void
     {
         $this->assertEquals(
             $this->data_3->values()->toArray(),
@@ -160,7 +141,7 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testMap()
+    public function testMap(): void
     {
         $arr1 = [1, 2, 3, 4, 5];
         $arr2 = [6, 7, 8, 9, 10];
@@ -183,17 +164,17 @@ class ArrayObjectTest extends TestCase
         ]);
     }
 
-    public function testClear()
+    public function testClear(): void
     {
         $this->assertEquals((clone $this->data->clear())->toArray(), []);
     }
 
-    public function testReverse()
+    public function testReverse(): void
     {
         $this->assertEquals($this->data->reverse()->toArray(), array_reverse($this->control_data));
     }
 
-    public function testDelete()
+    public function testDelete(): void
     {
         $data       = clone $this->data_3;
         $expectData = $data->toArray();
@@ -205,13 +186,13 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testContains()
+    public function testContains(): void
     {
         $this->assertTrue($this->data_2->contains('swoole'));
         $this->assertFalse($this->data_2->contains('aliyun'));
     }
 
-    public function testUnserialize()
+    public function testUnserialize(): void
     {
         $str = serialize($this->data->toArray());
         $this->assertEquals(
@@ -220,21 +201,21 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testPushBack()
+    public function testPushBack(): void
     {
         $data = clone $this->data;
         $data->pushBack(999);
         $this->assertEquals($data->search(999), $data->count() - 1);
     }
 
-    public function testPushFront()
+    public function testPushFront(): void
     {
         $data = clone $this->data;
         $data->pushFront(999);
         $this->assertEquals($data->search(999), 0);
     }
 
-    public function testPopFront()
+    public function testPopFront(): void
     {
         $data  = clone $this->data;
         $value = $data->popFront();
@@ -242,7 +223,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data->count(), $this->data->count() - 1);
     }
 
-    public function testPopBack()
+    public function testPopBack(): void
     {
         $data  = clone $this->data;
         $value = $data->popBack();
@@ -250,7 +231,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data->count(), $this->data->count() - 1);
     }
 
-    public function testPop()
+    public function testPop(): void
     {
         $data  = clone $this->data;
         $value = $data->pop();
@@ -258,14 +239,14 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data->count(), $this->data->count() - 1);
     }
 
-    public function testPush()
+    public function testPush(): void
     {
         $data = clone $this->data;
         $data->pushBack(999);
         $this->assertEquals($data->search(999), $data->count() - 1);
     }
 
-    public function testAppend()
+    public function testAppend(): void
     {
         $data = clone $this->data;
         $data->append(999)->append(888);
@@ -275,7 +256,7 @@ class ArrayObjectTest extends TestCase
         $this->assertTrue($data->contains(30000));
     }
 
-    public function testShuffle()
+    public function testShuffle(): void
     {
         $data1 = clone $this->data;
         $data2 = clone $this->data;
@@ -284,7 +265,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1->values()->sort()->toArray(), $data2->values()->sort()->toArray());
     }
 
-    public function testColumn()
+    public function testColumn(): void
     {
         $records = [
             [
@@ -320,12 +301,12 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testIndexOf()
+    public function testIndexOf(): void
     {
         $this->assertEquals($this->data->indexOf(23), 7);
     }
 
-    public function testProduct()
+    public function testProduct(): void
     {
         $value = 1;
         foreach ($this->control_data as $v) {
@@ -334,7 +315,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($this->data->product(), $value);
     }
 
-    public function testAsort()
+    public function testAsort(): void
     {
         $data1 = $this->data_4->toArray();
         $data2 = clone $this->data_4;
@@ -342,7 +323,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->asort()->toArray());
     }
 
-    public function testArsort()
+    public function testArsort(): void
     {
         $data1 = $this->data_4->toArray();
         $data2 = clone $this->data_4;
@@ -350,7 +331,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->arsort()->toArray());
     }
 
-    public function testKsort()
+    public function testKsort(): void
     {
         $data1 = $this->data_4->toArray();
         $data2 = clone $this->data_4;
@@ -358,7 +339,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->ksort()->toArray());
     }
 
-    public function testKrsort()
+    public function testKrsort(): void
     {
         $data1 = $this->data_4->toArray();
         $data2 = clone $this->data_4;
@@ -366,7 +347,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->krsort()->toArray());
     }
 
-    public function testSort()
+    public function testSort(): void
     {
         $data1 = $this->data->toArray();
         $data2 = clone $this->data;
@@ -374,7 +355,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->sort()->toArray());
     }
 
-    public function testRsort()
+    public function testRsort(): void
     {
         $data1 = $this->data->toArray();
         $data2 = clone $this->data;
@@ -382,7 +363,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->rsort()->toArray());
     }
 
-    public function testUasort()
+    public function testUasort(): void
     {
         $data1 = ['a' => 4, 'b' => 8, 'c' => -1, 'd' => -9, 'e' => 2, 'f' => 5, 'g' => 3, 'h' => -4];
         $data2 = swoole_array($data1);
@@ -391,7 +372,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->uasort($cmp)->toArray());
     }
 
-    public function testNatsort()
+    public function testNatsort(): void
     {
         $data1 = ['img12.png', 'img10.png', 'img2.png', 'img1.png'];
         $data2 = swoole_array($data1);
@@ -399,7 +380,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->natsort()->toArray());
     }
 
-    public function testNatcasesort()
+    public function testNatcasesort(): void
     {
         $data1 = ['IMG0.png', 'img12.png', 'img10.png', 'img2.png', 'img1.png', 'IMG3.png'];
         $data2 = swoole_array($data1);
@@ -407,7 +388,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->natcasesort()->toArray());
     }
 
-    public function testUsort()
+    public function testUsort(): void
     {
         $cmp = fn ($a, $b) => $a <=> $b;
 
@@ -417,7 +398,7 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->usort($cmp)->toArray());
     }
 
-    public function testUksort()
+    public function testUksort(): void
     {
         $cmp = function ($a, $b) {
             $a = preg_replace('@^(a|an|the) @', '', $a);
@@ -431,17 +412,17 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->uksort($cmp)->toArray());
     }
 
-    public function testCount()
+    public function testCount(): void
     {
         $this->assertEquals($this->data->count(), count($this->control_data));
     }
 
-    public function testOffsetGet()
+    public function testOffsetGet(): void
     {
         $this->assertEquals($this->control_data[6], $this->data[6]);
     }
 
-    public function testReduce()
+    public function testReduce(): void
     {
         $this->assertEquals($this->data->product(), $this->data->reduce(function ($carry, $item) {
             $carry *= $item;
@@ -449,7 +430,7 @@ class ArrayObjectTest extends TestCase
         }, 1));
     }
 
-    public function testOffsetSet()
+    public function testOffsetSet(): void
     {
         $value   = 9999;
         $data    = clone $this->data;
@@ -457,20 +438,20 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data->get(7), $value);
     }
 
-    public function testOffsetUnset()
+    public function testOffsetUnset(): void
     {
         $data = clone $this->data;
         unset($data[6]);
         $this->assertFalse($data->exists(6));
     }
 
-    public function testIsEmpty()
+    public function testIsEmpty(): void
     {
         $this->assertFalse($this->data->isEmpty());
         $this->assertTrue(swoole_array()->isEmpty());
     }
 
-    public function testKeys()
+    public function testKeys(): void
     {
         $this->assertEquals(
             $this->data_4->keys()->toArray(),
@@ -478,7 +459,7 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testSet()
+    public function testSet(): void
     {
         $data = clone $this->data_3;
         $data->set('com', 'tal100');
@@ -486,35 +467,35 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data->count(), $this->data_3->count() + 1);
     }
 
-    public function testInsert()
+    public function testInsert(): void
     {
         $data = clone $this->data;
         $data->insert(7, 888);
         $this->assertEquals($data->get(7), 888);
     }
 
-    public function testRandomGet()
+    public function testRandomGet(): void
     {
         $this->assertTrue($this->data->contains($this->data->randomGet()));
     }
 
-    public function testSum()
+    public function testSum(): void
     {
         $this->assertEquals($this->data->sum(), array_sum($this->control_data));
     }
 
-    public function testFlip()
+    public function testFlip(): void
     {
         $result = $this->data_3->flip();
         $this->assertEquals($result->toArray(), array_flip($this->data_3->toArray()));
     }
 
-    public function testJoin()
+    public function testJoin(): void
     {
         $this->assertEquals($this->data_2->join('-'), implode('-', $this->data_2->toArray()));
     }
 
-    public function testChunk()
+    public function testChunk(): void
     {
         $this->assertEquals(
             $this->data->chunk(2)->toArray(),
@@ -522,7 +503,7 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testSlice()
+    public function testSlice(): void
     {
         $this->assertEquals(
             $this->data->slice(2, 4)->toArray(),
@@ -530,43 +511,43 @@ class ArrayObjectTest extends TestCase
         );
     }
 
-    public function testLastIndexOf()
+    public function testLastIndexOf(): void
     {
         $this->assertEquals($this->data->lastIndexOf(23), 9);
     }
 
-    public function testExists()
+    public function testExists(): void
     {
         $this->assertTrue($this->data_3->exists('swoole'));
     }
 
-    public function testFirst()
+    public function testFirst(): void
     {
         $this->assertEquals($this->data_4->first(), 'lemon');
     }
 
-    public function testLast()
+    public function testLast(): void
     {
         $this->assertEquals($this->data_4->last(), 'apple');
     }
 
-    public function testFirstKey()
+    public function testFirstKey(): void
     {
         $this->assertEquals($this->data_4->firstKey(), 'd');
     }
 
-    public function testLastKey()
+    public function testLastKey(): void
     {
         $this->assertEquals($this->data_4->lastKey(), 'c');
     }
 
-    public function testGetOr()
+    public function testGetOr(): void
     {
         $this->assertNull($this->data->getOr('undefined_key'));
         $this->assertSame('default_value', $this->data->getOr('undefined_key', 'default_value'));
     }
 
-    public function testFrom()
+    public function testFrom(): void
     {
         $arr = ArrayObject::from([1, 2, 3]);
         $this->assertInstanceOf(ArrayObject::class, $arr);
