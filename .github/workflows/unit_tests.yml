@@ -18,19 +18,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Services
+      - name: Customize Dockerfile
+        run: sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:${{ matrix.swoole-prefix }}php${{ matrix.php }}/g" ./Dockerfile
+
+      - name: Start Docker Containers
+        uses: isbang/compose-action@v2.0.0
+
+      - name: Prepare Test Environment
         run: |
-          sed -i.bak -e "s/^FROM phpswoole\/swoole.*$/FROM phpswoole\/swoole:${{ matrix.swoole-prefix }}php${{ matrix.php }}/g" ./Dockerfile
-          docker-compose up -d
-          docker ps -a
           docker-compose exec -T app php -v
           docker-compose exec -T app php --ri swoole
           docker-compose exec -T app composer install -n -q --no-progress
+          sleep 40s
 
       - name: Run Unit Tests
-        run: |
-          sleep 40s
-          docker-compose exec -T app composer test
-
-      - name: Stop and Remove Docker Containers
-        run: docker-compose down
+        run: docker-compose exec -T app composer test
