@@ -18,3 +18,4 @@
 # Ignore project files.
 /Dockerfile.bak
 /html/*
+/.idea
