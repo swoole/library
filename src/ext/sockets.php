@@ -236,7 +236,7 @@ function swoole_socket_create_pair(
     int $domain,
     int $type,
     int $protocol,
-    array &$pair
+    array &$pair,
 ) {
     $_pair = swoole_coroutine_socketpair($domain, $type, $protocol);
     if ($_pair) {

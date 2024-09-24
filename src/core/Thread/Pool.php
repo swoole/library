@@ -18,58 +18,30 @@ use Swoole\Thread;
 class Pool
 {
     private array $threads = [];
+
     private string $autoloader = '';
+
     private string $classDefinitionFile = '';
+
     private string $runnableClass = '';
+
     private int $threadNum = 0;
+
     private string $proxyFile;
+
     private array $arguments = [];
+
     private object $running;
+
     private object $queue;
 
     public function __construct(string $runnableClass, int $threadNum)
     {
         if ($threadNum <= 0) {
-            throw new \Exception("threadNum must be greater than 0");
+            throw new \Exception('threadNum must be greater than 0');
         }
         $this->runnableClass = $runnableClass;
-        $this->threadNum = $threadNum;
-    }
-
-    protected function isValidPhpFile($filePath): bool
-    {
-        $allowedNodeTypes = [
-            \PhpParser\Node\Stmt\Class_::class,
-            \PhpParser\Node\Stmt\Const_::class,
-            \PhpParser\Node\Stmt\Use_::class,
-            \PhpParser\Node\Stmt\Namespace_::class,
-            \PhpParser\Node\Stmt\Declare_::class,
-        ];
-
-        $parser = (new ParserFactory())->createForNewestSupportedVersion();
-        try {
-            $code = file_get_contents($filePath);
-            $stmts = $parser->parse($code);
-            $skipLine = -1;
-            foreach ($stmts as $stmt) {
-                $isAllowed = false;
-                foreach ($allowedNodeTypes as $allowedNodeType) {
-                    if ($stmt instanceof $allowedNodeType) {
-                        $isAllowed = true;
-                        break;
-                    }
-                }
-                if (!$isAllowed) {
-                    if ($stmt->getLine() == $skipLine) {
-                        continue;
-                    }
-                    return false;
-                }
-            }
-        } catch (Error $error) {
-            return false;
-        }
-        return true;
+        $this->threadNum     = $threadNum;
     }
 
     public function withArguments(array $arguments): static
@@ -91,11 +63,9 @@ class Pool
     }
 
     /**
-     * @param array $arguments
-     * @return void
      * @throws \ReflectionException
      */
-    function start(array $arguments = []): void
+    public function start(array $arguments = []): void
     {
         if (empty($this->classDefinitionFile) and class_exists($this->runnableClass, false)) {
             $file = (new \ReflectionClass($this->runnableClass))->getFileName();
@@ -108,11 +78,11 @@ class Pool
         }
 
         if (!class_exists($this->runnableClass)) {
-            throw new \Exception("class `$this->runnableClass` not found");
+            throw new \Exception("class `{$this->runnableClass}` not found");
         }
 
         if (!is_subclass_of($this->runnableClass, Runnable::class)) {
-            throw new \Exception("class `$this->runnableClass` must implements Thread\\Runnable");
+            throw new \Exception("class `{$this->runnableClass}` must implements Thread\\Runnable");
         }
 
         if (empty($this->autoloader)) {
@@ -148,7 +118,7 @@ class Pool
             file_put_contents($this->proxyFile, $script);
         }
 
-        $this->queue = new Queue;
+        $this->queue   = new Queue();
         $this->running = new Atomic(1);
 
         for ($i = 0; $i < $this->threadNum; $i++) {
@@ -157,7 +127,7 @@ class Pool
 
         while ($this->running->get()) {
             $threadId = $this->queue->pop(-1);
-            $thread = $this->threads[$threadId];
+            $thread   = $this->threads[$threadId];
             $thread->join();
             unset($this->threads[$threadId]);
             $this->createThread();
@@ -166,6 +136,42 @@ class Pool
         foreach ($this->threads as $thread) {
             $thread->join();
         }
+    }
+
+    protected function isValidPhpFile($filePath): bool
+    {
+        $allowedNodeTypes = [
+            \PhpParser\Node\Stmt\Class_::class,
+            \PhpParser\Node\Stmt\Const_::class,
+            \PhpParser\Node\Stmt\Use_::class,
+            \PhpParser\Node\Stmt\Namespace_::class,
+            \PhpParser\Node\Stmt\Declare_::class,
+        ];
+
+        $parser = (new ParserFactory())->createForNewestSupportedVersion();
+        try {
+            $code     = file_get_contents($filePath);
+            $stmts    = $parser->parse($code);
+            $skipLine = -1;
+            foreach ($stmts as $stmt) {
+                $isAllowed = false;
+                foreach ($allowedNodeTypes as $allowedNodeType) {
+                    if ($stmt instanceof $allowedNodeType) {
+                        $isAllowed = true;
+                        break;
+                    }
+                }
+                if (!$isAllowed) {
+                    if ($stmt->getLine() == $skipLine) {
+                        continue;
+                    }
+                    return false;
+                }
+            }
+        } catch (Error $error) {
+            return false;
+        }
+        return true;
     }
 
     protected function createThread(): void

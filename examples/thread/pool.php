@@ -9,7 +9,6 @@
 
 declare(strict_types=1);
 
-
 use Swoole\Thread\Pool;
 use tests\TestThread;
 
@@ -22,5 +21,5 @@ $map = new Swoole\Thread\Map();
     ->withAutoloader(dirname(__DIR__, 2) . '/vendor/autoload.php')
     ->withClassDefinitionFile(__DIR__ . '/TestThread.php')
     ->withArguments([uniqid(), $map])
-    ->start();
-
+    ->start()
+;

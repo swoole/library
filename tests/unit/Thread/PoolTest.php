@@ -28,7 +28,8 @@ class PoolTest extends TestCase
         (new Pool(TestThread::class, 4))
             ->withClassDefinitionFile(dirname(__DIR__, 2) . '/TestThread.php')
             ->withArguments([uniqid(), $map])
-            ->start();
+            ->start()
+        ;
 
         $this->assertEquals($map['sleep'], 65);
         $this->assertEquals($map['thread'], 13);
