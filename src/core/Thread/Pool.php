@@ -34,6 +34,7 @@ class Pool
     private object $running;
 
     private object $queue;
+    private array $indexes = [];
 
     public function __construct(string $runnableClass, int $threadNum)
     {
@@ -110,10 +111,11 @@ class Pool
             $script .= '$queue = $arguments[2];' . PHP_EOL;
             $script .= '$classDefinitionFile = $arguments[3];' . PHP_EOL;
             $script .= '$running = $arguments[4];' . PHP_EOL;
-            $script .= '$threadArguments = array_slice($arguments, 5);' . PHP_EOL;
+            $script .= '$index = $arguments[5];' . PHP_EOL;
+            $script .= '$threadArguments = array_slice($arguments, 6);' . PHP_EOL;
             $script .= 'if ($autoloader) require_once $autoloader;' . PHP_EOL;
             $script .= 'if ($classDefinitionFile) require_once $classDefinitionFile;' . PHP_EOL;
-            $script .= '$runnable = new $runnableClass($running);' . PHP_EOL;
+            $script .= '$runnable = new $runnableClass($running, $index);' . PHP_EOL;
             $script .= 'try { $runnable->run($threadArguments); }' . PHP_EOL;
             $script .= 'finally { $queue->push($threadId, Swoole\Thread\Queue::NOTIFY_ONE); }' . PHP_EOL;
             $script .= PHP_EOL;
@@ -123,21 +125,28 @@ class Pool
         $this->queue   = new Queue();
         $this->running = new Atomic(1);
 
-        for ($i = 0; $i < $this->threadNum; $i++) {
-            $this->createThread();
+        for ($index = 0; $index < $this->threadNum; $index++) {
+            $this->createThread($index);
         }
 
         while ($this->running->get()) {
             $threadId = $this->queue->pop(-1);
-            $thread   = $this->threads[$threadId];
+            $thread = $this->threads[$threadId];
+            $index = $this->indexes[$threadId];
             $thread->join();
             unset($this->threads[$threadId]);
-            $this->createThread();
+            unset($this->indexes[$threadId]);
+            $this->createThread($index);
         }
 
         foreach ($this->threads as $thread) {
             $thread->join();
         }
+    }
+
+    public function shutdown(): void
+    {
+        $this->running->set(0);
     }
 
     protected function isValidPhpFile($filePath): bool
@@ -176,7 +185,7 @@ class Pool
         return true;
     }
 
-    protected function createThread(): void
+    protected function createThread($index): void
     {
         $thread = new Thread($this->proxyFile,
             $this->autoloader,
@@ -184,8 +193,10 @@ class Pool
             $this->queue,
             $this->classDefinitionFile,
             $this->running,
+            $index,
             ...$this->arguments
         );
+        $this->indexes[$thread->id] = $index;
         $this->threads[$thread->id] = $thread;
     }
 }
