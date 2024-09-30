@@ -94,11 +94,13 @@ class Pool
                 }
             }
         }
-        if (empty($this->autoloader)) {
-            throw new \Exception('autoload file not found');
+
+        if ($this->autoloader) {
+            $this->proxyFile = dirname($this->autoloader) . '/thread_runner.php';
+        } else {
+            $this->proxyFile = dirname($this->classDefinitionFile) . '/thread_runner.php';
         }
 
-        $this->proxyFile = dirname($this->autoloader) . '/thread_runner.php';
         if (!is_file($this->proxyFile)) {
             $script = '<?php' . PHP_EOL;
             $script .= '$arguments = Swoole\Thread::getArguments();' . PHP_EOL;
@@ -109,7 +111,7 @@ class Pool
             $script .= '$classDefinitionFile = $arguments[3];' . PHP_EOL;
             $script .= '$running = $arguments[4];' . PHP_EOL;
             $script .= '$threadArguments = array_slice($arguments, 5);' . PHP_EOL;
-            $script .= 'require_once $autoloader;' . PHP_EOL;
+            $script .= 'if ($autoloader) require_once $autoloader;' . PHP_EOL;
             $script .= 'if ($classDefinitionFile) require_once $classDefinitionFile;' . PHP_EOL;
             $script .= '$runnable = new $runnableClass($running);' . PHP_EOL;
             $script .= 'try { $runnable->run($threadArguments); }' . PHP_EOL;
