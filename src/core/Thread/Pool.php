@@ -45,7 +45,7 @@ class Pool
         $this->threadNum     = $threadNum;
     }
 
-    public function withArguments(array $arguments): static
+    public function withArguments(...$arguments): static
     {
         $this->arguments = $arguments;
         return $this;
@@ -66,7 +66,7 @@ class Pool
     /**
      * @throws \ReflectionException
      */
-    public function start(array $arguments = []): void
+    public function start(): void
     {
         if (empty($this->classDefinitionFile) and class_exists($this->runnableClass, false)) {
             $file = (new \ReflectionClass($this->runnableClass))->getFileName();

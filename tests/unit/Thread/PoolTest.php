@@ -27,7 +27,7 @@ class PoolTest extends TestCase
 
         (new Pool(TestThread::class, 4))
             ->withClassDefinitionFile(dirname(__DIR__, 2) . '/TestThread.php')
-            ->withArguments([uniqid(), $map])
+            ->withArguments(uniqid(), $map)
             ->start()
         ;
 
