@@ -111,6 +111,8 @@ class Helper
         'output_buffer_size'          => true,
         'buffer_output_size'          => true,
         'message_queue_key'           => true,
+        'init_arguments'              => true,
+        'bootstrap'                   => true,
     ];
 
     public const PORT_OPTIONS = [
