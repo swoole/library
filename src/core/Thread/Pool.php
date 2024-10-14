@@ -34,6 +34,7 @@ class Pool
     private object $running;
 
     private object $queue;
+
     private array $indexes = [];
 
     public function __construct(string $runnableClass, int $threadNum)
@@ -131,11 +132,11 @@ class Pool
 
         while ($this->running->get()) {
             $threadId = $this->queue->pop(-1);
-            $thread = $this->threads[$threadId];
-            $index = $this->indexes[$threadId];
+            $thread   = $this->threads[$threadId];
+            $index    = $this->indexes[$threadId];
             $thread->join();
-            unset($this->threads[$threadId]);
-            unset($this->indexes[$threadId]);
+            unset($this->threads[$threadId], $this->indexes[$threadId]);
+
             $this->createThread($index);
         }
 
