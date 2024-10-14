@@ -9,9 +9,11 @@
 
 declare(strict_types=1);
 
+use Swoole\Coroutine\System;
+
 function swoole_exec(string $command, &$output = null, &$returnVar = null)
 {
-    $result = Swoole\Coroutine::exec($command);
+    $result = System::exec($command);
     if ($result) {
         $outputList = explode(PHP_EOL, $result['output']);
         foreach ($outputList as &$value) {
@@ -34,7 +36,7 @@ function swoole_exec(string $command, &$output = null, &$returnVar = null)
 
 function swoole_shell_exec(string $cmd)
 {
-    $result = Swoole\Coroutine::exec($cmd);
+    $result = System::exec($cmd);
     if ($result && $result['output'] !== '') {
         return $result['output'];
     }
