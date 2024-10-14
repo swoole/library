@@ -24,6 +24,9 @@ jobs:
       - name: Start Docker Containers
         uses: isbang/compose-action@v2.0.0
 
+      - name: Install docker-compose
+        uses: apt update && apt install docker-compose
+
       - name: Prepare Test Environment
         run: |
           docker-compose exec -T app php -v
