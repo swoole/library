@@ -453,7 +453,7 @@ final class Handler implements \Stringable
                         $resolve = substr($resolve, 1);
                     }
                     $tmpResolve = explode(':', $resolve, 3);
-                    $host       = $tmpResolve[0] ?? '';
+                    $host       = $tmpResolve[0];
                     $port       = $tmpResolve[1] ?? 0;
                     $ip         = $tmpResolve[2] ?? '';
                     if ($flag === '-') {
@@ -909,7 +909,7 @@ final class Handler implements \Stringable
             }
         }
 
-        if ($this->cookieJar && $this->cookieJar !== '') {
+        if (!empty($this->cookieJar)) {
             if ($this->cookieJar === '-') {
                 foreach ((array) $client->set_cookie_headers as $cookie) {
                     echo $cookie . PHP_EOL;
