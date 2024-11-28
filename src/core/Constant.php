@@ -127,8 +127,14 @@ class Constant
 
     public const OPTION_IOURING_ENTRIES = 'iouring_entries';
 
+    /**
+     * @since 6.0.0-rc1
+     */
     public const OPTION_IOURING_WORKERS = 'iouring_workers';
 
+    /**
+     * @since 6.0.0-rc1
+     */
     public const OPTION_IOURING_FLAG = 'iouring_flag';
 
     public const OPTION_ENABLE_SIGNALFD = 'enable_signalfd';
