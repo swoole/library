@@ -13,9 +13,9 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.2
+          php-version: 8.3
           tools: composer:v2
-          extensions: redis-stable, swoole-5.1.1
+          extensions: redis-stable, swoole-5.1.6
           ini-values: swoole.enable_library=off
           coverage: none
         env:

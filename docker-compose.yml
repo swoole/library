@@ -21,12 +21,12 @@ services:
       - wordpress:/var/www/html
 
   php-fpm:
-    image: php:8.2-fpm
+    image: php:8.3-fpm
     volumes:
       - .:/var/www
 
   wordpress:
-    image: wordpress:php8.2-fpm
+    image: wordpress:php8.3-fpm
     links:
       - mysql
     environment:
