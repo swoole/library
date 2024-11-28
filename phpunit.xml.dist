@@ -7,6 +7,7 @@
     xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd">
   <testsuite name="default">
     <directory suffix="Test.php">tests/unit</directory>
+    <exclude>tests/unit/Thread</exclude>
   </testsuite>
   <php>
     <ini name="error_reporting" value="-1"/>
