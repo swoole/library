@@ -125,6 +125,9 @@ class Constant
 
     public const OPTION_AIO_MAX_IDLE_TIME = 'aio_max_idle_time';
 
+    /**
+     * @since 6.0.0-beta
+     */
     public const OPTION_IOURING_ENTRIES = 'iouring_entries';
 
     /**
