@@ -29,10 +29,10 @@ jobs:
 
       - name: Prepare Test Environment
         run: |
-          docker-compose exec -T app php -v
-          docker-compose exec -T app php --ri swoole
-          docker-compose exec -T app composer install -n -q --no-progress
+          docker compose exec -T app php -v
+          docker compose exec -T app php --ri swoole
+          docker compose exec -T app composer install -n -q --no-progress
           sleep 40s
 
       - name: Run Unit Tests
-        run: docker-compose exec -T app composer test
+        run: docker compose exec -T app composer test
