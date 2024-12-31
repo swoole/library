@@ -5,28 +5,18 @@ on: [ push, pull_request, workflow_dispatch ]
 jobs:
   static-analysis:
     runs-on: ubuntu-22.04
+    container:
+      image: phpswoole/swoole:6.0-php8.3
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.3
-          tools: composer:v2
-          extensions: redis-stable, swoole-stable
-          ini-values: swoole.enable_library=off
-          coverage: none
-        env:
-          SWOOLE_CONFIGURE_OPTS: --enable-mysqlnd --enable-swoole-pgsql --enable-openssl --enable-sockets --enable-swoole-curl
-
-      - name: Install PHPStan
-        uses: nick-invision/retry@v3
-        with:
-          timeout_minutes: 5
-          max_attempts: 5
-          command: composer require phpstan/phpstan=~2.0 -n -q --no-progress
+      - name: Setup PHP And Swoole
+        run: |
+          set -e
+          echo "swoole.enable_library=Off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini
+          composer global require -n -q --no-progress -- phpstan/phpstan=~2.0
 
       - name: Run Static Analysis
-        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit 2G
+        run: ~/.composer/vendor/bin/phpstan analyse --no-progress --memory-limit 2G
