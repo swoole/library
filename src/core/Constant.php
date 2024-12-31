@@ -402,8 +402,14 @@ class Constant
 
     public const OPTION_MESSAGE_QUEUE_KEY = 'message_queue_key';
 
+    /**
+     * @since 6.0.0-beta
+     */
     public const OPTION_BOOTSTRAP = 'bootstrap';
 
+    /**
+     * @since 6.0.0-beta
+     */
     public const OPTION_INIT_ARGUMENTS = 'init_arguments';
 
     public const OPTION_BACKLOG = 'backlog';
