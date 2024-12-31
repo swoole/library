@@ -15,7 +15,7 @@ jobs:
         with:
           php-version: 8.3
           tools: composer:v2
-          extensions: redis-stable, swoole-5.1.6
+          extensions: redis-stable, swoole-stable
           ini-values: swoole.enable_library=off
           coverage: none
         env:
