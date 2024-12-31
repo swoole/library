@@ -1,4 +1,28 @@
-## 5.2.0 (TBD)
+## 6.0.0 (2024-12-16)
+
+Built-in PHP library included in [Swoole v6.0.0](https://github.com/swoole/swoole-src/releases/tag/v6.0.0).
+
+Removed:
+
+* Drop support for PHP 8.0.
+* Deprecated option constants removed from class `\Swoole\Constant`.
+
+Added:
+
+* Added [\Swoole\Thread classes](https://github.com/swoole/library/tree/v6.0.0/src/core/Thread).
+* MR swoole/library#177: Added io_uring constants.
+
+Fixed:
+
+* Fix swoole/swoole-src#5595: curl option `CURLOPT_BINARYTRANSFER` removed.
+
+Changed:
+
+* Added Swoole server option `init_arguments` and `bootstrap` ([commit](https://github.com/swoole/library/commit/fa7b522bcdd905d18e08b545edb54d142c766064)).
+
+## 5.1.3 (2024-06-06)
+
+Built-in PHP library included in [Swoole v5.1.3](https://github.com/swoole/swoole-src/releases/tag/v5.1.3).
 
 Fixed:
 
