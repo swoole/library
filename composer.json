@@ -39,6 +39,7 @@
             "src/constants.php",
             "src/core/Coroutine/functions.php",
             "src/core/Coroutine/Http/functions.php",
+            "src/core/Future/functions.php",
             "src/std/exec.php",
             "src/ext/curl.php",
             "src/ext/sockets.php",
