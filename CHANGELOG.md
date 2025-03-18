@@ -1,3 +1,11 @@
+## 6.0.1 (2025-02-14)
+
+Built-in PHP library included in [Swoole v6.0.1](https://github.com/swoole/swoole-src/releases/tag/v6.0.1).
+
+Added:
+
+* Added io_uring constants ([commit](https://github.com/swoole/library/commit/67e2322ddf9d12dd5d18f9b1c006d3390963c413)).
+
 ## 6.0.0 (2024-12-16)
 
 Built-in PHP library included in [Swoole v6.0.0](https://github.com/swoole/swoole-src/releases/tag/v6.0.0).
