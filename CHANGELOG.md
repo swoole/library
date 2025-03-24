@@ -1,3 +1,9 @@
+## 6.0.2 (2025-03-21)
+
+Built-in PHP library included in [Swoole v6.0.2](https://github.com/swoole/swoole-src/releases/tag/v6.0.2).
+
+This release is the same as Swoole Library [v6.0.1](https://github.com/swoole/library/releases/tag/v6.0.1).
+
 ## 6.0.1 (2025-02-14)
 
 Built-in PHP library included in [Swoole v6.0.1](https://github.com/swoole/swoole-src/releases/tag/v6.0.1).
