@@ -1,4 +1,7 @@
-FROM phpswoole/swoole
+ARG IMAGE_TAG_PREFIX=""
+ARG PHP_VERSION=8.3
+
+FROM phpswoole/swoole:${IMAGE_TAG_PREFIX}php${PHP_VERSION}
 
 RUN apt update  \
     && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git \

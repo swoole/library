@@ -1,6 +1,10 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - IMAGE_TAG_PREFIX
+        - PHP_VERSION
     platform: linux/amd64
     links:
       - consul
@@ -21,12 +25,12 @@ services:
       - wordpress:/var/www/html
 
   php-fpm:
-    image: php:8.3-fpm
+    image: php:8.4-fpm
     volumes:
       - .:/var/www
 
   wordpress:
-    image: wordpress:php8.3-fpm
+    image: wordpress:php8.4-fpm
     links:
       - mysql
     environment:
@@ -43,7 +47,7 @@ services:
           nocopy: false
 
   mysql:
-    image: mysql:8.2
+    image: mysql:8
     environment:
       MYSQL_DATABASE: test
       MYSQL_USER: username
@@ -51,28 +55,24 @@ services:
       MYSQL_ROOT_PASSWORD: password
 
   pgsql:
-    image: postgres:14
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: root
       POSTGRES_DB: test
-      POSTGRES_PASSWORD: root
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
 
   oracle:
     image: gvenzl/oracle-xe:slim
     platform: linux/amd64
     environment:
       ORACLE_PASSWORD: oracle
-    ports:
-      - 1521
 
   redis:
-    image: redis:6.2
+    image: redis:7.2
 
   nacos:
     image: nacos/nacos-server
     platform: linux/amd64
-    ports:
-      - 8848
     environment:
       MODE: standalone
       PREFER_HOST_MODE: hostname
@@ -81,8 +81,6 @@ services:
     image: consul:1.15
     command:
       consul agent -dev -client=0.0.0.0
-    ports:
-      - 8500
 
 volumes:
   wordpress:

@@ -24,7 +24,7 @@ if (!defined('SWOOLE_LIBRARY')) {
 if (!defined('MYSQL_SERVER_HOST')) {
     define('MYSQL_SERVER_HOST', 'mysql');
     define('MYSQL_SERVER_PORT', 3306);
-    define('MYSQL_SERVER_USER', 'root');
+    define('MYSQL_SERVER_USER', 'username');
     define('MYSQL_SERVER_PWD', 'password');
     define('MYSQL_SERVER_DB', 'test');
 }
@@ -32,8 +32,8 @@ if (!defined('MYSQL_SERVER_HOST')) {
 if (!defined('PGSQL_SERVER_HOST')) {
     define('PGSQL_SERVER_HOST', 'pgsql');
     define('PGSQL_SERVER_PORT', 5432);
-    define('PGSQL_SERVER_USER', 'root');
-    define('PGSQL_SERVER_PWD', 'root');
+    define('PGSQL_SERVER_USER', 'username');
+    define('PGSQL_SERVER_PWD', 'password');
     define('PGSQL_SERVER_DB', 'test');
 }
 
