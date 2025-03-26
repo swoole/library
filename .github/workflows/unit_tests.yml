@@ -12,7 +12,7 @@ jobs:
         image-tag-prefix: ["", "6.0-"]
         php: ["8.1", "8.2", "8.3", "8.4"]
 
-    name: Run Tests Using Image phpswoole/swoole:${{ matrix.image-tag-prefix }}php${{ matrix.php }}
+    name: Tests With ${{ matrix.image-tag-prefix }}php${{ matrix.php }}
 
     steps:
       - name: Checkout
