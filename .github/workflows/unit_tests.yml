@@ -12,7 +12,7 @@ jobs:
         image-tag-prefix: ["", "6.0-"]
         php: ["8.1", "8.2", "8.3", "8.4"]
 
-    name: Run Tests Using Image phpswoole/swoole:${{ matrix.image-tag-prefix }}php${{ matrix.php }}
+    name: Image phpswoole/swoole:${{ matrix.image-tag-prefix }}php${{ matrix.php }}
 
     steps:
       - name: Checkout
@@ -20,9 +20,6 @@ jobs:
 
       - name: Start Docker Containers
         uses: hoverkraft-tech/compose-action@v2.2.0
-        with:
-          up-flags: "--build --abort-on-container-exit --remove-orphans --renew-anon-volumes"
-          down-flags: "--volumes"
         env:
           IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
           PHP_VERSION: ${{ matrix.php }}
