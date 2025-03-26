@@ -3,8 +3,9 @@ ARG PHP_VERSION=8.3
 
 FROM phpswoole/swoole:${IMAGE_TAG_PREFIX}php${PHP_VERSION}
 
-RUN apt update  \
-    && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git \
+RUN set -ex \
+    && apt update \
+    && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git --no-install-recommends \
     && wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip \
     && unzip instantclient-basiclite-linuxx64.zip && rm -rf META-INF instantclient-basiclite-linuxx64.zip \
     && wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxx64.zip \
@@ -16,10 +17,12 @@ RUN apt update  \
     && echo '/usr/local/instantclient' > /etc/ld.so.conf.d/oracle-instantclient.conf \
     && ldconfig \
     && export ORACLE_HOME=instantclient,/usr/local/instantclient \
-    && apt install -y sqlite3 libsqlite3-dev libpq-dev \
-    && pecl update-channels \
-    && docker-php-ext-install mysqli pdo_oci pdo_pgsql pdo_sqlite \
-    && docker-php-ext-enable  mysqli pdo_oci pdo_pgsql pdo_sqlite \
+    && apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends \
+    && docker-php-ext-install mysqli pdo_pgsql pdo_sqlite \
+    && docker-php-ext-enable  mysqli pdo_pgsql pdo_sqlite \
+    && pecl channel-update pecl \
+    && if [ "$(php -r 'echo version_compare(PHP_VERSION, "8.4.0", "<") ? "old" : "new";')" = "old" ] ; then docker-php-ext-install pdo_oci; else pecl install pdo_oci-stable; fi \
+    && docker-php-ext-enable  pdo_oci \
     && git clone https://github.com/swoole/swoole-src.git \
     && cd ./swoole-src \
     && phpize \
@@ -34,10 +37,10 @@ RUN apt update  \
     && make -j$(cat /proc/cpuinfo | grep processor | wc -l) \
     && make install \
     && docker-php-ext-enable swoole \
+    && echo "swoole.enable_library=off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini \
     && php -m \
     && php --ri swoole \
-    && echo "swoole.enable_library=off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini && \
-    { \
+    && { \
         echo '[supervisord]'; \
         echo 'user = root'; \
         echo ''; \
