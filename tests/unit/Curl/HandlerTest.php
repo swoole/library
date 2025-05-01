@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
+use Swoole\Coroutine\Http\Server;
 use Swoole\Tests\HookFlagsTrait;
 
 /**
@@ -259,6 +260,33 @@ class HandlerTest extends TestCase
             $get_private = curl_getinfo($ch, CURLINFO_PRIVATE);
             self::assertEquals($private, $get_private);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
+            curl_close($ch);
+        });
+    }
+
+    public function testRepeatHeader(): void
+    {
+        Coroutine\run(function () {
+            $server = new Server('127.0.0.1', 0);
+            Coroutine\go(function () use ($server) {
+                $server->handle('/', function ($request, $response) {
+                    $response->header('X-Test-Header1', ['value1', 'value2']);
+                    $response->header('X-Test-Header2', 'value3');
+                    $response->end();
+                });
+                $server->start();
+            });
+            $ch = curl_init('http://127.0.0.1:' . $server->port);
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Test-Header: value1', 'X-Test-Header: value2']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            $response   = curl_exec($ch);
+            $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            $headers    = substr($response, 0, $headerSize);
+            $this->assertStringContainsStringIgnoringCase("x-test-header1: value1\r\n", $headers);
+            $this->assertStringContainsStringIgnoringCase("x-test-header1: value2\r\n", $headers);
+            $this->assertStringContainsStringIgnoringCase("x-test-header2: value3\r\n", $headers);
+            $server->shutdown();
             curl_close($ch);
         });
     }
