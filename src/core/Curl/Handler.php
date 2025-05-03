@@ -630,7 +630,13 @@ final class Handler implements \Stringable
                 $this->readFunction = $value;
                 break;
             case CURLOPT_WRITEFUNCTION:
-                $this->writeFunction = $value;
+                if (SWOOLE_VERSION_ID >= 50100) {
+                    $this->clientOptions[Constant::OPTION_WRITE_FUNC] = function ($client, $data) use ($value) {
+                        return $value($this, $data);
+                    };
+                } else {
+                    $this->writeFunction = $value;
+                }
                 break;
             case CURLOPT_NOPROGRESS:
                 $this->noProgress = $value;
