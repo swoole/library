@@ -26,21 +26,6 @@ use Swoole\Tests\DatabaseTestCase;
 class ObjectProxyTest extends DatabaseTestCase
 {
     /**
-     * @return array<array{0: callable, 1: class-string, 2: class-string<ObjectProxy>|null}>
-     */
-    public static function dataDatabaseObjectProxy(): array
-    {
-        return [
-            [[self::class, 'getMysqliPool'], \mysqli::class, MysqliProxy::class],
-            [[self::class, 'getPdoMysqlPool'], \PDO::class, PDOProxy::class],
-            [[self::class, 'getPdoOraclePool'], \PDO::class, PDOProxy::class],
-            [[self::class, 'getPdoPgsqlPool'], \PDO::class, PDOProxy::class],
-            [[self::class, 'getPdoSqlitePool'], \PDO::class, PDOProxy::class],
-            [[self::class, 'getRedisPool'], \Redis::class],
-        ];
-    }
-
-    /**
      * @param class-string $expectedObjectClass
      * @param class-string<ObjectProxy>|null $expectedProxyClass
      */
@@ -63,16 +48,17 @@ class ObjectProxyTest extends DatabaseTestCase
     }
 
     /**
-     * @return array<array<callable>>
+     * @return array<array{0: callable, 1: class-string, 2: class-string<ObjectProxy>|null}>
      */
-    public static function dataUncloneableDatabaseProxyObject(): array
+    public static function dataDatabaseObjectProxy(): array
     {
         return [
-            [[self::class, 'getMysqliPool']],
-            [[self::class, 'getPdoMysqlPool']],
-            [[self::class, 'getPdoOraclePool']],
-            [[self::class, 'getPdoPgsqlPool']],
-            [[self::class, 'getPdoSqlitePool']],
+            [[self::class, 'getMysqliPool'], \mysqli::class, MysqliProxy::class],
+            [[self::class, 'getPdoMysqlPool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getPdoOraclePool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getPdoPgsqlPool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getPdoSqlitePool'], \PDO::class, PDOProxy::class],
+            [[self::class, 'getRedisPool'], \Redis::class],
         ];
     }
 
@@ -91,5 +77,19 @@ class ObjectProxyTest extends DatabaseTestCase
                 }
             }
         });
+    }
+
+    /**
+     * @return array<array<callable>>
+     */
+    public static function dataUncloneableDatabaseProxyObject(): array
+    {
+        return [
+            [[self::class, 'getMysqliPool']],
+            [[self::class, 'getPdoMysqlPool']],
+            [[self::class, 'getPdoOraclePool']],
+            [[self::class, 'getPdoPgsqlPool']],
+            [[self::class, 'getPdoSqlitePool']],
+        ];
     }
 }

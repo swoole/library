@@ -32,6 +32,24 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
+    #[DataProvider('dataSetFetchMode')]
+    public function testSetFetchMode(array $expected, array $args, string $message): void
+    {
+        Coroutine\run(function () use ($expected, $args, $message) {
+            $stmt = self::getPdoMysqlPool()->get()->query(
+                'SELECT
+                 *
+                 FROM (
+                     SELECT 1 as col1, 2 as col2
+                     UNION SELECT 3, 4
+                     UNION SELECT 5, 6
+                 ) `table1`'
+            );
+            $stmt->setFetchMode(...$args);
+            self::assertEquals($expected, $stmt->fetchAll(), $message);
+        });
+    }
+
     public static function dataSetFetchMode(): array
     {
         return [
@@ -63,24 +81,6 @@ class PDOStatementProxyTest extends DatabaseTestCase
                 'Test the  fetch mode "PDO::FETCH_CLASS"',
             ],
         ];
-    }
-
-    #[DataProvider('dataSetFetchMode')]
-    public function testSetFetchMode(array $expected, array $args, string $message): void
-    {
-        Coroutine\run(function () use ($expected, $args, $message) {
-            $stmt = self::getPdoMysqlPool()->get()->query(
-                'SELECT
-                 *
-                 FROM (
-                     SELECT 1 as col1, 2 as col2
-                     UNION SELECT 3, 4
-                     UNION SELECT 5, 6
-                 ) `table1`'
-            );
-            $stmt->setFetchMode(...$args);
-            self::assertEquals($expected, $stmt->fetchAll(), $message);
-        });
     }
 
     public function testBindParam(): void

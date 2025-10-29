@@ -25,6 +25,13 @@ use Swoole\FastCGI\Record\Stdout;
 #[CoversClass(HttpResponse::class)]
 class HttpResponseTest extends TestCase
 {
+    #[DataProvider('dataHeaders')]
+    public function testHeaders(array $expectedHeaders, string $contentData, string $message): void
+    {
+        $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
+        self::assertSame($expectedHeaders, (new HttpResponse([new Stdout($contentData), new EndRequest()]))->getHeaders(), $message);
+    }
+
     public static function dataHeaders(): array
     {
         $poweredBy = 'PHP/' . PHP_VERSION;
@@ -63,11 +70,22 @@ Hello world!',
         ];
     }
 
-    #[DataProvider('dataHeaders')]
-    public function testHeaders(array $expectedHeaders, string $contentData, string $message): void
+    #[DataProvider('dataHeadersFromFPM')]
+    public function testHeadersFromFPM(array $expectedHeaders, string $filename, string $message): void
     {
-        $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
-        self::assertSame($expectedHeaders, (new HttpResponse([new Stdout($contentData), new EndRequest()]))->getHeaders(), $message);
+        Coroutine\run(
+            function () use ($expectedHeaders, $filename, $message) {
+                $client   = new Client('php-fpm', 9000);
+                $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
+
+                /*
+                 * Unit tests run in the Swoole image, thus we can't get the PHP-FPM version directly when running tests.
+                 * Here we override expected HTTP header "X-Powered-By" with whatever returned from PHP-FPM.
+                 */
+                $expectedHeaders['X-Powered-By'] = $response->getHeaders()['X-Powered-By'];
+                self::assertSame($expectedHeaders, $response->getHeaders(), $message);
+            }
+        );
     }
 
     public static function dataHeadersFromFPM(): array
@@ -114,22 +132,13 @@ Hello world!',
         ];
     }
 
-    #[DataProvider('dataHeadersFromFPM')]
-    public function testHeadersFromFPM(array $expectedHeaders, string $filename, string $message): void
+    #[DataProvider('dataStatus')]
+    public function testStatus(int $expectedStatusCode, string $expectedReasonPhrase, string $contentData): void
     {
-        Coroutine\run(
-            function () use ($expectedHeaders, $filename, $message) {
-                $client   = new Client('php-fpm', 9000);
-                $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
-
-                /*
-                 * Unit tests run in the Swoole image, thus we can't get the PHP-FPM version directly when running tests.
-                 * Here we override expected HTTP header "X-Powered-By" with whatever returned from PHP-FPM.
-                 */
-                $expectedHeaders['X-Powered-By'] = $response->getHeaders()['X-Powered-By'];
-                self::assertSame($expectedHeaders, $response->getHeaders(), $message);
-            }
-        );
+        $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
+        $response    = new HttpResponse([new Stdout($contentData), new EndRequest()]);
+        self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
+        self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
     }
 
     public static function dataStatus(): array
@@ -170,13 +179,17 @@ Hello world!',
         ];
     }
 
-    #[DataProvider('dataStatus')]
-    public function testStatus(int $expectedStatusCode, string $expectedReasonPhrase, string $contentData): void
+    #[DataProvider('dataStatusFromFPM')]
+    public function testStatusFromFPM(int $expectedStatusCode, string $expectedReasonPhrase, string $filename): void
     {
-        $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
-        $response    = new HttpResponse([new Stdout($contentData), new EndRequest()]);
-        self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
-        self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
+        Coroutine\run(
+            function () use ($expectedStatusCode, $expectedReasonPhrase, $filename) {
+                $client   = new Client('php-fpm', 9000);
+                $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
+                self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
+                self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
+            }
+        );
     }
 
     public static function dataStatusFromFPM(): array
@@ -207,18 +220,5 @@ Hello world!',
                 'test HTTP status overridden with extra spaces included, but no reason phrase',
             ],
         ];
-    }
-
-    #[DataProvider('dataStatusFromFPM')]
-    public function testStatusFromFPM(int $expectedStatusCode, string $expectedReasonPhrase, string $filename): void
-    {
-        Coroutine\run(
-            function () use ($expectedStatusCode, $expectedReasonPhrase, $filename) {
-                $client   = new Client('php-fpm', 9000);
-                $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
-                self::assertSame($expectedStatusCode, $response->getStatusCode(), 'test status code returned');
-                self::assertSame($expectedReasonPhrase, $response->getReasonPhrase(), 'test reason phrase');
-            }
-        );
     }
 }
