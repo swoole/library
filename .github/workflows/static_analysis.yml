@@ -16,7 +16,7 @@ jobs:
         run: |
           set -e
           echo "swoole.enable_library=Off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini
-          composer require -n -q --no-progress -- phpstan/phpstan=~2.0
+          composer require --dev -n -q --no-progress -- phpstan/phpstan=~2.0
 
       - name: Run Static Analysis
         run: ./vendor/bin/phpstan analyse --no-progress --memory-limit 2G

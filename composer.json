@@ -26,7 +26,8 @@
         "ext-redis": "*",
         "ext-curl": "*",
         "phpunit/phpunit": "~10.0 || ~11.0",
-        "swoole/ide-helper": "dev-master"
+        "swoole/ide-helper": "dev-master",
+        "phpstan/phpstan": "^2.1"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
