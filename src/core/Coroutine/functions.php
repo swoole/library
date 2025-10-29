@@ -93,9 +93,10 @@ function deadlock_check()
 {
     $all_coroutines = Coroutine::listCoroutines();
     $count          = Coroutine::stats()['coroutine_num'];
-    echo "\n===================================================================",
-    "\n [FATAL ERROR]: all coroutines (count: {$count}) are asleep - deadlock!",
-    "\n===================================================================\n";
+    echo "\n ===================================================================",
+    "\n  [FATAL ERROR]: all coroutines (count: {$count}) are asleep - deadlock!",
+    "\n ===================================================================",
+    "\n ";
 
     $options = Coroutine::getOptions();
     if (empty($options['deadlock_check_disable_trace'])) {
@@ -104,9 +105,9 @@ function deadlock_check()
         $depth = empty($options['deadlock_check_depth']) ? 32 : intval($options['deadlock_check_depth']);
         foreach ($all_coroutines as $cid) {
             echo "\n [Coroutine-{$cid}]";
-            echo "\n--------------------------------------------------------------------\n";
+            echo "\n --------------------------------------------------------------------\n";
             echo Coroutine::printBackTrace($cid, DEBUG_BACKTRACE_IGNORE_ARGS, $depth);
-            echo "\n";
+            echo "\n ";
             $index++;
             // limit the number of maximum outputs
             if ($index >= $limit) {
