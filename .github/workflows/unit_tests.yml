@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start Docker Containers
-        uses: hoverkraft-tech/compose-action@v2.2.0
+        uses: hoverkraft-tech/compose-action@v2.4.1
         env:
           IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
           PHP_VERSION: ${{ matrix.php }}
