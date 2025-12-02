@@ -73,7 +73,7 @@ services:
 
   mongodb:
     image: mongodb/mongodb-community-server:8.0-ubi8
-    container_name: remote-object
+    container_name: mongodb
     restart: always
     ports:
         - "27017:27017"

@@ -24,7 +24,8 @@ class Server
     private HttpServer $server;
 
     private array $objects = [];
-
+    private array $allowedClasses = [];
+    private array $allowedFunctions = [];
     private Long $nextObjectId;
 
     public function __construct(string $host = '127.0.0.1', int $port = self::DEFAULT_PORT, array $options = [])
@@ -33,6 +34,23 @@ class Server
         $server_mode = $options['server_mode'] ?? SWOOLE_THREAD;
         $server = new HttpServer($host, $port, $server_mode);
         unset($options['server_mode']);
+
+        if (isset($options['allowed_classes'])) {
+            if (!is_array($options['allowed_classes'])) {
+                throw new Exception('allowed_classes must be an array');
+            }
+            $this->allowedClasses = array_flip($options['allowed_classes']);
+            unset($options['allowed_classes']);
+        }
+
+        if (isset($options['allowed_functions'])) {
+            if (!is_array($options['allowed_functions'])) {
+                throw new Exception('allowed_functions must be an array');
+            }
+            $this->allowedFunctions = array_flip($options['allowed_functions']);
+            unset($options['allowed_functions']);
+        }
+
         if ($options) {
             $server->set($options);
         }
@@ -107,7 +125,11 @@ class Server
      */
     private function _new(Context $ctx): void
     {
-        $class = '\\' . $ctx->getParam('class');
+        $class = trim($ctx->getParam('class'), '\\ ');
+        if (count($this->allowedClasses) > 0 and !isset($this->allowedClasses[$class])) {
+            throw new Exception("class[{$class}] not allowed");
+        }
+        $class = '\\' . $class;
         $args  = unserialize($ctx->getParam('args'));
         foreach ($args as $key => $value) {
             $args[$key] = $this->unmarshal($value);
@@ -119,11 +141,15 @@ class Server
 
     private function _call_function(Context $ctx): void
     {
-        $fn   = '\\' . $ctx->getParam('function');
+        $fn = trim($ctx->getParam('function'), '\\ ');
+        if (count($this->allowedFunctions) > 0 and !isset($this->allowedFunctions[$fn])) {
+            throw new Exception("function[{$fn}] not allowed");
+        }
         $args = unserialize($ctx->getParam('args'));
         foreach ($args as $key => $value) {
             $args[$key] = $this->unmarshal($value);
         }
+        $fn = '\\' . $fn;
         if (!function_exists($fn)) {
             throw new Exception("function[{$fn}] not found");
         }
