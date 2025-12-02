@@ -29,7 +29,10 @@ class Server
 
     public function __construct(string $host = '127.0.0.1', int $port = self::DEFAULT_PORT, array $options = [])
     {
-        $server = new HttpServer($host, $port, SWOOLE_THREAD);
+        // By default, thread mode is used, and when viewed with ps, only one process will be displayed.
+        $server_mode = $options['server_mode'] ?? SWOOLE_THREAD;
+        $server = new HttpServer($host, $port, $server_mode);
+        unset($options['server_mode']);
         if ($options) {
             $server->set($options);
         }
@@ -112,6 +115,20 @@ class Server
         $obj       = new $class(...$args);
         $object_id = $this->addObject($obj);
         $ctx->end(['code' => 0, 'object' => $object_id]);
+    }
+
+    private function _call_function(Context $ctx): void
+    {
+        $fn   = '\\' . $ctx->getParam('function');
+        $args = unserialize($ctx->getParam('args'));
+        foreach ($args as $key => $value) {
+            $args[$key] = $this->unmarshal($value);
+        }
+        if (!function_exists($fn)) {
+            throw new Exception("function[{$fn}] not found");
+        }
+        $result = $fn(...$args);
+        $ctx->end(['code' => 0, 'result' => $this->marshal($ctx, $result)]);
     }
 
     /**

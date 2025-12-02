@@ -25,7 +25,7 @@ class Client
 
     private int $ownerCoroutineId;
 
-    public function __construct(string $host = '127.0.0.1', int $port = Server::DEFAULT_PORT)
+    public function __construct(string $host = '127.0.0.1', int $port = Server::DEFAULT_PORT, array $options = [])
     {
         $this->id               = $this->genUuid();
         $this->client           = new HttpClient($host, $port);
@@ -40,6 +40,11 @@ class Client
     public function create(string $class, mixed ...$args): RemoteObject
     {
         return RemoteObject::create($this, $class, $args);
+    }
+
+    public function call(string $fn, mixed ...$args): mixed
+    {
+        return RemoteObject::call($this, $fn, $args);
     }
 
     /**

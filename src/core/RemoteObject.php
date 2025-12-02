@@ -36,13 +36,16 @@ class RemoteObject implements \ArrayAccess, \Stringable
         // On the server side, this object will also be constructed,
         // but it is only used for data storage and serialization.
         // No remote calls are executed during destruction.
-        if ($this->client) {
+        // If the objectId is 0, it indicates that the object may have been a temporary object created by a function call
+        // and does not need to be destructed.
+        if ($this->client and $this->objectId > 0) {
             try {
                 $this->execute('/destroy', [
                     'object' => $this->objectId,
                 ]);
             } catch (Exception $e) {
                 error_log($e->getMessage());
+                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
             }
         }
     }
@@ -106,14 +109,30 @@ class RemoteObject implements \ArrayAccess, \Stringable
         return $rs->value;
     }
 
+    public function __invoke(...$args)
+    {
+        $rs = $this->execute('/call_method', [
+            'object' => $this->objectId,
+            'method' => '__invoke',
+            'args'   => serialize($args),
+        ]);
+        return unserialize($rs->result);
+    }
+
+    public static function call(Client $client, string $fn, array $args)
+    {
+        $object         = new self(Coroutine::getCid(), $client->getId());
+        $object->client = Client::getClient($client->getId());
+        $rs             = $object->execute('/call_function', [
+            'function' => $fn,
+            'args'     => serialize($args),
+        ]);
+        return unserialize($rs->result);
+    }
+
     public function getObjectId(): int
     {
         return $this->objectId;
-    }
-
-    public function getClientId(): string
-    {
-        return $this->clientId;
     }
 
     /**
@@ -188,6 +207,9 @@ class RemoteObject implements \ArrayAccess, \Stringable
      */
     private function execute(string $path, array $params = []): \stdClass
     {
+        if (!$this->client) {
+            throw new Exception('This remote object is not bound to a client, and cannot initiate remote calls');
+        }
         $rs = $this->client->post($path, $params);
         if (!$rs) {
             throw new Exception($this->client->errMsg);

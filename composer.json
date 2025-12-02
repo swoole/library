@@ -35,7 +35,8 @@
         "ext-mysqli": "Required to use mysqli database",
         "ext-pdo": "Required to use pdo database",
         "ext-redis": "Required to use redis database, and the required version is greater than or equal to 3.1.3",
-        "ext-curl": "Required to use http client"
+        "ext-curl": "Required to use http client",
+        "ext-mongodb": "Required to use mongodb database"
     },
     "autoload": {
         "files": [
