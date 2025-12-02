@@ -5,7 +5,7 @@ FROM phpswoole/swoole:${IMAGE_TAG_PREFIX}php${PHP_VERSION}
 
 RUN set -ex \
     && apt update \
-    && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git --no-install-recommends
+    && apt install -y libaio-dev libc-ares-dev supervisor wget git --no-install-recommends
 
 RUN wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip \
     && unzip instantclient-basiclite-linuxx64.zip && rm -rf META-INF instantclient-basiclite-linuxx64.zip \
