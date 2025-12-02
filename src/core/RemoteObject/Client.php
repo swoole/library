@@ -1,26 +1,38 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
 
 namespace Swoole\RemoteObject;
 
-
 use Swoole\Coroutine;
-use Swoole\Exception;
 use Swoole\Coroutine\Http\Client as HttpClient;
+use Swoole\Exception;
 use Swoole\RemoteObject;
 
 class Client
 {
     private static array $clients = [];
+
     private HttpClient $client;
+
     private string $id;
+
     private int $ownerCoroutineId;
+
     public function __construct(string $host = '127.0.0.1', int $port = Server::DEFAULT_PORT)
     {
-        $this->id = base64_encode(random_bytes(16));
-        $this->client = new HttpClient($host, $port);
+        $this->id               = base64_encode(random_bytes(16));
+        $this->client           = new HttpClient($host, $port);
         $this->ownerCoroutineId = Coroutine::getCid();
         $this->client->setHeaders([
-            'client-id' => $this->id,
+            'client-id'    => $this->id,
             'coroutine-id' => $this->ownerCoroutineId,
         ]);
         self::$clients[$this->id] = $this;
@@ -37,7 +49,7 @@ class Client
     /**
      * @throws Exception
      */
-    static function getClient(string $clientId): HttpClient
+    public static function getClient(string $clientId): HttpClient
     {
         if (empty($clientId)) {
             throw new Exception('RemoteObject is not bound to a client');

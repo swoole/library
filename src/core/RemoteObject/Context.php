@@ -17,17 +17,19 @@ use Swoole\Http\Response;
 class Context
 {
     public string $clientId;
+
     public int $coroutineId;
 
     public Request $request;
+
     public Response $response;
 
     public function __construct(Request $request, Response $response)
     {
-        $this->clientId = $request->header['client-id'] ?? '';
+        $this->clientId    = $request->header['client-id'] ?? '';
         $this->coroutineId = intval($request->header['coroutine-id'] ?? 0);
-        $this->request = $request;
-        $this->response = $response;
+        $this->request     = $request;
+        $this->response    = $response;
     }
 
     public function end(array $data): void
@@ -45,7 +47,7 @@ class Context
     {
         $value = $this->request->post[$name] ?? $default;
         if ($required and $value === null) {
-            throw new Exception("param[$name] is empty");
+            throw new Exception("param[{$name}] is empty");
         }
         return $value;
     }

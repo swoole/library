@@ -28,7 +28,8 @@
         "mongodb/mongodb": "^2.1",
         "phpunit/phpunit": "~10.0 || ~11.0",
         "swoole/ide-helper": "dev-master",
-        "phpstan/phpstan": "^2.1"
+        "phpstan/phpstan": "^2.1",
+        "friendsofphp/php-cs-fixer": "^3.0"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
@@ -64,6 +65,7 @@
     },
     "scripts": {
         "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
+        "cs-fix": "vendor/bin/php-cs-fixer fix $1",
         "post-install-cmd": [
             "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
         ],
