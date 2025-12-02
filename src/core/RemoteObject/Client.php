@@ -30,10 +30,15 @@ class Client
         $this->id               = $this->genUuid();
         $this->client           = new HttpClient($host, $port);
         $this->ownerCoroutineId = Coroutine::getCid();
-        $this->client->setHeaders([
+
+        $headers = [
             'client-id'    => $this->id,
             'coroutine-id' => $this->ownerCoroutineId,
-        ]);
+        ];
+        if (isset($options['api_key'])) {
+            $headers['x-api-key'] = $options['api_key'];
+        }
+        $this->client->setHeaders($headers);
         self::$clients[$this->id] = $this;
     }
 

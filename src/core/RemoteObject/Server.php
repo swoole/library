@@ -24,15 +24,20 @@ class Server
     private HttpServer $server;
 
     private array $objects = [];
+
     private array $allowedClasses = [];
+
     private array $allowedFunctions = [];
+
     private Long $nextObjectId;
+
+    private string $apiKey = '';
 
     public function __construct(string $host = '127.0.0.1', int $port = self::DEFAULT_PORT, array $options = [])
     {
         // By default, thread mode is used, and when viewed with ps, only one process will be displayed.
         $server_mode = $options['server_mode'] ?? SWOOLE_THREAD;
-        $server = new HttpServer($host, $port, $server_mode);
+        $server      = new HttpServer($host, $port, $server_mode);
         unset($options['server_mode']);
 
         if (isset($options['allowed_classes'])) {
@@ -51,6 +56,11 @@ class Server
             unset($options['allowed_functions']);
         }
 
+        if (isset($options['api_key'])) {
+            $this->apiKey = $options['api_key'];
+            unset($options['api_key']);
+        }
+
         if ($options) {
             $server->set($options);
         }
@@ -67,6 +77,11 @@ class Server
     public function onRequest(Request $request, Response $response): void
     {
         $ctx = new Context($request, $response);
+        if ($this->apiKey and $this->apiKey !== $request->header['x-api-key']) {
+            $response->status(403);
+            $ctx->end(['code' => -3, 'msg' => 'invalid api key']);
+            return;
+        }
         try {
             $method = $ctx->getHandler();
             if (method_exists($this, $method)) {
@@ -125,7 +140,7 @@ class Server
      */
     private function _new(Context $ctx): void
     {
-        $class = trim($ctx->getParam('class'), '\\ ');
+        $class = trim($ctx->getParam('class'), '\ ');
         if (count($this->allowedClasses) > 0 and !isset($this->allowedClasses[$class])) {
             throw new Exception("class[{$class}] not allowed");
         }
@@ -141,7 +156,7 @@ class Server
 
     private function _call_function(Context $ctx): void
     {
-        $fn = trim($ctx->getParam('function'), '\\ ');
+        $fn = trim($ctx->getParam('function'), '\ ');
         if (count($this->allowedFunctions) > 0 and !isset($this->allowedFunctions[$fn])) {
             throw new Exception("function[{$fn}] not allowed");
         }

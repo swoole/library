@@ -77,6 +77,12 @@ return [
         'core/Coroutine/FastCGI/Proxy.php',
         # <core for Process> #
         'core/Process/Manager.php',
+        # <core for RemoteObject> #
+        'core/RemoteObject.php',
+        'core/RemoteObject/Server.php',
+        'core/RemoteObject/Context.php',
+        'core/RemoteObject/Client.php',
+        'core/RemoteObject/Exception.php',
         # <core for Server> #
         'core/Server/Admin.php',
         'core/Server/Helper.php',
