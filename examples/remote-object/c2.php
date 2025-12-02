@@ -1,4 +1,13 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
 
 use MongoDB\BSON\UTCDateTime;
 
@@ -7,25 +16,26 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 class MongoDBExample
 {
     private $collection;
+
     private $roClient;
 
     public function __construct()
     {
-        $this->roClient = new Swoole\RemoteObject\Client();
-        $client = $this->roClient->create(MongoDB\Client::class, "mongodb://localhost:27017");
+        $this->roClient   = new Swoole\RemoteObject\Client();
+        $client           = $this->roClient->create(MongoDB\Client::class, 'mongodb://localhost:27017');
         $this->collection = $client->myDatabase->users;
     }
 
     public function insertOne()
     {
         $result = $this->collection->insertOne([
-            'name' => '张三',
-            'email' => 'zhangsan@example.com',
-            'age' => 25,
-            'created_at' => $this->roClient->create(UTCDateTime::class)
+            'name'       => '张三',
+            'email'      => 'zhangsan@example.com',
+            'age'        => 25,
+            'created_at' => $this->roClient->create(UTCDateTime::class),
         ]);
 
-        echo "插入成功，ID: " . $result->getInsertedId() . "\n";
+        echo '插入成功，ID: ' . $result->getInsertedId() . "\n";
         return $result->getInsertedId();
     }
 
@@ -34,20 +44,20 @@ class MongoDBExample
     {
         $result = $this->collection->insertMany([
             [
-                'name' => '李四',
+                'name'  => '李四',
                 'email' => 'lisi@example.com',
-                'age' => 30,
-                'city' => '北京'
+                'age'   => 30,
+                'city'  => '北京',
             ],
             [
-                'name' => '王五',
+                'name'  => '王五',
                 'email' => 'wangwu@example.com',
-                'age' => 28,
-                'city' => '上海'
-            ]
+                'age'   => 28,
+                'city'  => '上海',
+            ],
         ]);
 
-        echo "插入了 " . $result->getInsertedCount() . " 条记录\n";
+        echo '插入了 ' . $result->getInsertedCount() . " 条记录\n";
     }
 
     // 查询单条数据
@@ -56,11 +66,10 @@ class MongoDBExample
         $document = $this->collection->findOne(['name' => '张三']);
 
         if ($document) {
-            echo "找到用户: " . $document['name'] . ", 邮箱: " . $document['email'] . "\n";
+            echo '找到用户: ' . $document['name'] . ', 邮箱: ' . $document['email'] . "\n";
             return $document;
-        } else {
-            echo "未找到数据\n";
         }
+        echo "未找到数据\n";
     }
 
     // 查询多条数据

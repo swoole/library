@@ -20,8 +20,9 @@ RUN wget -nv https://download.oracle.com/otn_software/linux/instantclient/instan
 
 RUN ldconfig
 
-RUN apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends \
-    && docker-php-ext-install mysqli pdo_pgsql pdo_sqlite mongodb \
+RUN apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends
+
+RUN docker-php-ext-install mysqli pdo_pgsql pdo_sqlite  \
     && docker-php-ext-enable  mysqli pdo_pgsql pdo_sqlite
 
 RUN pecl channel-update pecl \

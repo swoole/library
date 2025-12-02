@@ -22,7 +22,6 @@ use function Swoole\Coroutine\run;
 #[CoversClass(RemoteObject::class)]
 #[CoversClass(RemoteObject\Server::class)]
 #[CoversClass(RemoteObject\Client::class)]
-
 class RemoteObjectTest extends TestCase
 {
     public function testCallFunction(): void
