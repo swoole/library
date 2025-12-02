@@ -15,7 +15,7 @@ use Swoole\Coroutine\Http\Client as HttpClient;
 use Swoole\RemoteObject\Client;
 use Swoole\RemoteObject\Exception;
 
-class RemoteObject implements \ArrayAccess
+class RemoteObject implements \ArrayAccess, \Stringable
 {
     private int $objectId = 0;
 
@@ -72,11 +72,7 @@ class RemoteObject implements \ArrayAccess
         return unserialize($rs->property);
     }
 
-    /**
-     * @param mixed $value
-     * @throws Exception
-     */
-    public function __set(string $property, $value)
+    public function __set(string $property, mixed $value)
     {
         $this->execute('/write_property', [
             'object'   => $this->objectId,
@@ -85,10 +81,6 @@ class RemoteObject implements \ArrayAccess
         ]);
     }
 
-    /**
-     * Deserialization can only occur on the client side,
-     * and it requires binding an HTTP client to serve as a transmission channel for remote calls.
-     */
     public function __unserialize(array $data)
     {
         $this->objectId    = $data['objectId'];
@@ -97,9 +89,6 @@ class RemoteObject implements \ArrayAccess
         $this->client      = Client::getClient($this->clientId);
     }
 
-    /**
-     * Serialization can occur on both the client and the server, and is used solely as a data object.
-     */
     public function __serialize()
     {
         return [
@@ -107,6 +96,14 @@ class RemoteObject implements \ArrayAccess
             'coroutineId' => $this->coroutineId,
             'clientId'    => $this->clientId,
         ];
+    }
+
+    public function __toString(): string
+    {
+        $rs = $this->execute('/to_string', [
+            'object' => $this->objectId,
+        ]);
+        return $rs->value;
     }
 
     public function getObjectId(): int
@@ -134,18 +131,17 @@ class RemoteObject implements \ArrayAccess
         return $object;
     }
 
+    /**
+     * This method is only used on the server side.
+     */
     public static function serialize(int $objectId, int $ownerCoroutineId, string $clientId): string
     {
-        $object           = new self($ownerCoroutineId, $clientId);
-        $object->objectId = $objectId;
+        $object             = new self($ownerCoroutineId, $clientId);
+        $object->objectId   = $objectId;
         return serialize($object);
     }
 
-    /**
-     * @param mixed $offset
-     * @throws Exception
-     */
-    public function offsetGet($offset): mixed
+    public function offsetGet(mixed $offset): mixed
     {
         $rs = $this->execute('/offset_get', [
             'object' => $this->objectId,
@@ -155,11 +151,9 @@ class RemoteObject implements \ArrayAccess
     }
 
     /**
-     * @param mixed $offset
-     * @param mixed $value
      * @throws Exception
      */
-    public function offsetSet($offset, $value): void
+    public function offsetSet(mixed $offset, mixed $value): void
     {
         $this->execute('/offset_set', [
             'object' => $this->objectId,
@@ -169,10 +163,9 @@ class RemoteObject implements \ArrayAccess
     }
 
     /**
-     * @param mixed $offset
      * @throws Exception
      */
-    public function offsetUnset($offset): void
+    public function offsetUnset(mixed $offset): void
     {
         $this->execute('/offset_unset', [
             'object' => $this->objectId,
@@ -180,11 +173,7 @@ class RemoteObject implements \ArrayAccess
         ]);
     }
 
-    /**
-     * @param mixed $offset
-     * @throws Exception
-     */
-    public function offsetExists($offset): bool
+    public function offsetExists(mixed $offset): bool
     {
         $rs = $this->execute('/offset_exists', [
             'object' => $this->objectId,
@@ -194,10 +183,10 @@ class RemoteObject implements \ArrayAccess
     }
 
     /**
-     * @param mixed $params
+     * @param mixed|array $params
      * @throws Exception
      */
-    private function execute(string $path, $params = []): \stdClass
+    private function execute(string $path, array $params = []): \stdClass
     {
         $rs = $this->client->post($path, $params);
         if (!$rs) {

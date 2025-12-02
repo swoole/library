@@ -1,29 +1,28 @@
 <?php
 
-require 'vendor/autoload.php';
+use MongoDB\BSON\UTCDateTime;
 
-use MongoDB\Client;
-use MongoDB\BSON\ObjectId;
+require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 class MongoDBExample
 {
     private $collection;
+    private $roClient;
 
     public function __construct()
     {
-        // 连接 MongoDB
-        $client = new Client("mongodb://localhost:27017");
+        $this->roClient = new Swoole\RemoteObject\Client();
+        $client = $this->roClient->create(MongoDB\Client::class, "mongodb://localhost:27017");
         $this->collection = $client->myDatabase->users;
     }
 
-    // 插入单条数据
     public function insertOne()
     {
         $result = $this->collection->insertOne([
             'name' => '张三',
             'email' => 'zhangsan@example.com',
             'age' => 25,
-            'created_at' => new \MongoDB\BSON\UTCDateTime()
+            'created_at' => $this->roClient->create(UTCDateTime::class)
         ]);
 
         echo "插入成功，ID: " . $result->getInsertedId() . "\n";
@@ -123,29 +122,19 @@ class MongoDBExample
     }
 }
 
-// 使用示例
-try {
+Co\run(function () {
     $mongo = new MongoDBExample();
-
-    // 插入数据
     $mongo->insertOne();
     $mongo->insertMany();
 
-    // 查询数据
     $mongo->findOne();
     $mongo->findMany();
 
-    // 更新数据
     $mongo->updateOne();
     $mongo->updateMany();
 
-    // 统计
     $mongo->count();
 
-    // 删除数据（谨慎使用）
     // $mongo->deleteOne();
     // $mongo->deleteMany();
-
-} catch (Exception $e) {
-    echo "错误: " . $e->getMessage() . "\n";
-}
+});

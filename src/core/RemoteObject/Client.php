@@ -13,7 +13,6 @@ namespace Swoole\RemoteObject;
 
 use Swoole\Coroutine;
 use Swoole\Coroutine\Http\Client as HttpClient;
-use Swoole\Exception;
 use Swoole\RemoteObject;
 
 class Client
@@ -28,7 +27,7 @@ class Client
 
     public function __construct(string $host = '127.0.0.1', int $port = Server::DEFAULT_PORT)
     {
-        $this->id               = base64_encode(random_bytes(16));
+        $this->id               = $this->genUuid();
         $this->client           = new HttpClient($host, $port);
         $this->ownerCoroutineId = Coroutine::getCid();
         $this->client->setHeaders([
@@ -38,9 +37,6 @@ class Client
         self::$clients[$this->id] = $this;
     }
 
-    /**
-     * @throws Exception
-     */
     public function create(string $class, mixed ...$args): RemoteObject
     {
         return RemoteObject::create($this, $class, $args);
@@ -49,13 +45,13 @@ class Client
     /**
      * @throws Exception
      */
-    public static function getClient(string $clientId): HttpClient
+    public static function getClient(string $clientId): ?HttpClient
     {
         if (empty($clientId)) {
             throw new Exception('RemoteObject is not bound to a client');
         }
         if (!isset(self::$clients[$clientId])) {
-            throw new Exception('Client[#' . $clientId . '] not found');
+            return null;
         }
         return self::$clients[$clientId]->client;
     }
@@ -63,5 +59,13 @@ class Client
     public function getId(): string
     {
         return $this->id;
+    }
+
+    private function genUuid(): string
+    {
+        $data    = random_bytes(16);
+        $data[6] = chr(ord($data[6]) & 0x0F | 0x40);
+        $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 }

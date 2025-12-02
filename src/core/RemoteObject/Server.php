@@ -71,11 +71,7 @@ class Server
         return $object_id;
     }
 
-    /**
-     * @param mixed $data
-     * @throws Exception
-     */
-    private function marshal(Context $ctx, $data): string
+    private function marshal(Context $ctx, mixed $data): string
     {
         if (is_object($data) or is_resource($data)) {
             $object_id = $this->addObject($data);
@@ -185,6 +181,16 @@ class Server
         $ctx->end(['code' => 0]);
     }
 
+    private function _to_string(Context $ctx): void
+    {
+        $object_id = $ctx->getParam('object');
+        if (!isset($this->objects[$object_id])) {
+            throw new Exception("object[#{$object_id}] not found");
+        }
+        $obj = $this->objects[$object_id];
+        $ctx->end(['code' => 0, 'value' => (string) $obj]);
+    }
+
     private function _offset_get(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
@@ -197,7 +203,7 @@ class Server
         $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
     }
 
-    private function _offset_set(Context $ctx)
+    private function _offset_set(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
         $offset    = $ctx->getParam('offset');
@@ -210,7 +216,7 @@ class Server
         $ctx->end(['code' => 0]);
     }
 
-    private function _offset_unset(Context $ctx)
+    private function _offset_unset(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
         $offset    = $ctx->getParam('offset');
@@ -222,7 +228,7 @@ class Server
         $ctx->end(['code' => 0]);
     }
 
-    private function _offset_exists(Context $ctx)
+    private function _offset_exists(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
         $offset    = $ctx->getParam('offset');
