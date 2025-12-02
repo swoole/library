@@ -18,14 +18,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start Docker Containers
-        uses: hoverkraft-tech/compose-action@v2.4.1
+      - name: Prepare Test Environment
         env:
           IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
           PHP_VERSION: ${{ matrix.php }}
-
-      - name: Prepare Test Environment
         run: |
+          docker compose pull
+          docker compose build
+          docker compose up -d
 
           docker compose exec -T app php -v
           docker compose exec -T app php --ri swoole
