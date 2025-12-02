@@ -5,8 +5,9 @@ FROM phpswoole/swoole:${IMAGE_TAG_PREFIX}php${PHP_VERSION}
 
 RUN set -ex \
     && apt update \
-    && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git --no-install-recommends \
-    && wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip \
+    && apt install -y libaio-dev libc-ares-dev libaio1 supervisor wget git --no-install-recommends
+
+RUN wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip \
     && unzip instantclient-basiclite-linuxx64.zip && rm -rf META-INF instantclient-basiclite-linuxx64.zip \
     && wget -nv https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxx64.zip \
     && unzip instantclient-sdk-linuxx64.zip       && rm -rf META-INF instantclient-sdk-linuxx64.zip \
@@ -15,15 +16,22 @@ RUN set -ex \
     && echo DISABLE_INTERRUPT=on > ./instantclient/network/admin/sqlnet.ora \
     && mv ./instantclient /usr/local/ \
     && echo '/usr/local/instantclient' > /etc/ld.so.conf.d/oracle-instantclient.conf \
-    && ldconfig \
-    && export ORACLE_HOME=instantclient,/usr/local/instantclient \
-    && apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends \
-    && docker-php-ext-install mysqli pdo_pgsql pdo_sqlite \
-    && docker-php-ext-enable  mysqli pdo_pgsql pdo_sqlite \
-    && pecl channel-update pecl \
+    && export ORACLE_HOME=instantclient,/usr/local/instantclient
+
+RUN ldconfig
+
+RUN apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends \
+    && docker-php-ext-install mysqli pdo_pgsql pdo_sqlite mongodb \
+    && docker-php-ext-enable  mysqli pdo_pgsql pdo_sqlite
+
+RUN pecl channel-update pecl \
     && if [ "$(php -r 'echo version_compare(PHP_VERSION, "8.4.0", "<") ? "old" : "new";')" = "old" ] ; then docker-php-ext-install pdo_oci; else pecl install pdo_oci-stable; fi \
-    && docker-php-ext-enable  pdo_oci \
-    && git clone https://github.com/swoole/swoole-src.git \
+    && docker-php-ext-enable pdo_oci
+
+RUN pecl install mongodb-stable \
+    && docker-php-ext-enable mongodb
+
+RUN git clone https://github.com/swoole/swoole-src.git \
     && cd ./swoole-src \
     && phpize \
     && ./configure --enable-openssl \

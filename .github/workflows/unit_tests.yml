@@ -26,9 +26,6 @@ jobs:
 
       - name: Prepare Test Environment
         run: |
-          pecl channel-update pecl.php.net 
-          && yes no | pecl install mongodb-stable \
-          && docker-php-ext-enable mongodb
 
           docker compose exec -T app php -v
           docker compose exec -T app php --ri swoole
