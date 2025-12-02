@@ -12,7 +12,7 @@ class MongoDBExample
     public function __construct()
     {
         $this->roClient = new Swoole\RemoteObject\Client();
-        $client = $this->roClient->create(MongoDB\Client::class, "mongodb://localhost:27017");
+        $client = $this->roClient->create(MongoDB\Client::class, "remote-object://localhost:27017");
         $this->collection = $client->myDatabase->users;
     }
 

@@ -64,3 +64,12 @@ if (getenv('GITHUB_ACTIONS')) {
 
 // This points to folder ./tests/www under root directory of the project.
 const DOCUMENT_ROOT = '/var/www/tests/www';
+
+$process = new Swoole\Process(function (Swoole\Process $process) {
+    include dirname(__DIR__) . '/examples/remote-object/server.php';
+});
+$process->start();
+
+register_shutdown_function(function () use ($process) {
+    Swoole\Process::kill($process->pid);
+});
