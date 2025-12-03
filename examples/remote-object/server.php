@@ -10,9 +10,34 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-class Greeter
+class Greeter implements \Iterator, \Countable
 {
     private string $greeting;
+    private int $index = 0;
+    private array $list = [
+        'world',
+        'swoole',
+        'php',
+        'go',
+        'python',
+        'java',
+        'c++',
+        'c',
+        'nodejs',
+        'ruby',
+        'perl',
+        'lua',
+        'swift',
+        'objective-c',
+        'rust',
+        'kotlin',
+        'scala',
+        'haskell',
+        'lisp',
+        'clojure',
+        'elixir',
+        'erlang',
+    ];
 
     public function __construct(string $greeting = 'Hello')
     {
@@ -22,6 +47,36 @@ class Greeter
     public function __invoke(string $name): string
     {
         return "{$this->greeting}, {$name}!";
+    }
+
+    public function current(): mixed
+    {
+        return $this->list[$this->index];
+    }
+
+    public function next(): void
+    {
+        $this->index++;
+    }
+
+    public function key(): mixed
+    {
+        return $this->index;
+    }
+
+    public function valid(): bool
+    {
+        return $this->index < count($this->list);
+    }
+
+    public function rewind(): void
+    {
+        $this->index = 0;
+    }
+
+    public function count(): int
+    {
+        return count($this->list);
     }
 }
 

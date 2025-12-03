@@ -16,9 +16,8 @@ jobs:
         run: |
           set -e
           pecl channel-update pecl 
-          pecl install redis
           pecl install mongodb
-          docker-php-ext-enable redis mongodb
+          docker-php-ext-enable mongodb
           echo "swoole.enable_library=Off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini
           composer require --dev -n -q --no-progress -- phpstan/phpstan=^2.1
 

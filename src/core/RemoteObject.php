@@ -15,7 +15,7 @@ use Swoole\Coroutine\Http\Client as HttpClient;
 use Swoole\RemoteObject\Client;
 use Swoole\RemoteObject\Exception;
 
-class RemoteObject implements \ArrayAccess, \Stringable
+class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
 {
     private int $objectId = 0;
 
@@ -220,5 +220,35 @@ class RemoteObject implements \ArrayAccess, \Stringable
             throw new Exception('Server Error: ' . $ex->message, $ex->code);
         }
         return $json;
+    }
+
+    public function current(): mixed
+    {
+        return $this->__call('current', []);
+    }
+
+    public function next(): void
+    {
+        $this->__call('next', []);
+    }
+
+    public function key(): mixed
+    {
+        return $this->__call('key', []);
+    }
+
+    public function valid(): bool
+    {
+        return $this->__call('valid', []);
+    }
+
+    public function rewind(): void
+    {
+        $this->__call('rewind', []);
+    }
+
+    public function count(): int
+    {
+        return $this->__call('count', []);
     }
 }
