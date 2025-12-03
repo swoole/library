@@ -55,12 +55,27 @@ if (getenv('GITHUB_ACTIONS')) {
     define('NACOS_SERVER_URL', 'http://nacos:8848');
     define('REDIS_SERVER_URL', 'tcp://redis:6379');
     define('GITHUB_ACTIONS', true);
+    define('MONGODB_SERVER_URL', 'mongodb://mongodb:27017');
 } else {
     define('CONSUL_AGENT_URL', 'http://127.0.0.1:8500');
     define('NACOS_SERVER_URL', 'http://127.0.0.1:8848');
     define('REDIS_SERVER_URL', 'tcp://127.0.0.1:6379');
     define('GITHUB_ACTIONS', false);
+    define('MONGODB_SERVER_URL', 'mongodb://127.0.0.1:27017');
 }
 
 // This points to folder ./tests/www under root directory of the project.
 const DOCUMENT_ROOT = '/var/www/tests/www';
+
+$remote_object_dir = dirname(__DIR__) . '/examples/remote-object';
+
+if (!is_file($remote_object_dir . '/server.pid')
+    or !posix_kill(intval(file_get_contents($remote_object_dir . '/server.pid')), 0)) {
+    $process = new Swoole\Process(function (Swoole\Process $process) use ($remote_object_dir) {
+        include $remote_object_dir . '/server.php';
+    });
+    $process->start();
+    register_shutdown_function(function () use ($process) {
+        Swoole\Process::kill($process->pid);
+    });
+}

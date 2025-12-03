@@ -25,15 +25,19 @@
         "ext-json": "*",
         "ext-redis": "*",
         "ext-curl": "*",
+        "ext-posix": "*",
+        "mongodb/mongodb": "^2.1",
         "phpunit/phpunit": "~10.0 || ~11.0",
         "swoole/ide-helper": "dev-master",
-        "phpstan/phpstan": "^2.1"
+        "phpstan/phpstan": "^2.1",
+        "friendsofphp/php-cs-fixer": "^3.0"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
         "ext-pdo": "Required to use pdo database",
         "ext-redis": "Required to use redis database, and the required version is greater than or equal to 3.1.3",
-        "ext-curl": "Required to use http client"
+        "ext-curl": "Required to use http client",
+        "ext-mongodb": "Required to use mongodb database"
     },
     "autoload": {
         "files": [
@@ -63,6 +67,7 @@
     },
     "scripts": {
         "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
+        "cs-fix": "vendor/bin/php-cs-fixer fix $1",
         "post-install-cmd": [
             "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"
         ],

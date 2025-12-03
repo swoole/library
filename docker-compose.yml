@@ -15,6 +15,7 @@ services:
       - pgsql
       - redis
       - wordpress
+      - mongodb
     environment:
       DISABLE_DEFAULT_SERVER: 1
       GITHUB_ACTIONS: "yes"
@@ -69,6 +70,13 @@ services:
 
   redis:
     image: redis:7.2
+
+  mongodb:
+    image: mongodb/mongodb-community-server:8.0-ubi8
+    container_name: mongodb
+    restart: always
+    ports:
+        - "27017:27017"
 
   nacos:
     image: nacos/nacos-server

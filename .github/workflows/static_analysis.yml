@@ -6,7 +6,7 @@ jobs:
   static-analysis:
     runs-on: ubuntu-22.04
     container:
-      image: phpswoole/swoole:6.0-php8.3
+      image: phpswoole/swoole:6.1-php8.3-zts
 
     steps:
       - name: Checkout
@@ -15,8 +15,11 @@ jobs:
       - name: Setup PHP And Swoole
         run: |
           set -e
+          pecl channel-update pecl 
+          pecl install mongodb
+          docker-php-ext-enable mongodb
           echo "swoole.enable_library=Off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini
-          composer require --dev -n -q --no-progress -- phpstan/phpstan=~2.0
+          composer require --dev -n -q --no-progress -- phpstan/phpstan=^2.1
 
       - name: Run Static Analysis
         run: ./vendor/bin/phpstan analyse --no-progress --memory-limit 2G

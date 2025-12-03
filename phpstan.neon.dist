@@ -3,8 +3,5 @@ parameters:
   paths:
     - ./src
   ignoreErrors:
-    - '#Instantiated class Swoole\\Thread(\\.+)? not found\.#'
-    - '#Access to property \$.+ on an unknown class Swoole\\Thread(\\.+)?\.#'
-    - '#Property Swoole\\Thread(\\.+)?::\$.+ has unknown class Swoole\\Thread(\\.+)? as its type\.#'
-    - '#Call to method .+\(\) on an unknown class Swoole\\Thread(\\.+)?\.#'
     - '#Comparison operation ">=" between \d+ and \d+ is always true\.#'
+    - '#Trait [a-zA-Z0-9_\\]+ is used zero times and is not analysed\.#'
