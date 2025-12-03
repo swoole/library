@@ -21,8 +21,8 @@ RUN ldconfig
 
 RUN apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends
 
-RUN docker-php-ext-install mysqli pdo_pgsql pdo_sqlite  \
-    && docker-php-ext-enable mysqli pdo_pgsql pdo_sqlite
+RUN docker-php-ext-install mysqli pdo_pgsql pdo_sqlite gd  \
+    && docker-php-ext-enable mysqli pdo_pgsql pdo_sqlite gd
 
 RUN export ORACLE_HOME=instantclient,/usr/local/instantclient \
     && if [ "$(php -r 'echo version_compare(PHP_VERSION, "8.4.0", "<") ? "old" : "new";')" = "old" ] ; then docker-php-ext-install pdo_oci; else pecl install pdo_oci-stable; fi \
