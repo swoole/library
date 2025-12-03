@@ -102,6 +102,7 @@ return [
         # <ext> #
         'ext/curl.php',
         'ext/sockets.php',
+        'ext/standard.php',
         # <finalizer> #
         'functions.php',
         'alias.php',
