@@ -107,18 +107,18 @@ class Server
         return $object_id;
     }
 
-    private function marshal(Context $ctx, mixed $data): string
+    private function marshal(Context $ctx, mixed $data): mixed
     {
         if (is_object($data) or is_resource($data)) {
             $object_id = $this->addObject($data);
-            return RemoteObject::serialize($object_id, $ctx->getCoroutineId(), $ctx->getClientId());
+            return RemoteObject::marshal($object_id, $ctx->getCoroutineId(), $ctx->getClientId());
         }
         if (is_array($data)) {
             foreach ($data as $key => $value) {
                 $data[$key] = $this->marshal($ctx, $value);
             }
         }
-        return serialize($data);
+        return $data;
     }
 
     private function unmarshal($data): mixed
@@ -169,7 +169,7 @@ class Server
             throw new Exception("function[{$fn}] not found");
         }
         $result = $fn(...$args);
-        $ctx->end(['code' => 0, 'result' => $this->marshal($ctx, $result)]);
+        $ctx->end(['code' => 0, 'result' => serialize($this->marshal($ctx, $result))]);
     }
 
     /**
@@ -192,7 +192,7 @@ class Server
             throw new Exception("method[{$class}::{$method}] not found");
         }
         $result = $obj->{$method}(...$args);
-        $ctx->end(['code' => 0, 'result' => $this->marshal($ctx, $result)]);
+        $ctx->end(['code' => 0, 'result' => serialize($this->marshal($ctx, $result))]);
     }
 
     /**
@@ -207,7 +207,7 @@ class Server
         }
         $obj    = $this->objects[$object_id];
         $result = $obj->{$property};
-        $ctx->end(['code' => 0, 'property' => $this->marshal($ctx, $result)]);
+        $ctx->end(['code' => 0, 'property' => serialize($this->marshal($ctx, $result))]);
     }
 
     /**
@@ -258,7 +258,7 @@ class Server
         }
         $obj    = $this->objects[$object_id];
         $result = $obj->{$offset};
-        $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
+        $ctx->end(['code' => 0, 'value' => serialize($this->marshal($ctx, $result))]);
     }
 
     private function _offset_set(Context $ctx): void
@@ -295,6 +295,6 @@ class Server
         }
         $obj    = $this->objects[$object_id];
         $result = isset($obj->{$offset});
-        $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
+        $ctx->end(['code' => 0, 'value' => serialize($this->marshal($ctx, $result))]);
     }
 }

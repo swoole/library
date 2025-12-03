@@ -153,11 +153,11 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     /**
      * This method is only used on the server side.
      */
-    public static function serialize(int $objectId, int $ownerCoroutineId, string $clientId): string
+    public static function marshal(int $objectId, int $ownerCoroutineId, string $clientId): RemoteObject
     {
         $object             = new self($ownerCoroutineId, $clientId);
         $object->objectId   = $objectId;
-        return serialize($object);
+        return $object;
     }
 
     public function offsetGet(mixed $offset): mixed
