@@ -87,5 +87,6 @@ $server = new Swoole\RemoteObject\Server(options: [
     'server_mode'      => SWOOLE_BASE,
     'enable_coroutine' => false,
     'bootstrap'        => __FILE__,
+    'pid_file'         => __DIR__ . '/server.pid',
 ]);
 $server->start();

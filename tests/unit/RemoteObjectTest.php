@@ -27,7 +27,7 @@ class RemoteObjectTest extends TestCase
     public function testCallFunction(): void
     {
         run(function () {
-            $client = new RemoteObject\Client('127.0.0.1', 9501);
+            $client = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
             $this->assertEquals($client->call('php_uname', 'm'), 'x86_64');
             $gd_info = $client->call('gd_info');
             $this->assertIsArray($gd_info);

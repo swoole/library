@@ -65,11 +65,16 @@ if (getenv('GITHUB_ACTIONS')) {
 // This points to folder ./tests/www under root directory of the project.
 const DOCUMENT_ROOT = '/var/www/tests/www';
 
-$process = new Swoole\Process(function (Swoole\Process $process) {
-    include dirname(__DIR__) . '/examples/remote-object/server.php';
-});
-$process->start();
+$remote_object_dir = dirname(__DIR__) . '/examples/remote-object';
 
-register_shutdown_function(function () use ($process) {
-    Swoole\Process::kill($process->pid);
-});
+if (!is_file($remote_object_dir . '/server.pid') or
+    !posix_kill(intval(file_get_contents($remote_object_dir . '/server.pid')), 0)) {
+    $process = new Swoole\Process(function (Swoole\Process $process) use ($remote_object_dir) {
+        include $remote_object_dir . '/server.php';
+    });
+    $process->start();
+    register_shutdown_function(function () use ($process) {
+        Swoole\Process::kill($process->pid);
+    });
+}
+
