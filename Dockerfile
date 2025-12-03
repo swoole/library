@@ -15,17 +15,17 @@ RUN wget -nv https://download.oracle.com/otn_software/linux/instantclient/instan
     && rm ./instantclient/sdk/include/ldap.h \
     && echo DISABLE_INTERRUPT=on > ./instantclient/network/admin/sqlnet.ora \
     && mv ./instantclient /usr/local/ \
-    && echo '/usr/local/instantclient' > /etc/ld.so.conf.d/oracle-instantclient.conf \
-    && export ORACLE_HOME=instantclient,/usr/local/instantclient
+    && echo '/usr/local/instantclient' > /etc/ld.so.conf.d/oracle-instantclient.conf
 
 RUN ldconfig
 
 RUN apt install -y sqlite3 libsqlite3-dev libpq-dev --no-install-recommends
 
 RUN docker-php-ext-install mysqli pdo_pgsql pdo_sqlite  \
-    && docker-php-ext-enable  mysqli pdo_pgsql pdo_sqlite
+    && docker-php-ext-enable mysqli pdo_pgsql pdo_sqlite
 
-RUN pecl channel-update pecl \
+RUN export ORACLE_HOME=instantclient,/usr/local/instantclient &&  \
+    pecl channel-update pecl \
     && if [ "$(php -r 'echo version_compare(PHP_VERSION, "8.4.0", "<") ? "old" : "new";')" = "old" ] ; then docker-php-ext-install pdo_oci; else pecl install pdo_oci-stable; fi \
     && docker-php-ext-enable pdo_oci
 
