@@ -35,4 +35,7 @@ class ProxyGreeter
 Co\run(function () {
     $o = new ProxyGreeter('hello swoole');
     echo $o('rango'), PHP_EOL;
+
+    $client = new RemoteObject\Client();
+    var_dump($client->call('gd_info'));
 });

@@ -55,11 +55,13 @@ if (getenv('GITHUB_ACTIONS')) {
     define('NACOS_SERVER_URL', 'http://nacos:8848');
     define('REDIS_SERVER_URL', 'tcp://redis:6379');
     define('GITHUB_ACTIONS', true);
+    define('MONGODB_SERVER_URL', 'mongodb://mongodb:27017');
 } else {
     define('CONSUL_AGENT_URL', 'http://127.0.0.1:8500');
     define('NACOS_SERVER_URL', 'http://127.0.0.1:8848');
     define('REDIS_SERVER_URL', 'tcp://127.0.0.1:6379');
     define('GITHUB_ACTIONS', false);
+    define('MONGODB_SERVER_URL', 'mongodb://127.0.0.1:27017');
 }
 
 // This points to folder ./tests/www under root directory of the project.

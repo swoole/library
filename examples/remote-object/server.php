@@ -12,11 +12,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 class Greeter implements Iterator, Countable
 {
-    private string $greeting;
-
-    private int $index = 0;
-
-    private array $list = [
+    public array $list = [
         'world',
         'swoole',
         'php',
@@ -40,6 +36,10 @@ class Greeter implements Iterator, Countable
         'elixir',
         'erlang',
     ];
+
+    private string $greeting;
+
+    private int $index = 0;
 
     public function __construct(string $greeting = 'Hello')
     {

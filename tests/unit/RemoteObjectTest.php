@@ -36,6 +36,26 @@ class RemoteObjectTest extends TestCase
         });
     }
 
+    public function testInvoke()
+    {
+        run(function () {
+            $client    = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $o         = $client->create(\Greeter::class, 'Hello swoole');
+            $this->assertEquals('Hello swoole, my name is Tianfeng.Han!', $o('my name is Tianfeng.Han'));
+        });
+    }
+
+    public function testIterator()
+    {
+        run(function () {
+            $client    = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $o         = $client->create(\Greeter::class, 'hello swoole');
+            $list      =  iterator_to_array($o);
+            $this->assertEquals($list, $o->list);
+            $this->assertEquals(count($list), count($o));
+        });
+    }
+
     public function testMongoDb(): void
     {
         run(function () {
@@ -47,7 +67,7 @@ class RemoteObjectTest extends TestCase
                 public function __construct()
                 {
                     $this->roClient   = new RemoteObject\Client();
-                    $client           = $this->roClient->create(\MongoDB\Client::class, 'mongodb://localhost:27017');
+                    $client           = $this->roClient->create(\MongoDB\Client::class, MONGODB_SERVER_URL);
                     $this->collection = $client->myDatabase->users;
                 }
 
