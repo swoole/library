@@ -24,10 +24,13 @@ RUN apt install -y sqlite3 libsqlite3-dev libpq-dev
 RUN docker-php-ext-install mysqli pdo_pgsql pdo_sqlite  \
     && docker-php-ext-enable mysqli pdo_pgsql pdo_sqlite
 
-RUN export ORACLE_HOME=instantclient,/usr/local/instantclient &&  \
-    pecl channel-update pecl \
-    && pecl install pdo_oci-stable \
-    && docker-php-ext-enable pdo_oci
+# pdo_oci.so (libaio.so.1: cannot open shared object file: No such file or directory))
+# not available for php8.3
+#RUN export ORACLE_HOME=instantclient,/usr/local/instantclient \
+#    && pecl channel-update pecl \
+#    && apt install -y libaio1t64 \
+#    && pecl install pdo_oci-stable \
+#    && docker-php-ext-enable pdo_oci
 
 RUN pecl install mongodb-stable \
     && docker-php-ext-enable mongodb
