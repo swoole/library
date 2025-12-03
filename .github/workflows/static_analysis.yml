@@ -6,7 +6,7 @@ jobs:
   static-analysis:
     runs-on: ubuntu-22.04
     container:
-      image: phpswoole/swoole:6.0-php8.3
+      image: phpswoole/swoole:6.1-php8.3-zts
 
     steps:
       - name: Checkout
