@@ -83,6 +83,7 @@ return [
         'core/RemoteObject/Context.php',
         'core/RemoteObject/Client.php',
         'core/RemoteObject/Exception.php',
+        'core/RemoteObject/ProxyTrait.php',
         # <core for Server> #
         'core/Server/Admin.php',
         'core/Server/Helper.php',
