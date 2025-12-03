@@ -201,27 +201,6 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         return $rs->exists;
     }
 
-    /**
-     * @param mixed|array $params
-     * @throws Exception
-     */
-    private function execute(string $path, array $params = []): \stdClass
-    {
-        if (!$this->client) {
-            throw new Exception('This remote object is not bound to a client, and cannot initiate remote calls');
-        }
-        $rs = $this->client->post($path, $params);
-        if (!$rs) {
-            throw new Exception($this->client->errMsg);
-        }
-        $json = json_decode($this->client->body);
-        if ($json->code != 0) {
-            $ex = $json->exception;
-            throw new Exception('Server Error: ' . $ex->message, $ex->code);
-        }
-        return $json;
-    }
-
     public function current(): mixed
     {
         return $this->__call('current', []);
@@ -250,5 +229,22 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     public function count(): int
     {
         return $this->__call('count', []);
+    }
+
+    private function execute(string $path, array $params = []): \stdClass
+    {
+        if (!$this->client) {
+            throw new Exception('This remote object is not bound to a client, and cannot initiate remote calls');
+        }
+        $rs = $this->client->post($path, $params);
+        if (!$rs) {
+            throw new Exception($this->client->errMsg);
+        }
+        $json = json_decode($this->client->body);
+        if ($json->code != 0) {
+            $ex = $json->exception;
+            throw new Exception('Server Error: ' . $ex->message, $ex->code);
+        }
+        return $json;
     }
 }

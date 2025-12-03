@@ -10,10 +10,12 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-class Greeter implements \Iterator, \Countable
+class Greeter implements Iterator, Countable
 {
     private string $greeting;
+
     private int $index = 0;
+
     private array $list = [
         'world',
         'swoole',
