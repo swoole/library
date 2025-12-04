@@ -34,7 +34,12 @@ class Context
 
     public function end(array $data): void
     {
-        $this->response->end(json_encode($data));
+        $resp = serialize($data);
+        if (!$resp) {
+            throw new Exception('json_encode error, Error: ' . json_last_error_msg());
+        }
+        $this->response->header('Content-Type', 'application/octet-stream');
+        $this->response->end($resp);
     }
 
     public function getHandler(): string

@@ -21,6 +21,7 @@ use function Swoole\Coroutine\run;
  * @internal
  */
 #[CoversClass(RemoteObject::class)]
+#[CoversClass(RemoteObject\Context::class)]
 #[CoversClass(RemoteObject\Server::class)]
 #[CoversClass(RemoteObject\Client::class)]
 class RemoteObjectTest extends TestCase
@@ -53,6 +54,24 @@ class RemoteObjectTest extends TestCase
             $list      =  iterator_to_array($o);
             $this->assertEquals($list, $o->list);
             $this->assertEquals(count($list), count($o));
+        });
+    }
+
+    public function testResource()
+    {
+        run(function () {
+            $client = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $fp = $client->call('fopen', '/tmp/data.txt', 'w');
+
+            $n = random_int(1024, 65536);
+            $wdata = random_bytes($n);
+            $client->call('fwrite', $fp, $wdata);
+            $client->call('fclose', $fp);
+
+            $fp = $client->call('fopen', '/tmp/data.txt', 'r');
+            $rdata = $client->call('fread', $fp, $n);
+            $client->call('fclose', $fp);
+            $this->assertEquals($wdata, $rdata);
         });
     }
 

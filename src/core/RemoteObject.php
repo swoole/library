@@ -60,7 +60,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'method' => $method,
             'args'   => serialize($args),
         ]);
-        return unserialize($rs->result);
+        return $rs['result'];
     }
 
     /**
@@ -72,7 +72,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'object'   => $this->objectId,
             'property' => $property,
         ]);
-        return unserialize($rs->property);
+        return $rs['property'];
     }
 
     public function __set(string $property, mixed $value)
@@ -84,7 +84,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         ]);
     }
 
-    public function __unserialize(array $data)
+    public function __unserialize(array $data): void
     {
         $this->objectId    = $data['objectId'];
         $this->coroutineId = $data['coroutineId'];
@@ -92,7 +92,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         $this->client      = Client::getClient($this->clientId);
     }
 
-    public function __serialize()
+    public function __serialize(): array
     {
         return [
             'objectId'    => $this->objectId,
@@ -106,7 +106,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         $rs = $this->execute('/to_string', [
             'object' => $this->objectId,
         ]);
-        return $rs->value;
+        return $rs['value'];
     }
 
     public function __invoke(...$args)
@@ -116,7 +116,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'method' => '__invoke',
             'args'   => serialize($args),
         ]);
-        return unserialize($rs->result);
+        return $rs['result'];
     }
 
     public static function call(Client $client, string $fn, array $args)
@@ -127,7 +127,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'function' => $fn,
             'args'     => serialize($args),
         ]);
-        return unserialize($rs->result);
+        return $rs['result'];
     }
 
     public function getObjectId(): int
@@ -146,7 +146,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'class' => $class,
             'args'  => serialize($args),
         ]);
-        $object->objectId = intval($rs->object);
+        $object->objectId = intval($rs['object']);
         return $object;
     }
 
@@ -166,7 +166,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'object' => $this->objectId,
             'offset' => $offset,
         ]);
-        return unserialize($rs->value);
+        return $rs['value'];
     }
 
     /**
@@ -198,7 +198,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'object' => $this->objectId,
             'offset' => $offset,
         ]);
-        return $rs->exists;
+        return $rs['exists'];
     }
 
     public function current(): mixed
@@ -231,7 +231,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         return $this->__call('count', []);
     }
 
-    private function execute(string $path, array $params = []): \stdClass
+    private function execute(string $path, array $params = []): array
     {
         if (!$this->client) {
             throw new Exception('This remote object is not bound to a client, and cannot initiate remote calls');
@@ -240,11 +240,11 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         if (!$rs) {
             throw new Exception($this->client->errMsg);
         }
-        $json = json_decode($this->client->body);
-        if ($json->code != 0) {
-            $ex = $json->exception;
-            throw new Exception('Server Error: ' . $ex->message, $ex->code);
+        $result = unserialize($this->client->body);
+        if ($result['code'] != 0) {
+            $ex = $result['exception'];
+            throw new Exception('Server Error: ' . $ex['message'], $ex['code']);
         }
-        return $json;
+        return $result;
     }
 }
