@@ -34,12 +34,8 @@ class Context
 
     public function end(array $data): void
     {
-        $resp = serialize($data);
-        if (!$resp) {
-            throw new Exception('json_encode error, Error: ' . json_last_error_msg());
-        }
         $this->response->header('Content-Type', 'application/octet-stream');
-        $this->response->end($resp);
+        $this->response->end(serialize($data));
     }
 
     public function getHandler(): string
@@ -48,13 +44,17 @@ class Context
         return str_replace('/', '_', $path);
     }
 
-    public function getParam(string $name, bool $required = true, $default = null): string
+    public function getParam(string $name): string
     {
-        $value = $this->request->post[$name] ?? $default;
-        if ($required and $value === null) {
+        if (!isset($this->request->post[$name])) {
             throw new Exception("param[{$name}] is empty");
         }
-        return $value;
+        return $this->request->post[$name];
+    }
+
+    public function getDataParam(string $name): mixed
+    {
+        return unserialize($this->getParam($name));
     }
 
     public function getCoroutineId(): int

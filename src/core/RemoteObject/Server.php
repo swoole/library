@@ -145,7 +145,7 @@ class Server
             throw new Exception("class[{$class}] not allowed");
         }
         $class = '\\' . $class;
-        $args  = unserialize($ctx->getParam('args'));
+        $args  = $ctx->getDataParam('args');
         foreach ($args as $key => $value) {
             $args[$key] = $this->unmarshal($value);
         }
@@ -160,7 +160,7 @@ class Server
         if (count($this->allowedFunctions) > 0 and !isset($this->allowedFunctions[$fn])) {
             throw new Exception("function[{$fn}] not allowed");
         }
-        $args = unserialize($ctx->getParam('args'));
+        $args = $ctx->getDataParam('args');
         foreach ($args as $key => $value) {
             $args[$key] = $this->unmarshal($value);
         }
@@ -182,7 +182,7 @@ class Server
             throw new Exception("object[#{$object_id}] not found");
         }
         $method = $ctx->getParam('method');
-        $args   = unserialize($ctx->getParam('args'));
+        $args   = $ctx->getDataParam('args');
         foreach ($args as $key => $value) {
             $args[$key] = $this->unmarshal($value);
         }
@@ -217,7 +217,7 @@ class Server
     {
         $object_id = $ctx->getParam('object');
         $property  = $ctx->getParam('property');
-        $value     = unserialize($ctx->getParam('value'));
+        $value     = $ctx->getDataParam('value');
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }
@@ -265,7 +265,7 @@ class Server
     {
         $object_id = $ctx->getParam('object');
         $offset    = $ctx->getParam('offset');
-        $value     = unserialize($ctx->getParam('value'));
+        $value     = $ctx->getDataParam('value');
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }

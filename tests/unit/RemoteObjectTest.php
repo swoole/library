@@ -61,14 +61,14 @@ class RemoteObjectTest extends TestCase
     {
         run(function () {
             $client = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
-            $fp = $client->call('fopen', '/tmp/data.txt', 'w');
+            $fp     = $client->call('fopen', '/tmp/data.txt', 'w');
 
-            $n = random_int(1024, 65536);
+            $n     = random_int(1024, 65536);
             $wdata = random_bytes($n);
             $client->call('fwrite', $fp, $wdata);
             $client->call('fclose', $fp);
 
-            $fp = $client->call('fopen', '/tmp/data.txt', 'r');
+            $fp    = $client->call('fopen', '/tmp/data.txt', 'r');
             $rdata = $client->call('fread', $fp, $n);
             $client->call('fclose', $fp);
             $this->assertEquals($wdata, $rdata);
