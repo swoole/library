@@ -55,7 +55,7 @@ class Client
     /**
      * @throws Exception
      */
-    public static function getClient(string $clientId): ?HttpClient
+    public static function getInstance(string $clientId): ?static
     {
         if (empty($clientId)) {
             throw new Exception('RemoteObject is not bound to a client');
@@ -63,12 +63,26 @@ class Client
         if (!isset(self::$clients[$clientId])) {
             return null;
         }
-        return self::$clients[$clientId]->client;
+        return self::$clients[$clientId];
     }
 
     public function getId(): string
     {
         return $this->id;
+    }
+
+    public function execute(string $path, array $array)
+    {
+        $rs = $this->client->post($path, $array);
+        if (!$rs) {
+            throw new Exception($this->client->errMsg);
+        }
+        $result = unserialize($this->client->body);
+        if ($result['code'] != 0) {
+            $ex = $result['exception'];
+            throw new Exception('Server Error: ' . $ex['message'], $ex['code']);
+        }
+        return $result;
     }
 
     private function genUuid(): string

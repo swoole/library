@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-use Swoole\Coroutine\Http\Client as HttpClient;
 use Swoole\RemoteObject\Client;
 use Swoole\RemoteObject\Exception;
 
@@ -23,7 +22,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
 
     private string $clientId;
 
-    private ?HttpClient $client = null;
+    private ?Client $client = null;
 
     public function __construct($coroutineId, $clientId)
     {
@@ -89,7 +88,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         $this->objectId    = $data['objectId'];
         $this->coroutineId = $data['coroutineId'];
         $this->clientId    = $data['clientId'];
-        $this->client      = Client::getClient($this->clientId);
+        $this->client      = Client::getInstance($this->clientId);
     }
 
     public function __serialize(): array
@@ -122,7 +121,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     public static function call(Client $client, string $fn, array $args)
     {
         $object         = new self(Coroutine::getCid(), $client->getId());
-        $object->client = Client::getClient($client->getId());
+        $object->client = $client;
         $rs             = $object->execute('/call_function', [
             'function' => $fn,
             'args'     => serialize($args),
@@ -141,7 +140,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     public static function create(Client $client, string $class, array $args): RemoteObject
     {
         $object         = new self(Coroutine::getCid(), $client->getId());
-        $object->client = Client::getClient($client->getId());
+        $object->client = $client;
         $rs             = $object->execute('/new', [
             'class' => $class,
             'args'  => serialize($args),
@@ -236,15 +235,6 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         if (!$this->client) {
             throw new Exception('This remote object is not bound to a client, and cannot initiate remote calls');
         }
-        $rs = $this->client->post($path, $params);
-        if (!$rs) {
-            throw new Exception($this->client->errMsg);
-        }
-        $result = unserialize($this->client->body);
-        if ($result['code'] != 0) {
-            $ex = $result['exception'];
-            throw new Exception('Server Error: ' . $ex['message'], $ex['code']);
-        }
-        return $result;
+        return $this->client->execute($path, $params);
     }
 }
