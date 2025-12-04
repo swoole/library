@@ -3,7 +3,7 @@ name: Unit Tests
 on: [ push, pull_request, workflow_dispatch ]
 
 jobs:
-  # Run unit tests with Swoole 6.0+.
+  # Run unit tests with Swoole 6.1+.
   unit-tests:
     runs-on: ubuntu-22.04
     strategy:
