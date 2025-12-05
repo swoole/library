@@ -37,8 +37,9 @@ class Server
     {
         // By default, thread mode is used, and when viewed with ps, only one process will be displayed.
         $server_mode = $options['server_mode'] ?? SWOOLE_THREAD;
-        $server      = new HttpServer($host, $port, $server_mode);
-        unset($options['server_mode']);
+        $socket_type = $options['socket_type'] ?? SWOOLE_SOCK_TCP;
+        $server      = new HttpServer($host, $port, $server_mode, $socket_type);
+        unset($options['server_mode'], $options['socket_type']);
 
         if (isset($options['allowed_classes'])) {
             if (!is_array($options['allowed_classes'])) {

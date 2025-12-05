@@ -129,13 +129,13 @@ function swoole_array_default_value(array $array, $key, $default_value = null)
     return array_key_exists($key, $array) ? $array[$key] : $default_value;
 }
 
-function swoole_is_in_container()
+function swoole_is_in_container(): bool
 {
     $mountinfo = file_get_contents('/proc/self/mountinfo');
     return strpos($mountinfo, 'kubepods') > 0 || strpos($mountinfo, 'docker') > 0;
 }
 
-function swoole_container_cpu_num()
+function swoole_container_cpu_num(): int
 {
     $swoole_cpu_num = intval(getenv('SWOOLE_CPU_NUM'));
     if ($swoole_cpu_num > 0) {
@@ -163,4 +163,64 @@ function swoole_container_cpu_num()
         return swoole_cpu_num();
     }
     return intval(floor($cpu_num));
+}
+
+function swoole_init_default_remote_object_server(): void
+{
+    $dir = swoole_library_get_option('default_remote_object_server_dir');
+    if (empty($dir)) {
+        $home = getenv('HOME') ?: sys_get_temp_dir();
+        $dir  = $home . '/.swoole';
+        swoole_library_set_option('default_remote_object_server_dir', $dir);
+    }
+
+    $pid_file = $dir . '/remote-object-server.pid';
+
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    } else {
+        if (is_file($pid_file)
+            and posix_kill(intval(file_get_contents($pid_file)), 0)) {
+            return;
+        }
+    }
+
+    $options = swoole_library_get_option('default_remote_object_server_options');
+    if (!$options) {
+        $worker_num = swoole_library_get_option('default_remote_object_server_worker_num') ?: 128;
+        $options    = [
+            'worker_num'  => $worker_num,
+            'server_mode' => SWOOLE_THREAD,
+        ];
+    }
+
+    $php_file                    = $dir . '/remote-object-server.php';
+    $socket_file                 = $dir . '/remote-object-server.sock';
+    $options['enable_coroutine'] = false;
+    $options['bootstrap']        = $php_file;
+    $options['pid_file']         = $pid_file;
+    $options['log_file']         = $dir . '/remote-object-server.log';
+    $options['socket_type']      = SWOOLE_SOCK_UNIX_STREAM;
+
+    file_put_contents($php_file, "<?php\n(new Swoole\\RemoteObject\\Server("
+        . "'{$socket_file}', 0, "
+        . var_export($options, true) .
+        "))->start();\n");
+
+    $php_bin = $_SERVER['_'] ?? 'env php';
+    if (is_file($socket_file)) {
+        unlink($socket_file);
+    }
+    shell_exec("nohup {$php_bin} {$php_file} > /dev/null 2>&1 &");
+}
+
+function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
+{
+    $dir = swoole_library_get_option('default_remote_object_server_dir');
+    if (empty($dir)) {
+        $home = getenv('HOME') ?: sys_get_temp_dir();
+        $dir  = $home . '/.swoole';
+    }
+    $socket_file = 'unix://' . $dir . '/remote-object-server.sock';
+    return new Swoole\RemoteObject\Client($socket_file);
 }
