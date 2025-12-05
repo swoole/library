@@ -32,10 +32,18 @@ class ProxyGreeter
     }
 }
 
+require dirname(__DIR__, 2) . '/src/ext/standard.php';
+
 Co\run(function () {
     $o = new ProxyGreeter('hello swoole');
     echo $o('rango'), PHP_EOL;
 
     $client = new RemoteObject\Client();
     var_dump($client->call('gd_info'));
+
+    $client = swoole_get_default_remote_object_client();
+    var_dump($client->call('gd_info'));
+
+    $rs = swoole_dns_get_record('www.baidu.com', DNS_A);
+    var_dump($rs);
 });

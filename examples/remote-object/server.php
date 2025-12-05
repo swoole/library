@@ -82,11 +82,23 @@ class Greeter implements Iterator, Countable
     }
 }
 
-$server = new Swoole\RemoteObject\Server(options: [
-    'worker_num'       => 4,
-    'server_mode'      => SWOOLE_BASE,
+//$server = new Swoole\RemoteObject\Server(options: [
+//    'worker_num'       => 4,
+//    'server_mode'      => SWOOLE_BASE,
+//    'enable_coroutine' => false,
+//    'bootstrap'        => __FILE__,
+//    'pid_file'         => __DIR__ . '/server.pid',
+//]);
+//$server->start();
+
+require_once dirname(__DIR__, 2) . '/src/ext/standard.php';
+
+(new Swoole\RemoteObject\Server('/home/swoole/.swoole/remote-object-server.sock', 0, [
+    'worker_num'       => 8,
+    'server_mode'      => 3,
     'enable_coroutine' => false,
     'bootstrap'        => __FILE__,
-    'pid_file'         => __DIR__ . '/server.pid',
-]);
-$server->start();
+    'pid_file'         => '/home/swoole/.swoole/remote-object-server.pid',
+    'log_file'         => '/home/swoole/.swoole/remote-object-server.log',
+    'socket_type'      => 5,
+]))->start();
