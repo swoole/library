@@ -103,6 +103,7 @@ return [
         'ext/curl.php',
         'ext/sockets.php',
         'ext/standard.php',
+        'ext/mongodb.php',
         # <finalizer> #
         'functions.php',
         'alias.php',
