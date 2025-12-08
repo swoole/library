@@ -190,19 +190,46 @@ function swoole_init_default_remote_object_server(): void
         $worker_num = swoole_library_get_option('default_remote_object_server_worker_num') ?: 128;
         $options    = [
             'worker_num'  => $worker_num,
-            'server_mode' => SWOOLE_THREAD,
+            'server_mode' => defined('SWOOLE_THREAD') ? SWOOLE_THREAD : SWOOLE_BASE,
         ];
     }
 
     $php_file                    = $dir . '/remote-object-server.php';
     $socket_file                 = $dir . '/remote-object-server.sock';
+    $log_file                    = $dir . '/remote-object-server.log';
+    $lock_file                   = $dir . '/remote-object-server.lock';
+
+    $wait_ready_fn = function () use ($socket_file) {
+        // wait for remote object server ready
+        while (true) {
+            if (posix_access($socket_file, POSIX_R_OK)) {
+                break;
+            }
+            usleep(500000);
+        }
+    };
+
+    $lock_handle = fopen($lock_file, 'c');
+    if (!$lock_handle) {
+        throw new RuntimeException("failed to open lock file[{$lock_file}]");
+    }
+    // If the lock was not acquired, it indicates that another process is trying to start the remote object server.
+    // In this case, the service should be skipped from starting and proceed to the ready wait detection branch.
+    if (!flock($lock_handle, LOCK_EX | LOCK_NB)) {
+        fclose($lock_handle);
+        $wait_ready_fn();
+        return;
+    }
+
     $options['enable_coroutine'] = false;
     $options['bootstrap']        = $php_file;
     $options['pid_file']         = $pid_file;
-    $options['log_file']         = $dir . '/remote-object-server.log';
+    $options['log_file']         = $log_file;
     $options['socket_type']      = SWOOLE_SOCK_UNIX_STREAM;
 
-    file_put_contents($php_file, "<?php\n(new Swoole\\RemoteObject\\Server("
+    file_put_contents($php_file, '<?php' .
+        "\nif (is_file(__DIR__ . '/vendor/autoload.php')) { require __DIR__ . '/vendor/autoload.php'; }" .
+        "\n(new Swoole\\RemoteObject\\Server("
         . "'{$socket_file}', 0, "
         . var_export($options, true) .
         "))->start();\n");
@@ -211,7 +238,18 @@ function swoole_init_default_remote_object_server(): void
     if (is_file($socket_file)) {
         unlink($socket_file);
     }
+
+    $hook_flags = Swoole\Runtime::getHookFlags();
+    // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
+    if ($hook_flags & SWOOLE_HOOK_MONGODB and !is_dir($dir . '/vendor/mongodb/mongodb')) {
+        system("cd {$dir} && composer require mongodb/mongodb");
+    }
+
+    // start server
     shell_exec("nohup {$php_bin} {$php_file} > /dev/null 2>&1 &");
+    $wait_ready_fn();
+    flock($lock_handle, LOCK_UN);
+    fclose($lock_handle);
 }
 
 function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client

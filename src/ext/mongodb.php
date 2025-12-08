@@ -1,17 +1,26 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
 
 namespace Swoole\MongoDB;
 
-use Swoole\RemoteObject\ProxyTrait;
 use Swoole\RemoteObject;
+use Swoole\RemoteObject\ProxyTrait;
 
 class Client
 {
+    use ProxyTrait;
+
     public const DEFAULT_URI = 'mongodb://127.0.0.1/';
 
     protected RemoteObject $client;
-
-    use ProxyTrait;
 
     public function __construct(?string $uri = self::DEFAULT_URI, array $uriOptions = [], array $driverOptions = [])
     {

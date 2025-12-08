@@ -66,6 +66,7 @@ class Server
             $server->set($options);
         }
         $server->on('request', [$this, 'onRequest']);
+        $server->on('start', [$this, 'onStart']);
         $this->server       = $server;
         $this->nextObjectId = new Long(1);
     }
@@ -73,6 +74,11 @@ class Server
     public function start(): bool
     {
         return $this->server->start();
+    }
+
+    public function onStart(): void
+    {
+        echo "The remote-object server is started at http://{$this->server->host}:{$this->server->port}\n";
     }
 
     public function onRequest(Request $request, Response $response): void
@@ -224,6 +230,11 @@ class Server
         }
         $obj              = $this->objects[$object_id];
         $obj->{$property} = $this->unmarshal($value);
+        $ctx->end(['code' => 0]);
+    }
+
+    private function _ping(Context $ctx): void
+    {
         $ctx->end(['code' => 0]);
     }
 

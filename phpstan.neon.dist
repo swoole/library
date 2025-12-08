@@ -4,4 +4,3 @@ parameters:
     - ./src
   ignoreErrors:
     - '#Comparison operation ">=" between \d+ and \d+ is always true\.#'
-    - '#Trait [a-zA-Z0-9_\\]+ is used zero times and is not analysed\.#'
