@@ -234,14 +234,14 @@ function swoole_init_default_remote_object_server(): void
         . var_export($options, true) .
         "))->start();\n");
 
-    $php_bin = $_SERVER['_'] ?? 'env php';
-    if (is_file($socket_file)) {
+    $php_bin = PHP_BINARY;
+    if (posix_access($socket_file, POSIX_R_OK)) {
         unlink($socket_file);
     }
 
     $hook_flags = Swoole\Runtime::getHookFlags();
     // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
-    if ($hook_flags & SWOOLE_HOOK_MONGODB and !is_dir($dir . '/vendor/mongodb/mongodb')) {
+    if (defined('SWOOLE_HOOK_MONGODB') and $hook_flags & SWOOLE_HOOK_MONGODB and !is_dir($dir . '/vendor/mongodb/mongodb')) {
         system("cd {$dir} && composer require mongodb/mongodb");
     }
 
