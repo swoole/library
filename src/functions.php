@@ -225,14 +225,20 @@ function swoole_init_default_remote_object_server(): void
     $options['bootstrap']        = $php_file;
     $options['pid_file']         = $pid_file;
     $options['log_file']         = $log_file;
+    $options['daemonize']        = true;
     $options['socket_type']      = SWOOLE_SOCK_UNIX_STREAM;
 
-    file_put_contents($php_file, '<?php' .
+    $rv = file_put_contents($php_file, '<?php' .
         "\nif (is_file(__DIR__ . '/vendor/autoload.php')) { require __DIR__ . '/vendor/autoload.php'; }" .
+        "\nif (is_file(__DIR__ . '/bootstrap.php')) { require __DIR__ . '/bootstrap.php'; }" .
+        "\n" .
         "\n(new Swoole\\RemoteObject\\Server("
         . "'{$socket_file}', 0, "
         . var_export($options, true) .
         "))->start();\n");
+    if (!$rv) {
+        throw new RuntimeException("failed to write php file[{$php_file}]");
+    }
 
     $php_bin = PHP_BINARY;
     if (posix_access($socket_file, POSIX_R_OK)) {
@@ -246,7 +252,20 @@ function swoole_init_default_remote_object_server(): void
     }
 
     // start server
-    shell_exec("nohup {$php_bin} {$php_file} > /dev/null 2>&1 &");
+    $proc = proc_open("{$php_bin} {$php_file}", [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ], $pipes);
+    if ($proc === false) {
+        throw new RuntimeException('failed to start remote object server');
+    }
+    $rc = proc_close($proc);
+    if ($rc !== 0) {
+        $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+        throw new RuntimeException("failed to start remote object server: exit code {$rc}, output: " . $output);
+    }
+
     $wait_ready_fn();
     flock($lock_handle, LOCK_UN);
     fclose($lock_handle);

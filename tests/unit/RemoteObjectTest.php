@@ -29,7 +29,7 @@ class RemoteObjectTest extends TestCase
     public function testCallFunction(): void
     {
         run(function () {
-            $client = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $client = swoole_get_default_remote_object_client();
             $this->assertEquals('x86_64', $client->call('php_uname', 'm'));
             $gd_info = $client->call('gd_info');
             $this->assertIsArray($gd_info);
@@ -40,7 +40,7 @@ class RemoteObjectTest extends TestCase
     public function testInvoke()
     {
         run(function () {
-            $client    = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $client    = swoole_get_default_remote_object_client();
             $o         = $client->create(\Greeter::class, 'Hello swoole');
             $this->assertEquals('Hello swoole, my name is Tianfeng.Han!', $o('my name is Tianfeng.Han'));
         });
@@ -49,7 +49,7 @@ class RemoteObjectTest extends TestCase
     public function testIterator()
     {
         run(function () {
-            $client    = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $client    = swoole_get_default_remote_object_client();
             $o         = $client->create(\Greeter::class, 'hello swoole');
             $list      =  iterator_to_array($o);
             $this->assertEquals($list, $o->list);
@@ -60,7 +60,7 @@ class RemoteObjectTest extends TestCase
     public function testResource()
     {
         run(function () {
-            $client = new RemoteObject\Client('127.0.0.1', RemoteObject\Server::DEFAULT_PORT);
+            $client = swoole_get_default_remote_object_client();
             $fp     = $client->call('fopen', '/tmp/data.txt', 'w');
 
             $n     = random_int(1024, 65536);
@@ -85,7 +85,7 @@ class RemoteObjectTest extends TestCase
 
                 public function __construct()
                 {
-                    $this->roClient   = new RemoteObject\Client();
+                    $this->roClient   =     swoole_get_default_remote_object_client();
                     $client           = $this->roClient->create(\MongoDB\Client::class, MONGODB_SERVER_URL);
                     $this->collection = $client->myDatabase->users;
                 }
