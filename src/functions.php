@@ -229,6 +229,8 @@ function swoole_init_default_remote_object_server(): void
 
     file_put_contents($php_file, '<?php' .
         "\nif (is_file(__DIR__ . '/vendor/autoload.php')) { require __DIR__ . '/vendor/autoload.php'; }" .
+        "\nif (is_file(__DIR__ . '/bootstrap.php')) { require __DIR__ . '/bootstrap.php'; }" .
+        "\n" .
         "\n(new Swoole\\RemoteObject\\Server("
         . "'{$socket_file}', 0, "
         . var_export($options, true) .

@@ -1,0 +1,5 @@
+remote-object-server.sock
+remote-object-server.log
+remote-object-server.pid
+remote-object-server.php
+remote-object-server.lock

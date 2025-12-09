@@ -68,14 +68,5 @@ if (getenv('GITHUB_ACTIONS')) {
 const DOCUMENT_ROOT = '/var/www/tests/www';
 
 $remote_object_dir = dirname(__DIR__) . '/examples/remote-object';
-
-if (!is_file($remote_object_dir . '/server.pid')
-    or !posix_kill(intval(file_get_contents($remote_object_dir . '/server.pid')), 0)) {
-    $process = new Swoole\Process(function (Swoole\Process $process) use ($remote_object_dir) {
-        include $remote_object_dir . '/server.php';
-    });
-    $process->start();
-    register_shutdown_function(function () use ($process) {
-        Swoole\Process::kill($process->pid);
-    });
-}
+swoole_library_set_option('default_remote_object_server_worker_num', 8);
+swoole_library_set_option('default_remote_object_server_dir', $remote_object_dir);
