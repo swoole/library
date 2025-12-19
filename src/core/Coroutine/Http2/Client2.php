@@ -23,6 +23,8 @@ class Client2 extends Client
 
     protected bool $heartbeat = false;
 
+    protected bool $waitClose = false;
+
     protected int $lastSendTime = 0;
 
     public function __construct(string $host, int $port = 80, bool $open_ssl = false)
@@ -82,16 +84,19 @@ class Client2 extends Client
 
     protected function heartbeat(): void
     {
-        $heartbeat = $this->getHeartbeat();
         if (! $this->heartbeat) {
             $this->heartbeat = true;
 
             Coroutine::create(
-                function () use ($heartbeat) {
+                function () {
                     try {
                         while (true) {
                             try {
-                                $this->sleep($heartbeat);
+                                $this->sleep($this->getHeartbeat());
+
+                                if ($this->chan === null) {
+                                    return;
+                                }
                                 if (! $this->getChannelManager()->isEmpty()) {
                                     continue;
                                 }
@@ -106,6 +111,7 @@ class Client2 extends Client
                         swoole_error_log(SWOOLE_LOG_ERROR, $exception->getMessage());
                     } finally {
                         $this->close();
+                        $this->heartbeat = false;
                     }
                 }
             );
@@ -115,6 +121,7 @@ class Client2 extends Client
     protected function loop(): void
     {
         $this->heartbeat();
+        $this->waitClose();
 
         if ($this->chan !== null) {
             return;
@@ -156,22 +163,30 @@ class Client2 extends Client
                 }
             }
         );
-
-        Coroutine::create(
-            function () {
-                $this->waitClose();
-            }
-        );
     }
 
     protected function waitClose(): void
     {
-        while (true) {
-            $this->sleep(5);
-            if ($this->channelManager->isEmpty() && time() - $this->lastSendTime > 10) {
-                $this->close();
-                return;
-            }
+        if (! $this->waitClose) {
+            $this->waitClose = true;
+            Coroutine::create(
+                function () {
+                    try {
+                        while (true) {
+                            $this->sleep(3);
+                            if ($this->chan === null) {
+                                return;
+                            }
+                            if ($this->channelManager->isEmpty() && time() - $this->lastSendTime > 10) {
+                                $this->close();
+                                return;
+                            }
+                        }
+                    } finally {
+                        $this->waitClose = false;
+                    }
+                }
+            );
         }
     }
 
