@@ -1,0 +1,183 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Swoole\Coroutine\Http2;
+
+use Swoole\Coroutine;
+use Swoole\Coroutine\Channel;
+use Swoole\Coroutine\Http2\Client;
+use Swoole\Http2\Request;
+use Swoole\Http2\Response;
+use Throwable;
+
+class Client2 extends Client
+{
+    protected ?Channel $chan = null;
+
+    protected ?Channel $sleepChan = null;
+
+    protected int $requests = 0;
+
+    protected ChannelManager $channelManager;
+
+    protected bool $heartbeat = false;
+
+    protected int $lastSendTime = 0;
+
+    public function __construct(string $host, int $port = 80, bool $open_ssl = false)
+    {
+        parent::__construct($host, $port, $open_ssl);
+        $this->channelManager = new ChannelManager();
+        $this->lastSendTime = time();
+    }
+
+    public function request(Request $request, float $timeout = -1): false|Response
+    {
+        $this->loop();
+        $streamId = $this->send($request);
+
+        if ($streamId === false) {
+            $this->close();
+            return false;
+        }
+        $this->lastSendTime = time();
+        ++$this->requests;
+        $manager = $this->getChannelManager();
+        $chan = $manager->get($streamId, true);
+        try {
+            $data = $chan->pop($timeout);
+        } finally {
+            $manager->close($streamId);
+        }
+
+        return $data;
+    }
+
+    public function close(): bool
+    {
+        $this->getChannelManager()->flush();
+        $this->chan?->close();
+        $this->chan = null;
+        $this->sleepChan?->close();
+        $this->sleepChan = null;
+        return parent::close();
+    }
+
+    protected function getChannelManager(): ChannelManager
+    {
+        return $this->channelManager;
+    }
+
+    protected function reconnect(): bool
+    {
+        parent::close();
+        return parent::connect();
+    }
+
+    protected function getHeartbeat(): int
+    {
+        return 30;
+    }
+
+    protected function heartbeat(): void
+    {
+        $heartbeat = $this->getHeartbeat();
+        if (! $this->heartbeat) {
+            $this->heartbeat = true;
+
+            Coroutine::create(
+                function () use ($heartbeat) {
+                    try {
+                        while (true) {
+                            try {
+                                $this->sleep($heartbeat);
+                                if (! $this->getChannelManager()->isEmpty()) {
+                                    continue;
+                                }
+                                if (! $this->ping()) {
+                                    break;
+                                }
+                            } catch (Throwable $exception) {
+                                swoole_error_log(SWOOLE_LOG_ERROR, $exception->getMessage());
+                            }
+                        }
+                    } catch (Throwable $exception) {
+                        swoole_error_log(SWOOLE_LOG_ERROR, $exception->getMessage());
+                    } finally {
+                        $this->close();
+                    }
+                }
+            );
+        }
+    }
+
+    protected function loop(): void
+    {
+        $this->heartbeat();
+
+        if ($this->chan !== null) {
+            return;
+        }
+        $this->chan = new Channel(65535);
+
+        if (! $this->ping()) {
+            $this->reconnect();
+        }
+        Coroutine::create(
+            function () {
+                $reason = '';
+                try {
+                    $chan = $this->chan;
+                    while (true) {
+                        $response = $this->recv($this->setting['timeout'] ?? 60);
+
+                        if ($chan->errCode !== SWOOLE_CHANNEL_OK) {
+                            $reason = 'channel closed.';
+                            break;
+                        }
+
+                        if ($response === false) {
+                            $reason = 'client broken.';
+                            break;
+                        }
+
+                        if ($channel = $this->getChannelManager()->get($response->streamId)) {
+                            $channel->push($response);
+                        } else {
+                            swoole_error_log(SWOOLE_LOG_ERROR, sprintf('Recv channel [%d] does not exists.', $response->streamId));
+                        }
+                    }
+                } catch (Throwable $exception) {
+                    swoole_error_log(SWOOLE_LOG_ERROR, (string) $exception);
+                } finally {
+                    swoole_error_log(SWOOLE_LOG_DEBUG, 'Recv loop broken, wait to restart in next time. The reason is ' . $reason);
+                    $this->close();
+                }
+            }
+        );
+
+        Coroutine::create(
+            function () {
+                $this->waitClose();
+            }
+        );
+    }
+
+    protected function waitClose(): void
+    {
+        while (true) {
+            $this->sleep(5);
+            if ($this->channelManager->isEmpty() && time() - $this->lastSendTime > 10) {
+                $this->close();
+                return;
+            }
+        }
+    }
+
+    protected function sleep(float $timeout = -1): void
+    {
+        $this->sleepChan ??= new Channel(1);
+        $this->sleepChan->pop($timeout);
+    }
+}
