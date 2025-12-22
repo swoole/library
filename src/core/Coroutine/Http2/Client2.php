@@ -21,9 +21,7 @@ class Client2 extends Client
 
     protected ChannelManager $channelManager;
 
-    protected bool $heartbeat = false;
-
-    protected bool $waitClose = false;
+    protected bool $idleClose = false;
 
     protected int $lastSendTime = 0;
 
@@ -31,19 +29,18 @@ class Client2 extends Client
     {
         parent::__construct($host, $port, $open_ssl);
         $this->channelManager = new ChannelManager();
-        $this->lastSendTime = time();
     }
 
     public function request(Request $request, float $timeout = -1): false|Response
     {
         $this->loop();
         $streamId = $this->send($request);
+        $this->lastSendTime = time();
 
         if ($streamId === false) {
             $this->close();
             return false;
         }
-        $this->lastSendTime = time();
         ++$this->requests;
         $manager = $this->getChannelManager();
         $chan = $manager->get($streamId, true);
@@ -54,6 +51,11 @@ class Client2 extends Client
         }
 
         return $data;
+    }
+
+    public function getRequests(): int
+    {
+        return $this->requests;
     }
 
     public function close(): bool
@@ -77,51 +79,9 @@ class Client2 extends Client
         return parent::connect();
     }
 
-    protected function getHeartbeat(): int
-    {
-        return 30;
-    }
-
-    protected function heartbeat(): void
-    {
-        if (! $this->heartbeat) {
-            $this->heartbeat = true;
-
-            Coroutine::create(
-                function () {
-                    try {
-                        while (true) {
-                            try {
-                                $this->sleep($this->getHeartbeat());
-
-                                if ($this->chan === null) {
-                                    break;
-                                }
-                                if (! $this->getChannelManager()->isEmpty()) {
-                                    continue;
-                                }
-                                if (! $this->ping()) {
-                                    break;
-                                }
-                            } catch (Throwable $exception) {
-                                swoole_error_log(SWOOLE_LOG_ERROR, $exception->getMessage());
-                            }
-                        }
-                    } catch (Throwable $exception) {
-                        swoole_error_log(SWOOLE_LOG_ERROR, $exception->getMessage());
-                    } finally {
-                        $this->close();
-                        $this->heartbeat = false;
-                    }
-                }
-            );
-        }
-    }
-
     protected function loop(): void
     {
-        $this->heartbeat();
-        $this->waitClose();
+        $this->idleClose();
 
         if ($this->chan !== null) {
             return;
@@ -165,10 +125,10 @@ class Client2 extends Client
         );
     }
 
-    protected function waitClose(): void
+    protected function idleClose(): void
     {
-        if (! $this->waitClose) {
-            $this->waitClose = true;
+        if (! $this->idleClose) {
+            $this->idleClose = true;
             Coroutine::create(
                 function () {
                     try {
@@ -183,7 +143,7 @@ class Client2 extends Client
                             }
                         }
                     } finally {
-                        $this->waitClose = false;
+                        $this->idleClose = false;
                     }
                 }
             );
