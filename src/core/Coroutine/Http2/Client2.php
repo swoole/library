@@ -95,7 +95,7 @@ class Client2 extends Client
                                 $this->sleep($this->getHeartbeat());
 
                                 if ($this->chan === null) {
-                                    return;
+                                    break;
                                 }
                                 if (! $this->getChannelManager()->isEmpty()) {
                                     continue;
@@ -175,11 +175,11 @@ class Client2 extends Client
                         while (true) {
                             $this->sleep(3);
                             if ($this->chan === null) {
-                                return;
+                                break;
                             }
                             if ($this->channelManager->isEmpty() && time() - $this->lastSendTime > 10) {
                                 $this->close();
-                                return;
+                                break;
                             }
                         }
                     } finally {
