@@ -36,6 +36,10 @@ class SwooleLibrary
      * @var array<string, mixed>
      */
     public static array $options = [];
+
+    public static bool $remote_object_server_initiated = false;
+
+    public static string $remote_object_server_socket_file = '';
 }
 
 /**
@@ -273,11 +277,17 @@ function swoole_init_default_remote_object_server(): void
 
 function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
 {
-    $dir = swoole_library_get_option('default_remote_object_server_dir');
-    if (empty($dir)) {
-        $home = getenv('HOME') ?: sys_get_temp_dir();
-        $dir  = $home . '/.swoole';
+    if (!SwooleLibrary::$remote_object_server_initiated) {
+        SwooleLibrary::$remote_object_server_initiated = true;
+        swoole_init_default_remote_object_server();
     }
-    $socket_file = 'unix://' . $dir . '/remote-object-server.sock';
-    return new Swoole\RemoteObject\Client($socket_file);
+    if (!SwooleLibrary::$remote_object_server_socket_file) {
+        $dir = swoole_library_get_option('default_remote_object_server_dir');
+        if (empty($dir)) {
+            $home = getenv('HOME') ?: sys_get_temp_dir();
+            $dir  = $home . '/.swoole';
+        }
+        SwooleLibrary::$remote_object_server_socket_file = 'unix://' . $dir . '/remote-object-server.sock';
+    }
+    return new Swoole\RemoteObject\Client(SwooleLibrary::$remote_object_server_socket_file);
 }
