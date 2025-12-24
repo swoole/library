@@ -10,3 +10,7 @@
 declare(strict_types=1);
 
 ini_set('swoole.enable_library', 'On');
+
+require_once __DIR__ . '/ext/curl.php';
+require_once __DIR__ . '/ext/sockets.php';
+require_once __DIR__ . '/ext/standard.php';
