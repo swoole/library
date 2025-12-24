@@ -17,8 +17,6 @@ class Client2 extends Client
 
     protected ?Channel $sleepChan = null;
 
-    protected int $requests = 0;
-
     protected ChannelManager $channelManager;
 
     protected bool $idleClose = false;
@@ -41,7 +39,6 @@ class Client2 extends Client
             $this->close();
             return false;
         }
-        ++$this->requests;
         $manager = $this->getChannelManager();
         $chan = $manager->get($streamId, true);
         try {
@@ -51,11 +48,6 @@ class Client2 extends Client
         }
 
         return $data;
-    }
-
-    public function getRequests(): int
-    {
-        return $this->requests;
     }
 
     public function close(): bool
