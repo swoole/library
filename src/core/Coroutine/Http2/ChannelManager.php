@@ -13,14 +13,14 @@ class ChannelManager
      */
     protected array $channels = [];
 
-    public function get(int $id, bool $initialize = false): ?Channel
+    public function get(int $streamId, bool $initialize = false): ?Channel
     {
-        if (isset($this->channels[$id])) {
-            return $this->channels[$id];
+        if (isset($this->channels[$streamId])) {
+            return $this->channels[$streamId];
         }
 
         if ($initialize) {
-            return $this->channels[$id] = $this->make(1);
+            return $this->channels[$streamId] = $this->make(1);
         }
 
         return null;
@@ -31,13 +31,13 @@ class ChannelManager
         return new Channel($limit);
     }
 
-    public function close(int $id): void
+    public function close(int $streamId): void
     {
-        if ($channel = $this->channels[$id] ?? null) {
+        if ($channel = $this->channels[$streamId] ?? null) {
             $channel->close();
         }
 
-        unset($this->channels[$id]);
+        unset($this->channels[$streamId]);
     }
 
     public function getChannels(): array
@@ -48,8 +48,9 @@ class ChannelManager
     public function flush(): void
     {
         $channels = $this->getChannels();
-        foreach ($channels as $id => $channel) {
-            $this->close($id);
+        $streamIds = array_keys($channels);
+        foreach ($streamIds as $streamId) {
+            $this->close($streamId);
         }
     }
 

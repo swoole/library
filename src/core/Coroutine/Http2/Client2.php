@@ -103,8 +103,6 @@ class Client2 extends Client
 
                         if ($channel = $this->getChannelManager()->get($response->streamId)) {
                             $channel->push($response);
-                        } else {
-                            swoole_error_log(SWOOLE_LOG_ERROR, sprintf('Recv channel [%d] does not exists.', $response->streamId));
                         }
                     }
                 } catch (Throwable $exception) {
