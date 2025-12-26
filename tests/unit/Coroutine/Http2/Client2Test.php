@@ -49,7 +49,7 @@ class Client2Test extends TestCase
                     $req->data = (string) $i;
                     $data = $client->request($req);
                     $result = json_decode($data->data, true);
-                    $this->assertEquals($i, intval($result['data']));
+                    $this->assertEquals($i, (int) $result['data']);
                 });
             }
         });
