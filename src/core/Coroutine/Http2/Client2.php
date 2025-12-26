@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine\Http2;
 
-use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
-use Swoole\Coroutine\Http2\Client;
 use Swoole\Http2\Request;
 use Swoole\Http2\Response;
 use Throwable;
+
+use function Swoole\Coroutine\go;
 
 class Client2 extends Client
 {
@@ -83,7 +83,7 @@ class Client2 extends Client
         if (! $this->ping()) {
             $this->reconnect();
         }
-        Coroutine::create(
+        go(
             function () {
                 $reason = '';
                 try {
@@ -119,7 +119,7 @@ class Client2 extends Client
     {
         if (! $this->idleClose) {
             $this->idleClose = true;
-            Coroutine::create(
+            go(
                 function () {
                     try {
                         while (true) {

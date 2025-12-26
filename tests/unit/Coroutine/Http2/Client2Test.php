@@ -14,9 +14,9 @@ namespace Swoole\Coroutine\Http2;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Swoole\Coroutine;
 use Swoole\Http2\Request;
 
+use function Swoole\Coroutine\go;
 use function Swoole\Coroutine\run;
 
 /**
@@ -36,7 +36,7 @@ class Client2Test extends TestCase
             ]);
             $client->connect();
             for ($i = 1; $i < 30; ++$i) {
-                Coroutine::create(function () use ($client, $i) {
+                go(function () use ($client, $i) {
                     $req = new Request();
                     $req->method = 'POST';
                     $req->path = '/post';

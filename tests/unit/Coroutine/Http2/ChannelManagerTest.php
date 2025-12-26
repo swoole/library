@@ -6,9 +6,9 @@ namespace Swoole\Coroutine\Http2;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 
+use function Swoole\Coroutine\go;
 use function Swoole\Coroutine\run;
 
 /**
@@ -26,7 +26,7 @@ class ChannelManagerTest extends TestCase
                 $this->assertInstanceOf(Channel::class, $chan);
                 $chan = $manager->get(1);
                 $this->assertInstanceOf(Channel::class, $chan);
-                Coroutine::create(
+                go(
                     function () use ($chan) {
                         usleep(10 * 1000);
                         $chan->push('Hello World.');
