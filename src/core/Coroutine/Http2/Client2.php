@@ -91,7 +91,7 @@ class Client2 extends Client
                     while (true) {
                         $response = $this->recv($this->setting['timeout'] ?? 60);
 
-                        if ($chan->errCode !== SWOOLE_CHANNEL_OK) {
+                        if ($chan?->errCode !== SWOOLE_CHANNEL_OK) {
                             $reason = 'channel closed.';
                             break;
                         }
