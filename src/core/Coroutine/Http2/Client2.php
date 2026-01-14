@@ -36,7 +36,6 @@ class Client2 extends Client
         $this->lastSendTime = time();
 
         if ($streamId === false) {
-            $this->close();
             return false;
         }
         $manager = $this->getChannelManager();
