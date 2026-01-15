@@ -88,7 +88,7 @@ class Client2 extends Client
                 try {
                     $chan = $this->chan;
                     while (true) {
-                        $response = $this->recv($this->setting['timeout'] ?? 60);
+                        $response = $this->recv();
 
                         if ($chan?->errCode !== SWOOLE_CHANNEL_OK) {
                             $reason = 'channel closed.';
