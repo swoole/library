@@ -171,13 +171,7 @@ function swoole_container_cpu_num(): int
 
 function swoole_init_default_remote_object_server(): void
 {
-    $dir = swoole_library_get_option('default_remote_object_server_dir');
-    if (empty($dir)) {
-        $home = getenv('HOME') ?: sys_get_temp_dir();
-        $dir  = $home . '/.swoole';
-        swoole_library_set_option('default_remote_object_server_dir', $dir);
-    }
-
+    $dir = swoole_get_default_remote_object_server_dir();
     $pid_file = $dir . '/remote-object-server.pid';
 
     if (!is_dir($dir)) {
@@ -281,6 +275,15 @@ function swoole_init_default_remote_object_server(): void
     fclose($lock_handle);
 }
 
+function swoole_get_default_remote_object_server_dir(): string {
+    $dir = swoole_library_get_option('default_remote_object_server_dir');
+    if (empty($dir)) {
+        $home = getenv('HOME') ?: sys_get_temp_dir();
+        $dir  = $home . '/.swoole';
+    }
+    return $dir;
+}
+
 function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
 {
     if (!SwooleLibrary::$remote_object_server_initiated) {
@@ -288,11 +291,7 @@ function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
         swoole_init_default_remote_object_server();
     }
     if (!SwooleLibrary::$remote_object_server_socket_file) {
-        $dir = swoole_library_get_option('default_remote_object_server_dir');
-        if (empty($dir)) {
-            $home = getenv('HOME') ?: sys_get_temp_dir();
-            $dir  = $home . '/.swoole';
-        }
+        $dir = swoole_get_default_remote_object_server_dir();
         SwooleLibrary::$remote_object_server_socket_file = 'unix://' . $dir . '/remote-object-server.sock';
     }
     return new Swoole\RemoteObject\Client(SwooleLibrary::$remote_object_server_socket_file);
