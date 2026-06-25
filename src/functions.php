@@ -284,7 +284,12 @@ function swoole_init_default_remote_object_server(): void
     }
     $print_log("remote object server pid: {$status['pid']}");
 
-    $exitStatus = Swoole\Coroutine\System::waitpid($status['pid']);
+    if (Swoole\Coroutine::getCid() > 0) {
+        $exitStatus = Swoole\Coroutine\System::waitpid($status['pid']);
+    } else {
+        pcntl_waitpid($status['pid'], $status);
+        $exitStatus['code'] = $status;
+    }
     if ($exitStatus['code'] !== 0) {
         $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
         throw new RuntimeException("failed to start remote object server: exit code {$exitStatus['code']}, output: " . $output);
