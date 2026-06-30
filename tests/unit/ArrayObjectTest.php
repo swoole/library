@@ -98,6 +98,29 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($this->control_data, $newArray);
     }
 
+    public function testValidAtEndOfArray(): void
+    {
+        $data = swoole_array([1, 2, 3]);
+
+        $errorRaised = false;
+        set_error_handler(static function () use (&$errorRaised): bool {
+            $errorRaised = true;
+            return true;
+        });
+
+        $values = [];
+        foreach ($data as $value) {
+            $values[] = $value;
+        }
+        $validAtEnd = $data->valid();
+
+        restore_error_handler();
+
+        $this->assertSame([1, 2, 3], $values);
+        $this->assertFalse($validAtEnd);
+        $this->assertFalse($errorRaised);
+    }
+
     public function testRemove(): void
     {
         $data1 = swoole_array_list('hello', 'world', 'swoole');
