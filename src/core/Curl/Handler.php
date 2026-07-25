@@ -107,6 +107,9 @@ final class Handler implements \Stringable
     /** @var callable */
     private $progressFunction;
 
+    /** @var callable|null */
+    private $prereqFunction;
+
     private $returnTransfer = false;
 
     private $method = '';
@@ -669,6 +672,10 @@ final class Handler implements \Stringable
                 $this->method = 'GET';
                 break;
             default:
+                if (defined('CURLOPT_PREREQFUNCTION') && $opt === CURLOPT_PREREQFUNCTION) {
+                    $this->prereqFunction = $value;
+                    break;
+                }
                 throw new CurlException("swoole_curl_setopt(): option[{$opt}] is not supported");
         }
         return true;

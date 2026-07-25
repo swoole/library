@@ -70,6 +70,22 @@ class HandlerTest extends TestCase
         });
     }
 
+    public function testPrereqFunction(): void
+    {
+        if (!defined('CURLOPT_PREREQFUNCTION')) {
+            self::markTestSkipped('CURLOPT_PREREQFUNCTION requires PHP >= 8.2 and libcurl >= 7.80.0');
+        }
+        Coroutine\run(function () {
+            $ch = curl_init('http://httpbin.org/get');
+            self::assertInstanceOf(Handler::class, $ch);
+            self::assertTrue(curl_setopt($ch, CURLOPT_PREREQFUNCTION, function () {
+                return CURL_PREREQFUNC_OK;
+            }));
+            // Guzzle clears it with null on handle release
+            self::assertTrue(curl_setopt($ch, CURLOPT_PREREQFUNCTION, null));
+        });
+    }
+
     public function testCustomHost(): void
     {
         Coroutine\run(function () {
