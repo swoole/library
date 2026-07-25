@@ -28,7 +28,7 @@ jobs:
           tar xfz swoole.tar.gz --strip-components=1 -C swoole
 
       - name: Checkout Source Code of Swoole Library
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: './swoole/library'
 
