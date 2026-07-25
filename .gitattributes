@@ -1,0 +1,13 @@
+/.claude                export-ignore
+/.gitattributes         export-ignore
+/.github                export-ignore
+/.gitignore             export-ignore
+/.php-cs-fixer.dist.php export-ignore
+/.phplint.yml           export-ignore
+/CLAUDE.md              export-ignore
+/Dockerfile             export-ignore
+/docker-compose.yml     export-ignore
+/examples               export-ignore
+/phpstan.neon.dist      export-ignore
+/phpunit.xml.dist       export-ignore
+/tests                  export-ignore
