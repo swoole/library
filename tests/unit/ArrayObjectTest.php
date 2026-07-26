@@ -30,7 +30,7 @@ class ArrayObjectTest extends TestCase
 
     private array $control_data;
 
-    public function __construct(?string $name = null, array $data = [], $dataName = '')
+    protected function setUp(): void
     {
         $_data      = '11, 33, 22, 44,12,32,55, 23,19,23';
         $this->data = swoole_string($_data)->split(',')->each(function (&$item) {
@@ -55,7 +55,6 @@ class ArrayObjectTest extends TestCase
             $v = trim($v);
         }
         $this->control_data = $array;
-        parent::__construct($name, $data, $dataName);
     }
 
     public function testToArray(): void
