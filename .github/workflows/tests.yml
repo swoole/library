@@ -1,0 +1,54 @@
+name: Tests
+
+on: [ push, pull_request, workflow_dispatch ]
+
+jobs:
+  # Unit tests run against every image in the matrix. The checks that are not environment-specific run on a
+  # subset of it, as noted on each step.
+  tests:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image-tag-prefix: ["", "6.2-"]
+        php: ["8.2", "8.3", "8.4", "8.5"]
+
+    name: Image phpswoole/swoole:${{ matrix.image-tag-prefix }}php${{ matrix.php }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Parsing runs once per PHP version because the analysis is PHP-version sensitive.
+      - name: Run Syntax Checks
+        if: matrix['image-tag-prefix'] == ''
+        run: docker run -q --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php${{ matrix.php }}-alpine phplint
+
+      - name: Prepare Test Environment
+        env:
+          IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
+          PHP_VERSION: ${{ matrix.php }}
+        run: |
+          docker compose pull
+          docker compose build
+          docker compose up -d
+
+          docker compose exec -T app php -v
+          docker compose exec -T app php --ri swoole
+          docker compose exec -T app composer install -n -q --no-progress
+
+          sleep 40s
+
+      # Coding style does not depend on the PHP version the code runs on, so it is checked once.
+      - name: Run Coding Style Checks
+        if: matrix.php == '8.4' && matrix['image-tag-prefix'] == ''
+        run: docker compose exec -T app composer cs-fix -- --dry-run --show-progress=none
+
+      # PHPStan resolves Swoole symbols from the swoole/ide-helper stubs rather than from the loaded extension
+      # (see phpstan.neon.dist), so the result does not depend on which Swoole build it runs against.
+      - name: Run Static Analysis
+        if: matrix.php == '8.4' && matrix['image-tag-prefix'] == ''
+        run: docker compose exec -T app ./vendor/bin/phpstan analyse --no-progress --memory-limit 2G
+
+      - name: Run Unit Tests
+        run: docker compose exec -T app composer test
