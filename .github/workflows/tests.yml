@@ -3,8 +3,8 @@ name: Tests
 on: [ push, pull_request, workflow_dispatch ]
 
 jobs:
-  # Unit tests run against every image in the matrix. The checks that are not environment-specific run on a
-  # subset of it, as noted on each step.
+  # Every image in the matrix gets built and booted, which is what proves the extension still compiles against
+  # each PHP version. The checks on top of that each run on a subset of the matrix, as noted on the step.
   tests:
     runs-on: ubuntu-22.04
     strategy:
@@ -50,5 +50,12 @@ jobs:
         if: matrix.php == '8.4' && matrix['image-tag-prefix'] == ''
         run: docker compose exec -T app ./vendor/bin/phpstan analyse --no-progress --memory-limit 2G
 
+      # Unit tests run on the oldest and the newest PHP version of the matrix only. Those two are where a
+      # version-dependent break shows up: the oldest still has to work without the newer syntax and functions,
+      # the newest is where deprecations and behaviour changes land first. The versions in between run the
+      # same library code against the same services, so they mostly repeat what those two already prove --
+      # while adding load on the external services the tests query, httpbin.org above all, which throttles.
+      # Keep this in step with the `php` matrix above whenever a version is added or dropped.
       - name: Run Unit Tests
+        if: matrix.php == '8.2' || matrix.php == '8.5'
         run: docker compose exec -T app composer test
