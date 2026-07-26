@@ -94,11 +94,11 @@ If `env -u GH_TOKEN gh release view "$VERSION" -R swoole/library` succeeds, repo
 
 ## Step 6 — Find the previous release to compare against
 
-Compare against GitHub **releases**, not bare tags (some tags have no release):
+Compare against GitHub **releases**, not bare tags (some tags have no release). Exclude drafts too — `gh release list` shows drafts to maintainers, and a draft's tag may not exist yet, which would break Step 7:
 
 ```bash
-env -u GH_TOKEN gh release list -R swoole/library --limit 200 --json tagName,isPrerelease \
-  --jq '.[] | select(.isPrerelease == false) | .tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$'
+env -u GH_TOKEN gh release list -R swoole/library --limit 200 --json tagName,isPrerelease,isDraft \
+  --jq '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$'
 ```
 
 From that list, pick `$PREV` as follows (use `sort -V` for version ordering; only consider versions strictly lower than `$VERSION`):
