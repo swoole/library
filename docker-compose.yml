@@ -19,6 +19,17 @@ services:
     environment:
       DISABLE_DEFAULT_SERVER: 1
       GITHUB_ACTIONS: "yes"
+      # /var/www is the bind mount below, owned on the host by whoever checked the code out -- the runner user
+      # on GitHub Actions -- while everything in this container runs as root. Git refuses to read a repository
+      # owned by somebody else ("detected dubious ownership"), and so does every tool that shells out to it:
+      # Composer guesses the root package version with `git branch -a --no-color --no-abbrev -v` and reports
+      # the version as 1.0.0 once that fails. These three variables are git's "command" configuration scope,
+      # one of the three scopes it considers protected; safe.directory is deliberately ignored from anywhere
+      # else. `docker compose exec` inherits them, so every step gets the exception. Adding a second setting
+      # here means raising GIT_CONFIG_COUNT to match.
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /var/www
     ports:
       - "80:80"
     volumes:
