@@ -1,7 +1,9 @@
 ---
 name: swoole-library-release
 description: Use when asked to tag, publish, or release Swoole Library for a specific Swoole extension version (e.g. "release swoole/library for v6.2.3", "publish the library release for 6.1.9", "tag swoole-library for the v6.0.1 Swoole release").
-allowed-tools: Bash Read Grep Glob WebFetch
+argument-hint: [version]
+disable-model-invocation: true
+allowed-tools: Bash(git:*), Bash(curl:*), Bash(env -u GH_TOKEN gh:*), Bash(grep:*), Bash(head:*), Bash(awk:*), Bash(sort:*), Read, Write
 ---
 
 # Swoole Library Release
@@ -12,7 +14,7 @@ Publishes a `swoole/library` GitHub release (repo `swoole/library`, git remote `
 
 ## Input
 
-The input is a Swoole release version. Normalize it to `vX.Y.Z` (add the `v` prefix if missing). Call it `$VERSION` throughout. The library tag name is always identical to the Swoole release tag name.
+The input (`$ARGUMENTS`) is a Swoole release version. Normalize it to `vX.Y.Z` (add the `v` prefix if missing). Call it `$VERSION` throughout. The library tag name is always identical to the Swoole release tag name.
 
 ## Failure handling
 
@@ -30,6 +32,14 @@ git ls-remote https://github.com/swoole/swoole-src.git "refs/tags/$VERSION"
 
 If this returns no output, the Swoole release does not exist. Report `ERROR: Swoole release $VERSION not found in swoole/swoole-src.` and stop.
 
+A tag can exist before the GitHub release is published, and the release message links to the Swoole release page. Also check:
+
+```bash
+env -u GH_TOKEN gh release view "$VERSION" -R swoole/swoole-src --json tagName
+```
+
+If this fails, the tag exists but the release is not published yet. Do not stop — warn the user and continue.
+
 ## Step 2 — Get the swoole/library commit hash used by that Swoole release
 
 The header comment of `ext-src/php_swoole_library.h` in the Swoole source records the hash on a line of the form `/* $Id: 26e2e98b4bdaf3da1497910c21c44cd96f7a8dc8 */` (near the top of the file):
@@ -43,24 +53,40 @@ If `$HASH` is not a 40-character hex string, report `ERROR: could not extract th
 ## Step 3 — Verify the hash exists in this repository
 
 ```bash
-git fetch origin --tags
+git fetch origin --tags --force
 git cat-file -t "$HASH"
 ```
+
+`--force` matters: a plain `git fetch --tags` silently leaves an existing local tag untouched even when `origin` has moved it, which would make Step 4 compare against a stale local tag.
 
 The object type must be `commit`. If not, report `ERROR: commit $HASH is not present in the swoole/library repository.` and stop.
 
 ## Step 4 — Create and push the tag
 
-First check whether the tag already exists on `origin` (`git ls-remote origin "refs/tags/$VERSION"`, then dereference with `git rev-parse "$VERSION^{commit}"` — the tags were already fetched in Step 3):
-
-- If it exists and points to `$HASH`: skip tagging and continue (idempotent re-run).
-- If it exists but points to a different commit: report `ERROR: tag $VERSION already exists and points to a different commit.` and stop.
-- Otherwise:
+Check the remote and the local tag separately — a previous interrupted run can leave a local tag that was never pushed.
 
 ```bash
-git tag "$VERSION" "$HASH"
-git push origin "$VERSION"
+git ls-remote origin "refs/tags/$VERSION" "refs/tags/$VERSION^{}"   # remote: empty output means no tag
+git rev-parse -q --verify "refs/tags/$VERSION^{commit}"             # local: empty output means no tag
 ```
+
+For an annotated tag `ls-remote` prints two lines; the `^{}` (peeled) line holds the commit. For a lightweight tag there is one line and it is the commit.
+
+- **Remote tag exists, points to `$HASH`**: skip tagging and continue (idempotent re-run).
+- **Remote tag exists, points elsewhere**: report `ERROR: tag $VERSION already exists on origin and points to a different commit.` and stop.
+- **No remote tag, local tag exists at `$HASH`**: push it, then continue.
+
+  ```bash
+  git push origin "$VERSION"
+  ```
+
+- **No remote tag, local tag exists at a different commit**: report `ERROR: a local tag $VERSION already exists and points to a different commit; delete or correct it before re-running.` and stop. Do not move or delete it automatically.
+- **Neither exists**:
+
+  ```bash
+  git tag "$VERSION" "$HASH"
+  git push origin "$VERSION"
+  ```
 
 ## Step 5 — Skip if the release already exists
 
@@ -107,15 +133,17 @@ Then:
   This release is the same as Swoole Library [$PREV](https://github.com/swoole/library/releases/tag/$PREV).
   ```
 
-- **If there are differences**: write a short changelog based on the commits and diff — a flat bullet list of user-facing changes in plain language (fixes, features, refactorings), no category headers. Reference PR numbers like `#189` when a commit subject contains them. Skip merge commits and pure CI/style noise unless they are the only changes. Recent releases (v6.1.0+) lead the bullet list with a `Changes since [$PREV](https://github.com/swoole/library/releases/tag/$PREV):` line before the bullets — match that convention for consistency with the release history.
+- **If there are differences**: write a short changelog based on the commits and diff — a flat bullet list of user-facing changes in plain language (fixes, features, refactorings), no category headers. Reference PR numbers like `#189` when a commit subject contains them. Skip merge commits and pure CI/style noise unless they are the only changes. Lead the bullet list with a `Changes since [$PREV](https://github.com/swoole/library/releases/tag/$PREV):` line followed by a blank line, as v6.1.0 and v6.2.2 do.
 
 ## Step 9 — Publish the release
 
-Write the message to a temp file, then:
+Write the message with the Write tool to a scratch file outside the repository (never inside the working tree), then:
 
 ```bash
 env -u GH_TOKEN gh release create "$VERSION" -R swoole/library --verify-tag --latest=false --title "$VERSION" --notes-file <file>
 ```
+
+`--verify-tag` requires the tag to be on `origin` already, which Step 4 guarantees.
 
 Hard rules:
 
