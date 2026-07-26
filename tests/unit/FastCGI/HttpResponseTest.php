@@ -144,37 +144,33 @@ Hello world!',
     public static function dataStatus(): array
     {
         return [
-            [
+            'test HTTP status overridden with reason phrase included' => [
                 400,
                 'Bad Request',
                 'Status: 400 Bad Request
 
 Hello world!',
-                'test HTTP status overridden with reason phrase included',
             ],
-            [
+            'test HTTP status overridden without reason phrase included' => [
                 401,
                 'Unauthorized',
                 'Status: 401
 
 Hello world!',
-                'test HTTP status overridden without reason phrase included',
             ],
-            [
+            'test HTTP status overridden with reason phrase and extra spaces included' => [
                 402,
                 ' Payment Required',
                 'Status:  402  Payment Required  
 
 Hello world!',
-                'test HTTP status overridden with reason phrase and extra spaces included',
             ],
-            [
+            'test HTTP status overridden with extra spaces included, but no reason phrase' => [
                 403,
                 'Forbidden',
                 'Status:  403  
 
 Hello world!',
-                'test HTTP status overridden with extra spaces included, but no reason phrase',
             ],
         ];
     }
@@ -195,29 +191,25 @@ Hello world!',
     public static function dataStatusFromFPM(): array
     {
         return [
-            [
+            'test HTTP status overridden with reason phrase included' => [
                 400,
                 'Bad Request',
                 DOCUMENT_ROOT . '/status0.php',
-                'test HTTP status overridden with reason phrase included',
             ],
-            [
+            'test HTTP status overridden without reason phrase included' => [
                 401,
                 'Unauthorized',
                 DOCUMENT_ROOT . '/status1.php',
-                'test HTTP status overridden without reason phrase included',
             ],
-            [
+            'test HTTP status overridden with reason phrase and extra spaces included' => [
                 402,
                 ' Payment Required',
                 DOCUMENT_ROOT . '/status2.php',
-                'test HTTP status overridden with reason phrase and extra spaces included',
             ],
-            [
+            'test HTTP status overridden with extra spaces included, but no reason phrase' => [
                 403,
                 'Forbidden',
                 DOCUMENT_ROOT . '/status3.php',
-                'test HTTP status overridden with extra spaces included, but no reason phrase',
             ],
         ];
     }
