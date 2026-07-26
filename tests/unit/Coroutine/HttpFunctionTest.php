@@ -13,8 +13,10 @@ namespace Swoole\Coroutine;
 
 use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Swoole\Constant;
 use Swoole\Coroutine;
+use Swoole\Tests\RetryTrait;
 
 use function Swoole\Coroutine\Http\get;
 use function Swoole\Coroutine\Http\post;
@@ -27,6 +29,8 @@ use function Swoole\Coroutine\Http\post;
 #[CoversFunction('Swoole\Coroutine\Http\post')]
 class HttpFunctionTest extends TestCase
 {
+    use RetryTrait;
+
     public function testGet(): void
     {
         run(function () {
@@ -75,13 +79,27 @@ class HttpFunctionTest extends TestCase
 
     private function fun1(): void
     {
-        self::assertSame(200, get('http://httpbin.org')->getStatusCode(), 'Test HTTP GET without query strings.');
+        // A throttled httpbin.org answers with an error page, which is a reason to ask again rather than to
+        // fail the test; see Swoole\Tests\RetryTrait::retry().
+        $statusCode = self::retry(static function (): int {
+            $statusCode = get('http://httpbin.org')->getStatusCode();
+            if ($statusCode !== 200) {
+                throw new RuntimeException("httpbin.org answered with HTTP status code {$statusCode}");
+            }
+            return $statusCode;
+        });
+        self::assertSame(200, $statusCode, 'Test HTTP GET without query strings.');
     }
 
     private function fun2(): void
     {
-        $data = get('http://httpbin.org/get?hello=world');
-        $body = json_decode($data->getBody(), null, 512, JSON_THROW_ON_ERROR);
+        // An error page is not JSON, so json_decode() throws and the request is made again.
+        $body = self::retry(static fn (): object => json_decode(
+            get('http://httpbin.org/get?hello=world')->getBody(),
+            null,
+            512,
+            JSON_THROW_ON_ERROR
+        ));
         self::assertSame('httpbin.org', $body->headers->Host);
         self::assertSame('world', $body->args->hello);
     }
@@ -89,8 +107,12 @@ class HttpFunctionTest extends TestCase
     private function fun3(): void
     {
         $random_data = base64_encode(random_bytes(128));
-        $data        = post('http://httpbin.org/post?hello=world', ['random_data' => $random_data]);
-        $body        = json_decode($data->getBody(), null, 512, JSON_THROW_ON_ERROR);
+        $body        = self::retry(static fn (): object => json_decode(
+            post('http://httpbin.org/post?hello=world', ['random_data' => $random_data])->getBody(),
+            null,
+            512,
+            JSON_THROW_ON_ERROR
+        ));
         self::assertSame('httpbin.org', $body->headers->Host);
         self::assertSame('world', $body->args->hello);
         self::assertSame($random_data, $body->form->random_data);
