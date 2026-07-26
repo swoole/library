@@ -107,7 +107,7 @@ class Server
             return false;
         }
 
-        while ($this->running) { // @phpstan-ignore while.alwaysTrue
+        while ($this->running) {
             $conn = null;
             /** @var Socket $conn */
             $conn = $socket->accept();

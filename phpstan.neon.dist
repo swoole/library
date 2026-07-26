@@ -2,5 +2,11 @@ parameters:
   level: 5
   paths:
     - ./src
+  # Stubs for the Swoole extension itself. They cover symbols an NTS build does not expose (SWOOLE_THREAD and
+  # the Swoole\Thread classes), which keeps the analysis identical on NTS and ZTS builds. Only ./src/swoole is
+  # scanned: ./src/swoole_library holds stubs for this very repository, and Composer's post-install-cmd deletes
+  # it, so scanning the parent directory would redeclare our own classes whenever that hook has not run.
+  scanDirectories:
+    - vendor/swoole/ide-helper/src/swoole
   ignoreErrors:
     - '#Comparison operation ">=" between \d+ and \d+ is always true\.#'

@@ -13,7 +13,7 @@ if (PHP_VERSION_ID < 80100) { // @phpstan-ignore smaller.alwaysFalse
     throw new RuntimeException('require PHP version 8.1 or later');
 }
 
-if (SWOOLE_USE_SHORTNAME) { // @phpstan-ignore if.alwaysTrue
+if (SWOOLE_USE_SHORTNAME) {
     function _string(string $string = ''): Swoole\StringObject
     {
         return new Swoole\StringObject($string);
