@@ -31,5 +31,4 @@ Co\run(function () {
     } else {
         echo 'Response length: ' . strlen($response) . " bytes\n";
     }
-    curl_close($ch);
 });
