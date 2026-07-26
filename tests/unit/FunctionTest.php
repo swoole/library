@@ -22,6 +22,27 @@ use PHPUnit\Framework\TestCase;
 #[CoversFunction('swoole_library_set_options')]
 class FunctionTest extends TestCase
 {
+    /**
+     * @var array<string, mixed>
+     */
+    private array $options = [];
+
+    /**
+     * These tests overwrite the library options, and swoole_library_set_options() replaces them wholesale.
+     * SwooleLibrary::$options is static and the suite runs in a single process, so without restoring them the
+     * options set up in tests/bootstrap.php are lost for every test that runs afterwards. RemoteObjectTest is
+     * the one that notices: it needs 'default_remote_object_server_dir' to find its bootstrap file.
+     */
+    protected function setUp(): void
+    {
+        $this->options = swoole_library_get_options();
+    }
+
+    protected function tearDown(): void
+    {
+        swoole_library_set_options($this->options);
+    }
+
     public function testOptions(): void
     {
         $options = [__METHOD__ => uniqid()];
