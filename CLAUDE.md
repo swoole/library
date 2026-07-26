@@ -42,7 +42,7 @@ docker compose exec app php -d swoole.enable_library=Off ./vendor/bin/phpunit te
 # Run a single test by name
 docker compose exec app php -d swoole.enable_library=Off ./vendor/bin/phpunit --filter=testSplit tests/unit/StringObjectTest.php
 
-# Coding style (PHP-CS-Fixer; CI runs it with --dry-run)
+# Coding style (PHP-CS-Fixer; CI runs the same script with -- --dry-run)
 docker compose exec app composer cs-fix
 
 # Static analysis (PHPStan level 5 over ./src)
@@ -59,7 +59,7 @@ Notes:
 - Tooling that loads the Composer autoloader (`composer cs-fix`, PHPStan, PHPUnit) fails on any PHP whose Swoole extension has the embedded library enabled ("Constant SWOOLE_LIBRARY already defined", "Cannot redeclare function"). The `app` container sets `swoole.enable_library=off` in its php.ini, so these commands work there. On a host with Swoole installed, `php -d swoole.enable_library=Off vendor/bin/php-cs-fixer fix` works for the fixer, but PHPStan needs the setting in an ini file because its worker processes do not inherit `-d` flags.
 - PHPStan resolves Swoole symbols from the `swoole/ide-helper` stubs, wired up through `scanDirectories` in `phpstan.neon.dist`, so the analysis gives the same result on NTS and ZTS builds. The stubs are what supply `SWOOLE_THREAD` and the `Swoole\Thread` classes, which an NTS build does not expose. Because the stubs are more complete than the extension's own reflection, several `@phpstan-ignore` comments are unnecessary and must not be reintroduced — an unmatched ignore is itself a non-ignorable error. Note that `swoole/ide-helper` is required as `dev-master`, so a stub change can start or stop an error at any time.
 - `tests/unit/Thread` is excluded from the default PHPUnit suite because it requires a ZTS build of PHP/Swoole.
-- CI (GitHub Actions) runs unit tests against multiple `phpswoole/swoole` image tags and PHP versions, plus a `build-swoole` job that verifies this library still compiles into the Swoole extension from source.
+- CI (GitHub Actions) has two workflows. `tests.yml` runs syntax checks, coding style, static analysis and unit tests in that order, in a single job over a matrix of `phpswoole/swoole` image tags and PHP versions. Only the unit tests run across the whole matrix: syntax checks run once per PHP version, and coding style and static analysis run once overall (see the `if:` condition and comment on each step). Syntax checks come first because they need nothing but the checkout, so they fail before the images are built. `build-swoole.yml` verifies this library still compiles into the Swoole extension from source.
 
 ## Architecture
 
@@ -89,4 +89,10 @@ Unit tests live in `tests/unit/`, mirroring the `src/core/` structure. `tests/bo
 
 ### Coding style
 
-PHP-CS-Fixer enforces the style (see `.php-cs-fixer.dist.php`): strict types declaration in every file, the standard Swoole file header comment, aligned `=`/`=>` operators, and PSR-12/Symfony-based rules. Run `composer cs-fix` before committing.
+PHP-CS-Fixer enforces the style (see `.php-cs-fixer.dist.php`): strict types declaration in every file, the standard Swoole file header comment, aligned `=`/`=>` operators, and PSR-12/Symfony-based rules. Run it before committing:
+
+```bash
+docker compose exec app composer cs-fix
+```
+
+CI runs that same Composer script with `-- --dry-run --show-progress=none`, so the fixer version is pinned by `composer.json` (`^3.0`) in both places and a local pass means a CI pass. Arguments after `--` are forwarded to `php-cs-fixer`, so `composer cs-fix -- src/functions.php` checks a single path.
