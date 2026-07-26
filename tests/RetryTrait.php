@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole\Tests;
 
-use Closure;
 use CrowdStar\Backoff\AbstractRetryCondition;
 use CrowdStar\Backoff\ExponentialBackoff;
 use Exception;
@@ -40,10 +39,10 @@ trait RetryTrait
      * without blocking the scheduler when called from inside a coroutine. The last exception is rethrown once
      * the attempts run out, so a service that is genuinely broken still fails the test.
      */
-    protected static function retry(Closure $callback, int $maxAttempts = 4): mixed
+    protected static function retry(\Closure $callback, int $maxAttempts = 4): mixed
     {
         $condition = new class extends AbstractRetryCondition {
-            public function met($result, ?Exception $e): bool
+            public function met($result, ?\Exception $e): bool
             {
                 return ($e === null) || ($e instanceof PHPUnitException);
             }
