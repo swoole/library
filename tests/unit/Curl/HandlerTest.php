@@ -57,7 +57,6 @@ class HandlerTest extends TestCase
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
             self::assertEquals(200, $httpCode, 'HTTP status code should be 200 instead of 301');
         });
     }
@@ -80,7 +79,6 @@ class HandlerTest extends TestCase
             $body = curl_exec($ch);
             $body = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
-            curl_close($ch);
         });
     }
 
@@ -96,7 +94,6 @@ class HandlerTest extends TestCase
             $this->assertStringContainsStringIgnoringCase("\nDate:", $headers);
             $this->assertStringContainsStringIgnoringCase("\nContent-Type:", $headers);
             $this->assertStringContainsStringIgnoringCase("\nContent-Length:", $headers);
-            curl_close($ch);
         });
     }
 
@@ -115,7 +112,6 @@ class HandlerTest extends TestCase
             });
 
             $res = curl_exec($ch);
-            curl_close($ch);
             self::assertTrue($res);
         });
     }
@@ -134,7 +130,6 @@ class HandlerTest extends TestCase
 
             $data          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            curl_close($ch);
             $body = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
             self::assertEquals($body['url'], $url);
@@ -156,7 +151,6 @@ class HandlerTest extends TestCase
 
             $body          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            curl_close($ch);
             self::assertFalse($body);
             self::assertSame('', $httpPrimaryIp);
         });
@@ -197,7 +191,6 @@ class HandlerTest extends TestCase
 
             $body          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            curl_close($ch);
             self::assertFalse($body);
             self::assertSame('', $httpPrimaryIp);
         });
@@ -217,7 +210,6 @@ class HandlerTest extends TestCase
 
             $body          = curl_exec($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
-            curl_close($ch);
             self::assertFalse($body);
             self::assertSame('', $httpPrimaryIp);
         });
@@ -260,7 +252,6 @@ class HandlerTest extends TestCase
             $get_private = curl_getinfo($ch, CURLINFO_PRIVATE);
             self::assertEquals($private, $get_private);
             self::assertSame($body['headers']['Host'], 'httpbin.org');
-            curl_close($ch);
         });
     }
 
@@ -287,7 +278,6 @@ class HandlerTest extends TestCase
             $this->assertStringContainsStringIgnoringCase("x-test-header1: value2\r\n", $headers);
             $this->assertStringContainsStringIgnoringCase("x-test-header2: value3\r\n", $headers);
             $server->shutdown();
-            curl_close($ch);
         });
     }
 }
