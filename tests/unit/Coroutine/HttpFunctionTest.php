@@ -13,7 +13,6 @@ namespace Swoole\Coroutine;
 
 use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Swoole\Constant;
 use Swoole\Coroutine;
 use Swoole\Tests\RetryTrait;
@@ -84,7 +83,7 @@ class HttpFunctionTest extends TestCase
         $statusCode = self::retry(static function (): int {
             $statusCode = get('http://httpbin.org')->getStatusCode();
             if ($statusCode !== 200) {
-                throw new RuntimeException("httpbin.org answered with HTTP status code {$statusCode}");
+                throw new \RuntimeException("httpbin.org answered with HTTP status code {$statusCode}");
             }
             return $statusCode;
         });

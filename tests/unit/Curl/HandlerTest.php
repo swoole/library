@@ -14,7 +14,6 @@ namespace Swoole\Curl;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Http\Server;
 use Swoole\Tests\HookFlagsTrait;
@@ -65,7 +64,7 @@ class HandlerTest extends TestCase
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 if (!is_string(curl_exec($ch))) {
-                    throw new RuntimeException(self::curlErrorMessage($ch));
+                    throw new \RuntimeException(self::curlErrorMessage($ch));
                 }
                 return curl_getinfo($ch, CURLINFO_HTTP_CODE);
             });
@@ -104,7 +103,7 @@ class HandlerTest extends TestCase
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                 $response = curl_exec($ch);
                 if (!is_string($response)) {
-                    throw new RuntimeException(self::curlErrorMessage($ch));
+                    throw new \RuntimeException(self::curlErrorMessage($ch));
                 }
                 return substr($response, 0, curl_getinfo($ch, CURLINFO_HEADER_SIZE));
             });
@@ -130,7 +129,7 @@ class HandlerTest extends TestCase
                 });
 
                 if (curl_exec($ch) !== true) {
-                    throw new RuntimeException(self::curlErrorMessage($ch));
+                    throw new \RuntimeException(self::curlErrorMessage($ch));
                 }
 
                 return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
@@ -322,7 +321,7 @@ class HandlerTest extends TestCase
     {
         $response = curl_exec($ch);
         if (!is_string($response)) {
-            throw new RuntimeException(self::curlErrorMessage($ch));
+            throw new \RuntimeException(self::curlErrorMessage($ch));
         }
 
         return json_decode($response, true, 512, JSON_THROW_ON_ERROR);
