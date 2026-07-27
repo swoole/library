@@ -8,6 +8,7 @@ services:
     platform: linux/amd64
     links:
       - consul
+      - httpbin:local.httpbin.org
       - mysql
       - nacos
       - oracle
@@ -81,6 +82,14 @@ services:
 
   redis:
     image: redis:7.2
+
+  # A local stand-in for httpbin.org (a Go reimplementation of its API), so the HTTP/curl tests are not at the
+  # mercy of the real site's throttling. The app container reaches it as local.httpbin.org (see the link alias
+  # above), on the default HTTP port so that URLs and Host headers look just like the httpbin.org ones.
+  httpbin:
+    image: mccutchen/go-httpbin
+    environment:
+      PORT: 80
 
   mongodb:
     image: mongodb/mongodb-community-server:8.0-ubi8

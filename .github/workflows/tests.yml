@@ -53,8 +53,7 @@ jobs:
       # Unit tests run on the oldest and the newest PHP version of the matrix only. Those two are where a
       # version-dependent break shows up: the oldest still has to work without the newer syntax and functions,
       # the newest is where deprecations and behaviour changes land first. The versions in between run the
-      # same library code against the same services, so they mostly repeat what those two already prove --
-      # while adding load on the external services the tests query, httpbin.org above all, which throttles.
+      # same library code against the same services, so they mostly repeat what those two already prove.
       # Keep this in step with the `php` matrix above whenever a version is added or dropped.
       - name: Run Unit Tests
         if: matrix.php == '8.2' || matrix.php == '8.5'
