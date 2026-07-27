@@ -242,21 +242,27 @@ function swoole_init_default_remote_object_server(): void
     $options['socket_type']      = SWOOLE_SOCK_UNIX_STREAM;
 
     // The generated file lives inside the project tree, so PHP-CS-Fixer checks it along with everything else
-    // and it has to be written in the project's coding style: standard file header, strict types, and braces
-    // on their own lines. var_export() is not used for the options because it emits long array syntax; the
-    // array is written on a single line instead, which keeps the output free of the `=>` alignment and
-    // multiline-argument rules.
-    $export_array = static function (array $data) use (&$export_array): string {
-        $parts = [];
-        foreach ($data as $key => $value) {
+    // and it has to be written in the project's coding style: standard file header, strict types, braces on
+    // their own lines, short array syntax, a trailing comma on every multiline array element and `=>` operators
+    // aligned within each array block. var_export() is not used for the options because it emits long array
+    // syntax and does not align anything; the array is written out below instead, one element per line.
+    $export_array = static function (array $data, int $depth = 1) use (&$export_array): string {
+        if (!$data) {
+            return '[]';
+        }
+        $indent = str_repeat('    ', $depth);
+        $keys   = array_map(static fn ($key) => var_export($key, true), array_keys($data));
+        $width  = max(array_map('strlen', $keys));
+        $lines  = [];
+        foreach (array_values($data) as $i => $value) {
             if (is_array($value)) {
-                $exported = $export_array($value);
+                $exported = $export_array($value, $depth + 1);
             } else {
                 $exported = $value === null ? 'null' : var_export($value, true);
             }
-            $parts[] = var_export($key, true) . ' => ' . $exported;
+            $lines[] = $indent . str_pad($keys[$i], $width) . ' => ' . $exported . ',';
         }
-        return '[' . implode(', ', $parts) . ']';
+        return "[\n" . implode("\n", $lines) . "\n" . str_repeat('    ', $depth - 1) . ']';
     };
 
     $exported_options = $export_array($options);
