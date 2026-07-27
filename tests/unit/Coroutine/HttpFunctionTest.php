@@ -15,7 +15,6 @@ use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\TestCase;
 use Swoole\Constant;
 use Swoole\Coroutine;
-use Swoole\Tests\RetryTrait;
 
 use function Swoole\Coroutine\Http\get;
 use function Swoole\Coroutine\Http\post;
@@ -28,8 +27,6 @@ use function Swoole\Coroutine\Http\post;
 #[CoversFunction('Swoole\Coroutine\Http\post')]
 class HttpFunctionTest extends TestCase
 {
-    use RetryTrait;
-
     public function testGet(): void
     {
         run(function () {
@@ -78,27 +75,17 @@ class HttpFunctionTest extends TestCase
 
     private function fun1(): void
     {
-        // A request that fails while the httpbin service is still coming up is a reason to ask again rather
-        // than to fail the test; see Swoole\Tests\RetryTrait::retry().
-        $statusCode = self::retry(static function (): int {
-            $statusCode = get(HTTPBIN_SERVER_URL)->getStatusCode();
-            if ($statusCode !== 200) {
-                throw new \RuntimeException("The httpbin service answered with HTTP status code {$statusCode}");
-            }
-            return $statusCode;
-        });
-        self::assertSame(200, $statusCode, 'Test HTTP GET without query strings.');
+        self::assertSame(200, get(HTTPBIN_SERVER_URL)->getStatusCode(), 'Test HTTP GET without query strings.');
     }
 
     private function fun2(): void
     {
-        // An error page is not JSON, so json_decode() throws and the request is made again.
-        $body = self::retry(static fn (): object => json_decode(
+        $body = json_decode(
             get(HTTPBIN_SERVER_URL . '/get?hello=world')->getBody(),
             null,
             512,
             JSON_THROW_ON_ERROR
-        ));
+        );
         self::assertSame(HTTPBIN_SERVER_HOST, $body->headers->Host[0]);
         self::assertSame('world', $body->args->hello[0]);
     }
@@ -106,12 +93,12 @@ class HttpFunctionTest extends TestCase
     private function fun3(): void
     {
         $random_data = base64_encode(random_bytes(128));
-        $body        = self::retry(static fn (): object => json_decode(
+        $body        = json_decode(
             post(HTTPBIN_SERVER_URL . '/post?hello=world', ['random_data' => $random_data])->getBody(),
             null,
             512,
             JSON_THROW_ON_ERROR
-        ));
+        );
         self::assertSame(HTTPBIN_SERVER_HOST, $body->headers->Host[0]);
         self::assertSame('world', $body->args->hello[0]);
         self::assertSame($random_data, $body->form->random_data[0]);
