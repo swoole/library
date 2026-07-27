@@ -78,12 +78,12 @@ class HttpFunctionTest extends TestCase
 
     private function fun1(): void
     {
-        // A throttled httpbin.org answers with an error page, which is a reason to ask again rather than to
-        // fail the test; see Swoole\Tests\RetryTrait::retry().
+        // A request that fails while the httpbin service is still coming up is a reason to ask again rather
+        // than to fail the test; see Swoole\Tests\RetryTrait::retry().
         $statusCode = self::retry(static function (): int {
-            $statusCode = get('http://httpbin.org')->getStatusCode();
+            $statusCode = get(HTTPBIN_SERVER_URL)->getStatusCode();
             if ($statusCode !== 200) {
-                throw new \RuntimeException("httpbin.org answered with HTTP status code {$statusCode}");
+                throw new \RuntimeException("The httpbin service answered with HTTP status code {$statusCode}");
             }
             return $statusCode;
         });
@@ -94,26 +94,26 @@ class HttpFunctionTest extends TestCase
     {
         // An error page is not JSON, so json_decode() throws and the request is made again.
         $body = self::retry(static fn (): object => json_decode(
-            get('http://httpbin.org/get?hello=world')->getBody(),
+            get(HTTPBIN_SERVER_URL . '/get?hello=world')->getBody(),
             null,
             512,
             JSON_THROW_ON_ERROR
         ));
-        self::assertSame('httpbin.org', $body->headers->Host);
-        self::assertSame('world', $body->args->hello);
+        self::assertSame(HTTPBIN_SERVER_HOST, $body->headers->Host[0]);
+        self::assertSame('world', $body->args->hello[0]);
     }
 
     private function fun3(): void
     {
         $random_data = base64_encode(random_bytes(128));
         $body        = self::retry(static fn (): object => json_decode(
-            post('http://httpbin.org/post?hello=world', ['random_data' => $random_data])->getBody(),
+            post(HTTPBIN_SERVER_URL . '/post?hello=world', ['random_data' => $random_data])->getBody(),
             null,
             512,
             JSON_THROW_ON_ERROR
         ));
-        self::assertSame('httpbin.org', $body->headers->Host);
-        self::assertSame('world', $body->args->hello);
-        self::assertSame($random_data, $body->form->random_data);
+        self::assertSame(HTTPBIN_SERVER_HOST, $body->headers->Host[0]);
+        self::assertSame('world', $body->args->hello[0]);
+        self::assertSame($random_data, $body->form->random_data[0]);
     }
 }

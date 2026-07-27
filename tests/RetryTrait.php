@@ -17,11 +17,12 @@ use Exception;
 use PHPUnit\Framework\Exception as PHPUnitException;
 
 /**
- * Helper for the tests that talk to external services like httpbin.org.
+ * Helper for the tests that talk to services beyond the code under test, like the httpbin service of
+ * docker-compose.yml.
  *
- * Those services throttle, and answer with an error page instead of the expected payload once in a while. The
- * whole CI matrix queries them from the same runner at the same time, which makes throttled responses common
- * enough to break builds for reasons that have nothing to do with the code under test.
+ * A request that fails for a transient reason — a service still coming up, or a response that is not the
+ * expected payload — is a reason to ask again, not to break the build for something that has nothing to do
+ * with the code under test.
  */
 trait RetryTrait
 {

@@ -64,6 +64,15 @@ if (getenv('GITHUB_ACTIONS')) {
     define('MONGODB_SERVER_URL', 'mongodb://127.0.0.1:27017');
 }
 
+// The httpbin service of docker-compose.yml: a local stand-in for httpbin.org (mccutchen/go-httpbin), reached
+// as local.httpbin.org (a Docker link alias, so tests must run inside the app container) on the default HTTP
+// port so that URLs and Host headers look just like the httpbin.org ones. Note that go-httpbin reports
+// request values (args, headers, form) as arrays of strings, where httpbin.org reports single values as
+// plain strings.
+define('HTTPBIN_SERVER_HOST', 'local.httpbin.org');
+define('HTTPBIN_SERVER_PORT', 80);
+define('HTTPBIN_SERVER_URL', 'http://' . HTTPBIN_SERVER_HOST);
+
 // This points to folder ./tests/www under root directory of the project.
 const DOCUMENT_ROOT = '/var/www/tests/www';
 
