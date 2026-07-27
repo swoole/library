@@ -17,15 +17,11 @@ use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Http\Server;
 use Swoole\Tests\HookFlagsTrait;
-use Swoole\Tests\RetryTrait;
 
 /**
  * Class HandlerTest
  *
  * Most of the tests here query the httpbin service of docker-compose.yml, a local stand-in for httpbin.org.
- * Every request that leaves this class is still wrapped in self::retry(): a failed request or a response that
- * is not the expected JSON is a reason to ask again, not to fail the build. Assertions stay outside of the
- * retried closures so that a genuine mismatch is reported on the spot.
  *
  * @internal
  */
@@ -34,7 +30,6 @@ use Swoole\Tests\RetryTrait;
 class HandlerTest extends TestCase
 {
     use HookFlagsTrait;
-    use RetryTrait;
 
     public static function setUpBeforeClass(): void
     {
@@ -57,18 +52,13 @@ class HandlerTest extends TestCase
     public function testRedirect(): void
     {
         Coroutine\run(function () {
-            $httpCode = self::retry(static function (): int {
-                $ch = curl_init(HTTPBIN_SERVER_URL . '/redirect/2');
-                self::assertInstanceOf(Handler::class, $ch, 'Variable $ch should be a Handler object instead of a curl resource');
+            $ch = curl_init(HTTPBIN_SERVER_URL . '/redirect/2');
+            self::assertInstanceOf(Handler::class, $ch, 'Variable $ch should be a Handler object instead of a curl resource');
 
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                if (!is_string(curl_exec($ch))) {
-                    throw new \RuntimeException(self::curlErrorMessage($ch));
-                }
-                return curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            });
-            self::assertEquals(200, $httpCode, 'HTTP status code should be 200 instead of 302 once the redirects are followed');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            self::assertIsString(curl_exec($ch), self::curlErrorMessage($ch));
+            self::assertEquals(200, curl_getinfo($ch, CURLINFO_HTTP_CODE), 'HTTP status code should be 200 instead of 302 once the redirects are followed');
         });
     }
 
@@ -83,13 +73,11 @@ class HandlerTest extends TestCase
     public function testCustomHost(): void
     {
         Coroutine\run(function () {
-            $body = self::retry(static function (): array {
-                $ip = Coroutine::gethostbyname(HTTPBIN_SERVER_HOST);
-                $ch = curl_init("http://{$ip}/get");
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . HTTPBIN_SERVER_HOST]);
-                return self::curlExecJson($ch);
-            });
+            $ip = Coroutine::gethostbyname(HTTPBIN_SERVER_HOST);
+            $ch = curl_init("http://{$ip}/get");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . HTTPBIN_SERVER_HOST]);
+            $body = self::curlExecJson($ch);
             self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_HOST);
         });
     }
@@ -97,16 +85,12 @@ class HandlerTest extends TestCase
     public function testHeaderName(): void
     {
         Coroutine\run(function () {
-            $headers = self::retry(static function (): string {
-                $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
-                curl_setopt($ch, CURLOPT_HEADER, true);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                $response = curl_exec($ch);
-                if (!is_string($response)) {
-                    throw new \RuntimeException(self::curlErrorMessage($ch));
-                }
-                return substr($response, 0, curl_getinfo($ch, CURLINFO_HEADER_SIZE));
-            });
+            $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            $response = curl_exec($ch);
+            self::assertIsString($response, self::curlErrorMessage($ch));
+            $headers = substr($response, 0, curl_getinfo($ch, CURLINFO_HEADER_SIZE));
             $this->assertStringContainsStringIgnoringCase("\nDate:", $headers);
             $this->assertStringContainsStringIgnoringCase("\nContent-Type:", $headers);
             $this->assertStringContainsStringIgnoringCase("\nContent-Length:", $headers);
@@ -116,24 +100,20 @@ class HandlerTest extends TestCase
     public function testWriteFunction(): void
     {
         Coroutine\run(function () {
-            $body = self::retry(static function (): array {
-                $url     = HTTPBIN_SERVER_URL . '/get';
-                $ch      = curl_init();
-                $content = '';
+            $url     = HTTPBIN_SERVER_URL . '/get';
+            $ch      = curl_init();
+            $content = '';
 
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_WRITEFUNCTION, static function ($ch, $data) use (&$content): int {
-                    self::assertIsString($data);
-                    $content .= $data;
-                    return strlen($data);
-                });
-
-                if (curl_exec($ch) !== true) {
-                    throw new \RuntimeException(self::curlErrorMessage($ch));
-                }
-
-                return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, static function ($ch, $data) use (&$content): int {
+                self::assertIsString($data);
+                $content .= $data;
+                return strlen($data);
             });
+
+            self::assertTrue(curl_exec($ch), self::curlErrorMessage($ch));
+
+            $body = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_HOST);
         });
     }
@@ -146,15 +126,14 @@ class HandlerTest extends TestCase
             $url  = HTTPBIN_SERVER_URL . '/get';
             $ip   = Coroutine::gethostbyname($host);
 
-            [$body, $httpPrimaryIp] = self::retry(static function () use ($host, $port, $url, $ip): array {
-                $ch = curl_init();
+            $ch = curl_init();
 
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:{$ip}"]);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:{$ip}"]);
 
-                return [self::curlExecJson($ch), curl_getinfo($ch, CURLINFO_PRIMARY_IP)];
-            });
+            $body          = self::curlExecJson($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 
             self::assertSame($body['headers']['Host'][0], $host);
             self::assertEquals($body['url'], $url);
@@ -192,15 +171,14 @@ class HandlerTest extends TestCase
             $url  = HTTPBIN_SERVER_URL . '/get';
             $ip   = Coroutine::gethostbyname($host);
 
-            [$body, $httpPrimaryIp] = self::retry(static function () use ($host, $port, $url, $ip): array {
-                $ch = curl_init();
+            $ch = curl_init();
 
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:192.0.2.1", "{$host}:{$port}:{$ip}"]);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:192.0.2.1", "{$host}:{$port}:{$ip}"]);
 
-                return [self::curlExecJson($ch), curl_getinfo($ch, CURLINFO_PRIMARY_IP)];
-            });
+            $body          = self::curlExecJson($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 
             self::assertSame($body['headers']['Host'][0], $host);
             self::assertEquals($body['url'], $url);
@@ -260,15 +238,14 @@ class HandlerTest extends TestCase
             $url  = HTTPBIN_SERVER_URL . '/get';
             $ip   = Coroutine::gethostbyname($host);
 
-            [$body, $httpPrimaryIp] = self::retry(static function () use ($host, $port, $url, $ip): array {
-                $ch = curl_init();
+            $ch = curl_init();
 
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:{$ip}", "{$host}:{$port}:192.0.2.1", "-{$host}:{$port}:192.0.2.1"]);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:{$ip}", "{$host}:{$port}:192.0.2.1", "-{$host}:{$port}:192.0.2.1"]);
 
-                return [self::curlExecJson($ch), curl_getinfo($ch, CURLINFO_PRIMARY_IP)];
-            });
+            $body          = self::curlExecJson($ch);
+            $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 
             self::assertSame($body['headers']['Host'][0], $host);
             self::assertEquals($body['url'], $url);
@@ -282,16 +259,15 @@ class HandlerTest extends TestCase
             $url     = HTTPBIN_SERVER_URL . '/get';
             $private = 'swoole';
 
-            [$body, $get_private] = self::retry(static function () use ($url, $private): array {
-                $ch = curl_init();
+            $ch = curl_init();
 
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_PRIVATE, $private);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . HTTPBIN_SERVER_HOST]);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_PRIVATE, $private);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . HTTPBIN_SERVER_HOST]);
 
-                return [self::curlExecJson($ch), curl_getinfo($ch, CURLINFO_PRIVATE)];
-            });
+            $body        = self::curlExecJson($ch);
+            $get_private = curl_getinfo($ch, CURLINFO_PRIVATE);
 
             self::assertEquals($private, $get_private);
             self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_HOST);
@@ -326,8 +302,7 @@ class HandlerTest extends TestCase
 
     /**
      * Execute a request and return its response decoded from JSON. Both a failed request and a response that
-     * is not JSON (an error page, typically) raise an exception, which self::retry() turns into one more
-     * attempt.
+     * is not JSON raise an exception, failing the test on the spot.
      */
     private static function curlExecJson(mixed $ch): array
     {
