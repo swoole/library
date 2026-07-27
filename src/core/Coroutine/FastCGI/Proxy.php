@@ -47,7 +47,7 @@ class Proxy
     {
         [$this->host, $this->port] = Client::parseUrl($url);
         $this->documentRoot        = $documentRoot;
-        $this->staticFileFilter    = [$this, 'staticFileFiltrate'];
+        $this->staticFileFilter    = $this->staticFileFiltrate(...);
     }
 
     public function withTimeout(float $timeout): self
@@ -113,7 +113,7 @@ class Proxy
         $server   = $userRequest->server;
         $headers  = $userRequest->header;
         $pathInfo = $userRequest->server['path_info'];
-        $pathInfo = '/' . ltrim($pathInfo, '/');
+        $pathInfo = '/' . ltrim((string) $pathInfo, '/');
         if (strlen($this->index) !== 0) {
             $extension = pathinfo($pathInfo, PATHINFO_EXTENSION);
             if (empty($extension)) {
@@ -185,9 +185,9 @@ class Proxy
      */
     public function staticFileFiltrate(HttpRequest $request, SwooleHttpResponse $userResponse): bool
     {
-        $extension = pathinfo($request->getScriptFilename(), PATHINFO_EXTENSION);
+        $extension = pathinfo((string) $request->getScriptFilename(), PATHINFO_EXTENSION);
         if ($extension !== 'php') {
-            $realPath = realpath($request->getScriptFilename());
+            $realPath = realpath((string) $request->getScriptFilename());
             if (!$realPath || !str_starts_with($realPath, $this->documentRoot) || !is_file($realPath)) {
                 $userResponse->status(Http\Status::NOT_FOUND);
             } else {

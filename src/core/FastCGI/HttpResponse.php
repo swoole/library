@@ -74,7 +74,7 @@ class HttpResponse extends Response
             }
         }
         $statusCode   = (int) ($statusCode ?? Status::OK);
-        $reasonPhrase = $reasonPhrase ?? Status::getReasonPhrase($statusCode);
+        $reasonPhrase ??= Status::getReasonPhrase($statusCode);
         $this->withStatusCode($statusCode)->withReasonPhrase($reasonPhrase);
         $this->withBody($body);
     }

@@ -21,7 +21,7 @@ class Server
 {
     public const DEFAULT_PORT = 9567;
 
-    private HttpServer $server;
+    private readonly HttpServer $server;
 
     private array $objects = [];
 
@@ -29,7 +29,7 @@ class Server
 
     private array $allowedFunctions = [];
 
-    private Long $nextObjectId;
+    private readonly Long $nextObjectId;
 
     private string $apiKey = '';
 
@@ -65,8 +65,8 @@ class Server
         if ($options) {
             $server->set($options);
         }
-        $server->on('request', [$this, 'onRequest']);
-        $server->on('start', [$this, 'onStart']);
+        $server->on('request', $this->onRequest(...));
+        $server->on('start', $this->onStart(...));
         $this->server       = $server;
         $this->nextObjectId = new Long(1);
     }
@@ -100,7 +100,7 @@ class Server
             $ctx->end(['code' => -2, 'exception' => [
                 'message' => $e->getMessage(),
                 'code'    => $e->getCode(),
-                'class'   => get_class($e),
+                'class'   => $e::class,
             ]]);
         }
     }
@@ -195,7 +195,7 @@ class Server
         }
         $obj = $this->objects[$object_id];
         if (!method_exists($obj, $method)) {
-            $class = get_class($obj);
+            $class = $obj::class;
             throw new Exception("method[{$class}::{$method}] not found");
         }
         $result = $obj->{$method}(...$args);

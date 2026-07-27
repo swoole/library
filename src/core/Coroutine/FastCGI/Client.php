@@ -29,11 +29,9 @@ class Client
 
     protected int $port;
 
-    protected bool $ssl;
+    protected ?Socket $socket = null;
 
-    protected ?Socket $socket;
-
-    public function __construct(string $host, int $port = 0, bool $ssl = false)
+    public function __construct(string $host, int $port = 0, protected bool $ssl = false)
     {
         if (stripos($host, 'unix:/') === 0) {
             $this->af = AF_UNIX;
@@ -46,7 +44,6 @@ class Client
         }
         $this->host = $host;
         $this->port = $port;
-        $this->ssl  = $ssl;
     }
 
     /**

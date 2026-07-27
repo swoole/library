@@ -19,11 +19,11 @@ class Client
 {
     private static array $clients = [];
 
-    private HttpClient $client;
+    private readonly HttpClient $client;
 
-    private string $id;
+    private readonly string $id;
 
-    private int $ownerCoroutineId;
+    private readonly int $ownerCoroutineId;
 
     public function __construct(string $host = '127.0.0.1', int $port = Server::DEFAULT_PORT, array $options = [])
     {
@@ -90,7 +90,7 @@ class Client
         try {
             $this->execute('/ping', []);
             return true;
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             return false;
         }
     }

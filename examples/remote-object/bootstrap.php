@@ -37,13 +37,10 @@ class Greeter implements Iterator, Countable
         'erlang',
     ];
 
-    private string $greeting;
-
     private int $index = 0;
 
-    public function __construct(string $greeting = 'Hello')
+    public function __construct(private readonly string $greeting = 'Hello')
     {
-        $this->greeting = $greeting;
     }
 
     public function __invoke(string $name): string

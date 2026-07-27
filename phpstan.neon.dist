@@ -8,5 +8,3 @@ parameters:
   # it, so scanning the parent directory would redeclare our own classes whenever that hook has not run.
   scanDirectories:
     - vendor/swoole/ide-helper/src/swoole
-  ignoreErrors:
-    - '#Comparison operation ">=" between \d+ and \d+ is always true\.#'

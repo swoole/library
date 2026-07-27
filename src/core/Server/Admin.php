@@ -149,39 +149,37 @@ class Admin
             }
         );
 
-        $server->addCommand('close_session', $accepted_process_types, [self::class, 'handlerCloseSession']);
-        $server->addCommand('get_version_info', $accepted_process_types, [self::class, 'handlerGetVersionInfo']);
-        $server->addCommand('get_worker_info', $accepted_process_types, [self::class, 'handlerGetWorkerInfo']);
-        $server->addCommand('get_timer_list', $accepted_process_types, [self::class, 'handlerGetTimerList']);
-        $server->addCommand('get_coroutine_list', $accepted_process_types, [self::class, 'handlerGetCoroutineList']);
-        $server->addCommand('get_objects', $accepted_process_types, [self::class, 'handlerGetObjects']);
-        $server->addCommand('get_class_info', $accepted_process_types, [self::class, 'handlerGetClassInfo']);
-        $server->addCommand('get_function_info', $accepted_process_types, [self::class, 'handlerGetFunctionInfo']);
-        $server->addCommand('get_object_by_handle', $accepted_process_types, [self::class, 'handlerGetObjectByHandle']);
-        $server->addCommand('get_server_cpu_usage', $accepted_process_types, [self::class, 'handlerGetServerCpuUsage']);
+        $server->addCommand('close_session', $accepted_process_types, self::handlerCloseSession(...));
+        $server->addCommand('get_version_info', $accepted_process_types, self::handlerGetVersionInfo(...));
+        $server->addCommand('get_worker_info', $accepted_process_types, self::handlerGetWorkerInfo(...));
+        $server->addCommand('get_timer_list', $accepted_process_types, self::handlerGetTimerList(...));
+        $server->addCommand('get_coroutine_list', $accepted_process_types, self::handlerGetCoroutineList(...));
+        $server->addCommand('get_objects', $accepted_process_types, self::handlerGetObjects(...));
+        $server->addCommand('get_class_info', $accepted_process_types, self::handlerGetClassInfo(...));
+        $server->addCommand('get_function_info', $accepted_process_types, self::handlerGetFunctionInfo(...));
+        $server->addCommand('get_object_by_handle', $accepted_process_types, self::handlerGetObjectByHandle(...));
+        $server->addCommand('get_server_cpu_usage', $accepted_process_types, self::handlerGetServerCpuUsage(...));
         $server->addCommand(
             'get_server_memory_usage',
             $accepted_process_types,
-            [self::class, 'handlerGetServerMemoryUsage']
+            self::handlerGetServerMemoryUsage(...)
         );
         $server->addCommand(
             'get_static_property_value',
             $accepted_process_types,
-            [self::class, 'handlerGetStaticPropertyValue']
+            self::handlerGetStaticPropertyValue(...)
         );
         $server->addCommand(
             'get_defined_functions',
             $accepted_process_types,
-            [self::class, 'handlerGetDefinedFunctions']
+            self::handlerGetDefinedFunctions(...)
         );
-        $server->addCommand('get_declared_classes', $accepted_process_types, [self::class, 'handlerGetDeclaredClasses']);
+        $server->addCommand('get_declared_classes', $accepted_process_types, self::handlerGetDeclaredClasses(...));
 
         $server->addCommand(
             'gc_status',
             $accepted_process_types,
-            function (Server $server, string $msg) {
-                return self::json(gc_status());
-            }
+            fn (Server $server, string $msg) => self::json(gc_status())
         );
 
         if (extension_loaded('opcache')) {
@@ -213,7 +211,7 @@ class Admin
             fn (Server $server, string $msg) => self::json(['files' => get_included_files()])
         );
 
-        $server->addCommand('get_resources', $accepted_process_types, [self::class, 'handlerGetResources']);
+        $server->addCommand('get_resources', $accepted_process_types, self::handlerGetResources(...));
 
         $server->addCommand(
             'get_defined_constants',
@@ -1218,7 +1216,7 @@ class Admin
                 continue;
             }
             [$k, $v]   = swoole_string($l)->split(':');
-            $array[$k] = trim($v);
+            $array[$k] = trim((string) $v);
         }
         return $array;
     }

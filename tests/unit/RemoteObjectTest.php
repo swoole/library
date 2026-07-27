@@ -81,7 +81,7 @@ class RemoteObjectTest extends TestCase
             $mongo = new class {
                 private $collection;
 
-                private RemoteObject\Client $roClient;
+                private readonly RemoteObject\Client $roClient;
 
                 public function __construct()
                 {

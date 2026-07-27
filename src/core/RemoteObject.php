@@ -18,16 +18,10 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
 {
     private int $objectId = 0;
 
-    private int $coroutineId;
-
-    private string $clientId;
-
     private ?Client $client = null;
 
-    public function __construct($coroutineId, $clientId)
+    public function __construct(private int $coroutineId, private string $clientId)
     {
-        $this->coroutineId = $coroutineId;
-        $this->clientId    = $clientId;
     }
 
     public function __destruct()
@@ -105,7 +99,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         $rs = $this->execute('/to_string', [
             'object' => $this->objectId,
         ]);
-        return $rs['value'];
+        return (string) $rs['value'];
     }
 
     public function __invoke(...$args)

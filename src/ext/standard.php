@@ -52,7 +52,7 @@ function swoole_getmxrr(string $hostname, array &$hosts, ?array &$weights = null
 {
     $client   = swoole_get_default_remote_object_client();
     $_hosts   = $hosts;
-    $_weights = $weights === null ? null : $weights;
+    $_weights = $weights;
     $result   = $client->call('swoole_real_getmxrr', $hostname, $_hosts, $_weights);
     $hosts    = $result['host'];
     $weights  = $result['weight'];

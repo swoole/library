@@ -17,7 +17,7 @@ class MysqliConfig
 
     protected int $port = 3306;
 
-    protected ?string $unixSocket;
+    protected ?string $unixSocket = null;
 
     protected string $dbname = 'test';
 

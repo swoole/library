@@ -102,7 +102,7 @@ class DetectsLostConnections
     {
         $message = $e->getMessage();
         foreach (self::ERROR_MESSAGES as $needle) {
-            if (mb_strpos($message, $needle) !== false) {
+            if (str_contains($message, $needle)) {
                 return true;
             }
         }

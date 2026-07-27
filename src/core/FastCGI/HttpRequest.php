@@ -385,7 +385,7 @@ class HttpRequest extends Request
     {
         $headers = [];
         foreach ($this->params as $name => $value) {
-            if (str_starts_with($name, 'HTTP_')) {
+            if (str_starts_with((string) $name, 'HTTP_')) {
                 $headers[static::convertParamNameToHeaderName($name)] = $value;
             }
         }

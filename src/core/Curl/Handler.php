@@ -102,9 +102,6 @@ final class Handler implements \Stringable
     /** @var callable|null */
     private $readFunction;
 
-    /** @var callable|null */
-    private $writeFunction;
-
     private $noProgress = true;
 
     /** @var callable */
@@ -426,9 +423,9 @@ final class Handler implements \Stringable
                 $this->proxyPassword = $value;
                 break;
             case CURLOPT_PROXYUSERPWD:
-                $usernamePassword    = explode(':', $value);
+                $usernamePassword    = explode(':', (string) $value);
                 $this->proxyUsername = urldecode($usernamePassword[0]);
-                $this->proxyPassword = urldecode($usernamePassword[1] ?? null);
+                $this->proxyPassword = urldecode((string) ($usernamePassword[1] ?? null));
                 break;
             case CURLOPT_PROXYAUTH:
                 /* ignored temporarily */
@@ -447,12 +444,12 @@ final class Handler implements \Stringable
                 break;
             case CURLOPT_RESOLVE:
                 foreach ((array) $value as $resolve) {
-                    $flag = substr($resolve, 0, 1);
+                    $flag = substr((string) $resolve, 0, 1);
                     if ($flag === '+' || $flag === '-') {
                         // TODO: [+]HOST:PORT:ADDRESS
-                        $resolve = substr($resolve, 1);
+                        $resolve = substr((string) $resolve, 1);
                     }
-                    $tmpResolve = explode(':', $resolve, 3);
+                    $tmpResolve = explode(':', (string) $resolve, 3);
                     $host       = $tmpResolve[0];
                     $port       = $tmpResolve[1] ?? 0;
                     $ip         = $tmpResolve[2] ?? '';
@@ -551,7 +548,7 @@ final class Handler implements \Stringable
                     return false;
                 }
                 foreach ($value as $header) {
-                    $header      = explode(':', $header, 2);
+                    $header      = explode(':', (string) $header, 2);
                     $headerName  = $header[0];
                     $headerValue = trim($header[1] ?? '');
                     $this->setHeader($headerName, $headerValue);
@@ -630,13 +627,7 @@ final class Handler implements \Stringable
                 $this->readFunction = $value;
                 break;
             case CURLOPT_WRITEFUNCTION:
-                if (SWOOLE_VERSION_ID >= 50100) {
-                    $this->clientOptions[Constant::OPTION_WRITE_FUNC] = function ($client, $data) use ($value) {
-                        return $value($this, $data);
-                    };
-                } else {
-                    $this->writeFunction = $value;
-                }
+                $this->clientOptions[Constant::OPTION_WRITE_FUNC] = fn ($client, $data) => $value($this, $data);
                 break;
             case CURLOPT_NOPROGRESS:
                 $this->noProgress = $value;
@@ -926,16 +917,6 @@ final class Handler implements \Stringable
                 }
                 file_put_contents($this->cookieJar, $cookies);
             }
-        }
-
-        if ($this->writeFunction) {
-            if (!is_callable($this->writeFunction)) { // @phpstan-ignore booleanNot.alwaysFalse
-                trigger_error('curl_exec(): Could not call the CURLOPT_WRITEFUNCTION', E_USER_WARNING);
-                $this->setError(CURLE_WRITE_ERROR, 'Failure writing output to destination');
-                return false;
-            }
-            call_user_func($this->writeFunction, $this, $transfer);
-            return true;
         }
 
         if ($this->returnTransfer) {

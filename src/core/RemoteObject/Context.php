@@ -22,14 +22,11 @@ class Context
 
     public Request $request;
 
-    public Response $response;
-
-    public function __construct(Request $request, Response $response)
+    public function __construct(Request $request, public Response $response)
     {
         $this->clientId    = $request->header['client-id'] ?? '';
         $this->coroutineId = intval($request->header['coroutine-id'] ?? 0);
         $this->request     = $request;
-        $this->response    = $response;
     }
 
     public function end(array $data): void

@@ -18,8 +18,6 @@ class MysqliStatementProxy extends ObjectProxy
     /** @var \mysqli_stmt */
     protected $__object;
 
-    protected ?string $queryString;
-
     protected array $attrSetContext = [];
 
     protected array $bindParamContext;
@@ -30,10 +28,9 @@ class MysqliStatementProxy extends ObjectProxy
 
     protected int $parentRound;
 
-    public function __construct(\mysqli_stmt $object, ?string $queryString, MysqliProxy $parent)
+    public function __construct(\mysqli_stmt $object, protected ?string $queryString, MysqliProxy $parent)
     {
         parent::__construct($object);
-        $this->queryString = $queryString;
         $this->parent      = $parent;
         $this->parentRound = $parent->getRound();
     }

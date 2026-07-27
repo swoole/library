@@ -25,7 +25,7 @@ function fatorial(int $n): int
 Coroutine\run(function () {
     $use = microtime(true);
 
-    $results = map([2, 3, 4], 'fatorial'); // 2 6 24
+    $results = map([2, 3, 4], fatorial(...)); // 2 6 24
 
     $use = microtime(true) - $use;
     echo "Use {$use}s, Result:\n";

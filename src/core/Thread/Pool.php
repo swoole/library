@@ -26,8 +26,6 @@ class Pool
 
     private string $classDefinitionFile = '';
 
-    private string $runnableClass = '';
-
     private int $threadNum = 0;
 
     private string $proxyFile;
@@ -40,13 +38,12 @@ class Pool
 
     private array $indexes = [];
 
-    public function __construct(string $runnableClass, int $threadNum)
+    public function __construct(private readonly string $runnableClass, int $threadNum)
     {
         if ($threadNum <= 0) {
             throw new \Exception('threadNum must be greater than 0');
         }
-        $this->runnableClass = $runnableClass;
-        $this->threadNum     = $threadNum;
+        $this->threadNum = $threadNum;
     }
 
     public function withArguments(...$arguments): static
@@ -183,7 +180,7 @@ class Pool
                     return false;
                 }
             }
-        } catch (Error $error) {
+        } catch (Error) {
             return false;
         }
         return true;

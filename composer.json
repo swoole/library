@@ -16,8 +16,8 @@
         "issues": "https://github.com/swoole/library"
     },
     "require": {
-        "php": ">=8.1",
-        "ext-swoole": ">=5.1",
+        "php": ">=8.2",
+        "ext-swoole": ">=6.2",
         "ext-posix": "*",
         "nikic/php-parser": "^5.2"
     },
