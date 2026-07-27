@@ -91,7 +91,7 @@ function map(array $list, callable $fn, float $timeout = -1): array
 
 function deadlock_check()
 {
-    $all_coroutines = Coroutine::listCoroutines();
+    $all_coroutines = Coroutine::list();
     $count          = Coroutine::stats()['coroutine_num'];
 
     // coroutine deadlock detected, header
