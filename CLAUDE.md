@@ -67,6 +67,8 @@ Notes:
 
 This file is the manifest used by swoole-src's `tools/build-library.php` to pack the library into `php_swoole_library.h`. Its `files` list is **sorted by dependency order** — a file must appear after everything it depends on. **Any new source file must be registered here**, in the correct position, or it will not be shipped inside the extension. Keep it consistent with the `autoload` section of `composer.json`.
 
+Because the packed files end up as C string literals compiled with `-std=c++14`, code under `src/` must never contain a C trigraph sequence — `??=`, `??!`, `??/`, `??(`, `??)`, `??'`, `??<`, `??>` or `??-` (most easily hit through PHP's `??=` operator; write `$x = $x ?? $default;` instead). The compiler silently rewrites the sequence inside the string (`??=` becomes `#`), the packed file no longer parses, and the extension segfaults on startup. `tests.yml` never catches this — the tests load the library through Composer — only the `build-swoole.yml` workflow does.
+
 ### Source layout (`src/`)
 
 - `src/core/` — the main library, PSR-4 autoloaded as the `Swoole\` namespace. Key areas:
