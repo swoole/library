@@ -33,8 +33,7 @@ return [
         'core/Coroutine/Http/ClientProxy.php',
         'core/Coroutine/Http/functions.php',
         # <core for Http2> #
-        'core/Coroutine/Http2/Client2.php',
-        'core/Coroutine/Http2/ChannelManager.php',
+        'core/Coroutine/Http2/MultiplexClient.php',
         # <core for connection pool> #
         'core/ConnectionPool.php',
         'core/Database/ObjectProxy.php',

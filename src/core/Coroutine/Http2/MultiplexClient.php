@@ -1,4 +1,11 @@
 <?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
 
 declare(strict_types=1);
 
@@ -7,43 +14,38 @@ namespace Swoole\Coroutine\Http2;
 use Swoole\Coroutine\Channel;
 use Swoole\Http2\Request;
 use Swoole\Http2\Response;
-use Throwable;
 
 use function Swoole\Coroutine\go;
 
-class Client2 extends Client
+class MultiplexClient extends Client
 {
     protected ?Channel $chan = null;
 
     protected ?Channel $sleepChan = null;
 
-    protected ChannelManager $channelManager;
+    /**
+     * @var array<int, Channel> per-stream channels carrying the responses of in-flight requests
+     */
+    protected array $streamChannels = [];
 
     protected bool $idleClose = false;
 
     protected int $lastSendTime = 0;
 
-    public function __construct(string $host, int $port = 80, bool $open_ssl = false)
-    {
-        parent::__construct($host, $port, $open_ssl);
-        $this->channelManager = new ChannelManager();
-    }
-
     public function request(Request $request, float $timeout = -1): false|Response
     {
         $this->loop();
-        $streamId = $this->send($request);
+        $streamId           = $this->send($request);
         $this->lastSendTime = time();
 
         if ($streamId === false) {
             return false;
         }
-        $manager = $this->getChannelManager();
-        $chan = $manager->get($streamId, true);
+        $chan = $this->openStreamChannel($streamId);
         try {
             $data = $chan->pop($timeout);
         } finally {
-            $manager->close($streamId);
+            $this->closeStreamChannel($streamId);
         }
 
         return $data;
@@ -51,7 +53,7 @@ class Client2 extends Client
 
     public function close(): bool
     {
-        $this->getChannelManager()->flush();
+        $this->flushStreamChannels();
         $this->chan?->close();
         $this->chan = null;
         $this->sleepChan?->close();
@@ -59,9 +61,25 @@ class Client2 extends Client
         return parent::close();
     }
 
-    protected function getChannelManager(): ChannelManager
+    protected function openStreamChannel(int $streamId): Channel
     {
-        return $this->channelManager;
+        return $this->streamChannels[$streamId] = new Channel(1);
+    }
+
+    protected function closeStreamChannel(int $streamId): void
+    {
+        if ($channel = $this->streamChannels[$streamId] ?? null) {
+            $channel->close();
+        }
+
+        unset($this->streamChannels[$streamId]);
+    }
+
+    protected function flushStreamChannels(): void
+    {
+        foreach (array_keys($this->streamChannels) as $streamId) {
+            $this->closeStreamChannel($streamId);
+        }
     }
 
     protected function reconnect(): bool
@@ -79,7 +97,7 @@ class Client2 extends Client
         }
         $this->chan = new Channel(65535);
 
-        if (! $this->ping()) {
+        if (!$this->ping()) {
             $this->reconnect();
         }
         go(
@@ -100,11 +118,11 @@ class Client2 extends Client
                             break;
                         }
 
-                        if ($channel = $this->getChannelManager()->get($response->streamId)) {
+                        if ($channel = $this->streamChannels[$response->streamId] ?? null) {
                             $channel->push($response);
                         }
                     }
-                } catch (Throwable $exception) {
+                } catch (\Throwable $exception) {
                     swoole_error_log(SWOOLE_LOG_ERROR, (string) $exception);
                 } finally {
                     swoole_error_log(SWOOLE_LOG_DEBUG, 'Recv loop broken, wait to restart in next time. The reason is ' . $reason);
@@ -116,7 +134,7 @@ class Client2 extends Client
 
     protected function idleClose(): void
     {
-        if (! $this->idleClose) {
+        if (!$this->idleClose) {
             $this->idleClose = true;
             go(
                 function () {
@@ -126,7 +144,7 @@ class Client2 extends Client
                             if ($this->chan === null) {
                                 break;
                             }
-                            if ($this->channelManager->isEmpty() && time() - $this->lastSendTime > 10) {
+                            if ($this->streamChannels === [] && time() - $this->lastSendTime > 10) {
                                 $this->close();
                                 break;
                             }
@@ -141,7 +159,7 @@ class Client2 extends Client
 
     protected function sleep(float $timeout = -1): void
     {
-        $this->sleepChan ??= new Channel(1);
+        $this->sleepChan = $this->sleepChan ?? new Channel(1);
         $this->sleepChan->pop($timeout);
     }
 }
