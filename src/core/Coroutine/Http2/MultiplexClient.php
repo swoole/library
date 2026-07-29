@@ -28,6 +28,11 @@ if (!class_exists(Client::class, false)) {
 /**
  * An HTTP/2 client that multiplexes requests from many coroutines over one shared connection.
  *
+ * A single recv-loop coroutine reads every response off the connection and routes it to the
+ * requesting coroutine by stream ID. The connection is health-checked before each request and
+ * re-established transparently when it is gone; a heartbeat checker closes it after a period
+ * without requests.
+ *
  * Besides the settings understood by the underlying client, set() accepts:
  * - heartbeat_check_interval: seconds between two idle checks (default: 3)
  * - heartbeat_idle_time: seconds without a new request after which a connection with no in-flight
@@ -42,13 +47,17 @@ class MultiplexClient extends Client
      */
     protected ?object $recvLoopToken = null;
 
-    protected ?Channel $sleepChan = null;
+    /**
+     * @var Channel|null used by the heartbeat checker for an interruptible sleep; closed by close()
+     *                   to wake the checker up immediately
+     */
+    protected ?Channel $sleepChannel = null;
 
     /**
      * @var Channel|null present while a coroutine health-checks the connection and starts the shared
      *                   recv loop; other coroutines block on it (until it is closed) before sending
      */
-    protected ?Channel $starting = null;
+    protected ?Channel $startupBarrier = null;
 
     /**
      * @var array<int, Channel> per-stream channels carrying the responses of in-flight requests
@@ -56,28 +65,42 @@ class MultiplexClient extends Client
     protected array $streamChannels = [];
 
     /**
-     * @var array<int, true> IDs of streams whose requester timed out; their late responses are dropped
+     * @var array<int, true> IDs of streams whose requester timed out; the recv loop drops their late
+     *                       responses instead of parking them
      */
     protected array $abandonedStreams = [];
 
-    protected bool $idleClose = false;
+    /**
+     * @var bool guards against spawning more than one heartbeat-checker coroutine
+     */
+    protected bool $heartbeatCheckerRunning = false;
 
+    /**
+     * @var int Unix timestamp of the most recent send; the heartbeat checker measures idleness
+     *          against it
+     */
     protected int $lastSendTime = 0;
 
     /**
      * Sends a request over the shared connection and waits for its response.
      *
+     * Safe to call from any number of coroutines concurrently; the connection is established (or
+     * re-established) on demand.
+     *
      * @param float $timeout seconds to wait for the response. Non-positive values fall back to the
      *                       client's `timeout` setting; without that setting the wait is unbounded.
+     * @return false|Response the response, or false when sending failed, the wait timed out, or the
+     *                        connection was closed while waiting
      */
     public function request(Request $request, float $timeout = -1): false|Response
     {
         if ($timeout <= 0) {
-            // The ping check in loop() only confirms the request could be written out, not that the
-            // peer is alive, so an unbounded default wait could hang on a stale connection forever.
+            // The ping check in ensureRecvLoop() only confirms the request could be written out, not
+            // that the peer is alive, so an unbounded default wait could hang on a stale connection
+            // forever.
             $timeout = (float) ($this->setting['timeout'] ?? -1);
         }
-        $this->loop();
+        $this->ensureRecvLoop();
         $streamId           = $this->send($request);
         $this->lastSendTime = time();
 
@@ -105,21 +128,33 @@ class MultiplexClient extends Client
         return $data;
     }
 
+    /**
+     * Closes the connection, aborting every in-flight request (their request() calls return false)
+     * and stopping the recv loop and the heartbeat checker.
+     *
+     * The client remains usable: the next request() reconnects.
+     */
     public function close(): bool
     {
         $this->flushStreamChannels();
         $this->abandonedStreams = [];
         $this->recvLoopToken    = null;
-        $this->sleepChan?->close();
-        $this->sleepChan = null;
+        $this->sleepChannel?->close();
+        $this->sleepChannel = null;
         return parent::close();
     }
 
+    /**
+     * Registers the channel over which the response for the given stream will be delivered.
+     */
     protected function openStreamChannel(int $streamId): Channel
     {
         return $this->streamChannels[$streamId] = new Channel(1);
     }
 
+    /**
+     * Unregisters a stream's channel, waking its requester (pop() returns false) if one still waits.
+     */
     protected function closeStreamChannel(int $streamId): void
     {
         if ($channel = $this->streamChannels[$streamId] ?? null) {
@@ -129,6 +164,9 @@ class MultiplexClient extends Client
         unset($this->streamChannels[$streamId]);
     }
 
+    /**
+     * Aborts all in-flight requests by closing and unregistering their stream channels.
+     */
     protected function flushStreamChannels(): void
     {
         foreach (array_keys($this->streamChannels) as $streamId) {
@@ -136,27 +174,35 @@ class MultiplexClient extends Client
         }
     }
 
+    /**
+     * Re-establishes the connection, discarding the current one.
+     */
     protected function reconnect(): bool
     {
         parent::close();
         return parent::connect();
     }
 
-    protected function loop(): void
+    /**
+     * Makes sure the connection is healthy and the shared recv loop is running, (re)connecting and
+     * starting the loop when needed. Serializes concurrent callers so that none of them sends while
+     * the connection is still being set up.
+     */
+    protected function ensureRecvLoop(): void
     {
-        $this->idleClose();
+        $this->ensureHeartbeatChecker();
 
         // The health check and the reconnect below both yield; sending during either would fail
         // spuriously. Coroutines arriving in the meantime must wait for the starter to finish
         // (closing the channel wakes all waiters) and then re-check, as the state has changed.
-        while ($this->starting !== null) {
-            $this->starting->pop();
+        while ($this->startupBarrier !== null) {
+            $this->startupBarrier->pop();
         }
         if ($this->recvLoopToken !== null) {
             return;
         }
 
-        $this->starting = new Channel(1);
+        $this->startupBarrier = new Channel(1);
         try {
             $token = $this->recvLoopToken = new \stdClass();
             if (!$this->ping()) {
@@ -164,11 +210,22 @@ class MultiplexClient extends Client
             }
             go(fn () => $this->recvLoop($token));
         } finally {
-            $this->starting->close();
-            $this->starting = null;
+            // Clear the property before closing: close() resumes the waiters immediately, and a
+            // waiter that still saw the barrier set would re-enter pop() on the closed channel,
+            // which returns synchronously — a busy spin that never yields back to this coroutine.
+            $barrier              = $this->startupBarrier;
+            $this->startupBarrier = null;
+            $barrier->close();
         }
     }
 
+    /**
+     * Reads responses off the connection and routes each one to its requester's stream channel;
+     * runs in a coroutine of its own until the connection breaks or the client is closed.
+     *
+     * @param object $token the loop's identity: once it no longer matches $recvLoopToken, this loop
+     *                      is stale and exits without closing the client
+     */
     protected function recvLoop(object $token): void
     {
         $reason = '';
@@ -208,9 +265,13 @@ class MultiplexClient extends Client
         }
     }
 
-    protected function idleClose(): void
+    /**
+     * Makes sure the heartbeat checker is running, unless disabled: a coroutine that closes the
+     * connection once no requests are in flight and none was sent for `heartbeat_idle_time` seconds.
+     */
+    protected function ensureHeartbeatChecker(): void
     {
-        if ($this->idleClose) {
+        if ($this->heartbeatCheckerRunning) {
             return;
         }
         $maxIdleTime = (float) ($this->setting[Constant::OPTION_HEARTBEAT_IDLE_TIME] ?? 10);
@@ -219,12 +280,12 @@ class MultiplexClient extends Client
         }
         $checkInterval = (float) ($this->setting[Constant::OPTION_HEARTBEAT_CHECK_INTERVAL] ?? 3);
 
-        $this->idleClose = true;
+        $this->heartbeatCheckerRunning = true;
         go(
             function () use ($checkInterval, $maxIdleTime) {
                 try {
                     while (true) {
-                        $this->sleep($checkInterval);
+                        $this->interruptibleSleep($checkInterval);
                         if ($this->recvLoopToken === null) {
                             break;
                         }
@@ -234,15 +295,19 @@ class MultiplexClient extends Client
                         }
                     }
                 } finally {
-                    $this->idleClose = false;
+                    $this->heartbeatCheckerRunning = false;
                 }
             }
         );
     }
 
-    protected function sleep(float $timeout = -1): void
+    /**
+     * Sleeps for the given number of seconds, or until close() wakes the sleeper up early by
+     * closing the sleep channel.
+     */
+    protected function interruptibleSleep(float $seconds): void
     {
-        $this->sleepChan = $this->sleepChan ?? new Channel(1);
-        $this->sleepChan->pop($timeout);
+        $this->sleepChannel = $this->sleepChannel ?? new Channel(1);
+        $this->sleepChannel->pop($seconds);
     }
 }

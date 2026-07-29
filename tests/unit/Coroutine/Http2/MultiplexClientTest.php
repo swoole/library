@@ -40,8 +40,7 @@ class MultiplexClientTest extends TestCase
     {
         run(function () {
             $server = $this->startServer();
-            $client = new MultiplexClient('127.0.0.1', $server->port);
-            $client->set(['timeout' => 5]);
+            $client = $this->newClient($server);
             $this->assertTrue($client->connect());
 
             $wg = new WaitGroup();
@@ -65,12 +64,27 @@ class MultiplexClientTest extends TestCase
         });
     }
 
+    public function testRequestWithoutExplicitConnect(): void
+    {
+        run(function () {
+            $server = $this->startServer();
+            $client = $this->newClient($server);
+
+            // request() must establish the connection on demand.
+            $response = $client->request(self::newRequest('/', 'hello'));
+            $this->assertInstanceOf(Response::class, $response);
+            $this->assertSame('hello', $response->data);
+
+            $client->close();
+            $server->shutdown();
+        });
+    }
+
     public function testRequestTimeout(): void
     {
         run(function () {
             $server = $this->startServer();
-            $client = new MultiplexClient('127.0.0.1', $server->port);
-            $client->set(['timeout' => 5]);
+            $client = $this->newClient($server);
             $this->assertTrue($client->connect());
 
             $start = microtime(true);
@@ -93,8 +107,7 @@ class MultiplexClientTest extends TestCase
     {
         run(function () {
             $server = $this->startServer();
-            $client = new MultiplexClient('127.0.0.1', $server->port);
-            $client->set(['timeout' => 5]);
+            $client = $this->newClient($server);
             $this->assertTrue($client->connect());
 
             // The server closes the connection without answering the stream: the pending request
@@ -119,8 +132,7 @@ class MultiplexClientTest extends TestCase
     {
         run(function () {
             $server = $this->startServer();
-            $client = new MultiplexClient('127.0.0.1', $server->port);
-            $client->set(['timeout' => 5]);
+            $client = $this->newClient($server);
             $this->assertTrue($client->connect());
 
             $wg     = new WaitGroup();
@@ -137,14 +149,46 @@ class MultiplexClientTest extends TestCase
 
             $start = microtime(true);
             $client->close();
+            $client->close(); // closing an already-closed client must be harmless
             $wg->wait();
             $this->assertFalse($result);
             $this->assertLessThan(0.3, microtime(true) - $start); // woken by close(), not by a timeout
 
-            // As above: the reused stream ID of the new connection must work.
+            // The reused stream ID of the new connection must work.
             $response = $client->request(self::newRequest('/', 'again'));
             $this->assertInstanceOf(Response::class, $response);
             $this->assertSame('again', $response->data);
+
+            $client->close();
+            $server->shutdown();
+        });
+    }
+
+    public function testConcurrentRequestsAfterClose(): void
+    {
+        run(function () {
+            $server = $this->startServer();
+            $client = $this->newClient($server);
+            $this->assertTrue($client->connect());
+            $this->assertInstanceOf(Response::class, $client->request(self::newRequest('/', 'warm-up')));
+            $client->close();
+
+            // All requests arriving while the connection is re-established must wait behind the
+            // startup barrier and then succeed; none may send into the half-open connection.
+            $wg = new WaitGroup();
+            for ($i = 1; $i <= 10; $i++) {
+                $wg->add();
+                go(function () use ($client, $wg, $i) {
+                    try {
+                        $response = $client->request(self::newRequest('/', "burst-{$i}"), 10);
+                        $this->assertInstanceOf(Response::class, $response);
+                        $this->assertSame("burst-{$i}", $response->data);
+                    } finally {
+                        $wg->done();
+                    }
+                });
+            }
+            $wg->wait();
 
             $client->close();
             $server->shutdown();
@@ -156,10 +200,8 @@ class MultiplexClientTest extends TestCase
         run(function () {
             $server = $this->startServer();
 
-            $keeper = new MultiplexClient('127.0.0.1', $server->port);
-            $keeper->set(['timeout' => 5, 'heartbeat_idle_time' => 0]); // idle closing disabled
-            $closer = new MultiplexClient('127.0.0.1', $server->port);
-            $closer->set(['timeout' => 5, 'heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.5]);
+            $keeper = $this->newClient($server, ['heartbeat_idle_time' => 0]); // idle closing disabled
+            $closer = $this->newClient($server, ['heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.5]);
 
             foreach ([$keeper, $closer] as $client) {
                 $this->assertTrue($client->connect());
@@ -178,6 +220,24 @@ class MultiplexClientTest extends TestCase
 
             $keeper->close();
             $closer->close();
+            $server->shutdown();
+        });
+    }
+
+    public function testIdleCloseSparesInFlightRequest(): void
+    {
+        run(function () {
+            $server = $this->startServer();
+            $client = $this->newClient($server, ['heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.2]);
+            $this->assertTrue($client->connect());
+
+            // The request outlasts the idle threshold by far; a connection with an in-flight
+            // request must not be closed as idle.
+            $response = $client->request(self::newRequest('/slow', 'patient', ['x-delay' => '1.5']));
+            $this->assertInstanceOf(Response::class, $response);
+            $this->assertSame('patient', $response->data);
+
+            $client->close();
             $server->shutdown();
         });
     }
@@ -203,13 +263,17 @@ class MultiplexClientTest extends TestCase
         $server = new Server('127.0.0.1', 0);
         $server->set(['open_http2_protocol' => true]);
         $server->handle('/slow', function ($request, $response) {
-            Coroutine::sleep(0.5);
+            Coroutine::sleep((float) ($request->header['x-delay'] ?? 0.5));
             $response->end($request->getContent());
         });
         $server->handle('/bye', function ($request, $response) {
             $response->close();
         });
         $server->handle('/', function ($request, $response) {
+            // Respond after a small random delay so that concurrent responses interleave out of
+            // order, like real multiplexed traffic; dispatching by stream ID must not rely on
+            // responses arriving in request order.
+            Coroutine::sleep(random_int(1, 3) / 1000);
             $response->end($request->getContent());
         });
         go(function () use ($server) {
@@ -218,12 +282,20 @@ class MultiplexClientTest extends TestCase
         return $server;
     }
 
-    private static function newRequest(string $path, string $data): Request
+    private function newClient(Server $server, array $settings = []): MultiplexClient
     {
-        $request         = new Request();
-        $request->method = 'POST';
-        $request->path   = $path;
-        $request->data   = $data;
+        $client = new MultiplexClient('127.0.0.1', $server->port);
+        $client->set($settings + ['timeout' => 5]);
+        return $client;
+    }
+
+    private static function newRequest(string $path, string $data, array $headers = []): Request
+    {
+        $request          = new Request();
+        $request->method  = 'POST';
+        $request->path    = $path;
+        $request->data    = $data;
+        $request->headers = $headers;
         return $request;
     }
 }
