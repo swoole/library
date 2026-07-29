@@ -44,16 +44,19 @@ class MultiplexClientTest extends TestCase
             try {
                 $this->assertTrue($client->connect());
 
-                // Assertions live outside the coroutines: a failed assertion inside go() would
-                // escape as an uncaught exception in the child coroutine and abort the process
-                // instead of failing the test.
+                // Assertions live outside the coroutines, and exceptions are collected rather
+                // than left to escape: either would otherwise become an uncaught exception in a
+                // child coroutine and abort the process instead of failing the test.
                 $wg        = new WaitGroup();
                 $responses = [];
+                $errors    = [];
                 for ($i = 1; $i <= 30; $i++) {
                     $wg->add();
-                    go(function () use ($client, $wg, &$responses, $i) {
+                    go(function () use ($client, $wg, &$responses, &$errors, $i) {
                         try {
                             $responses[$i] = $client->request(self::newRequest('/', "payload-{$i}"), 10);
+                        } catch (\Throwable $e) {
+                            $errors[$i] = $e;
                         } finally {
                             $wg->done();
                         }
@@ -61,6 +64,7 @@ class MultiplexClientTest extends TestCase
                 }
                 $wg->wait();
 
+                $this->assertSame([], $errors);
                 $this->assertCount(30, $responses);
                 foreach ($responses as $i => $response) {
                     $this->assertInstanceOf(Response::class, $response);
@@ -104,6 +108,7 @@ class MultiplexClientTest extends TestCase
                 $elapsed = microtime(true) - $start;
                 $this->assertGreaterThan(0.15, $elapsed); // the timeout actually elapsed ...
                 $this->assertLessThan(0.6, $elapsed);     // ... and did not degrade into the 1 s delay
+                $this->assertSame(SWOOLE_ERROR_CO_TIMEDOUT, $client->errCode);
 
                 // While this second request is in flight (~0.2 s to ~1.2 s), the late response of the
                 // timed-out stream arrives (~1 s) and must be dropped — not delivered anywhere. The
@@ -112,6 +117,12 @@ class MultiplexClientTest extends TestCase
                 $response = $client->request(self::newRequest('/slow', 'on-time', ['x-delay' => '1']));
                 $this->assertInstanceOf(Response::class, $response);
                 $this->assertSame('on-time', $response->data);
+
+                // The late response must have been dropped, not parked: a parked channel or a
+                // leftover abandoned-stream marker would linger (and block idle closing) forever.
+                $reflection = new \ReflectionObject($client);
+                $this->assertSame([], $reflection->getProperty('streamChannels')->getValue($client));
+                $this->assertSame([], $reflection->getProperty('abandonedStreams')->getValue($client));
             } finally {
                 $client->close();
                 $server->shutdown();
@@ -156,10 +167,13 @@ class MultiplexClientTest extends TestCase
 
                 $wg     = new WaitGroup();
                 $result = null;
+                $error  = null;
                 $wg->add();
-                go(function () use ($client, $wg, &$result) {
+                go(function () use ($client, $wg, &$result, &$error) {
                     try {
                         $result = $client->request(self::newRequest('/slow', 'in-flight'));
+                    } catch (\Throwable $e) {
+                        $error = $e;
                     } finally {
                         $wg->done();
                     }
@@ -167,10 +181,12 @@ class MultiplexClientTest extends TestCase
                 Coroutine::sleep(0.1); // let the request get in flight
 
                 $start = microtime(true);
-                $client->close();
-                $client->close(); // closing an already-closed client must be harmless
+                $this->assertTrue($client->close()); // there was a connection to tear down
+                $this->assertFalse($client->close()); // closing an already-closed client is harmless
                 $wg->wait();
+                $this->assertNull($error);
                 $this->assertFalse($result);
+                $this->assertSame(SWOOLE_ERROR_CLIENT_NO_CONNECTION, $client->errCode);
                 $this->assertLessThan(0.3, microtime(true) - $start); // woken by close(), not by a timeout
 
                 // The reused stream ID of the new connection must work.
@@ -198,11 +214,14 @@ class MultiplexClientTest extends TestCase
                 // startup barrier and then succeed; none may send into the half-open connection.
                 $wg        = new WaitGroup();
                 $responses = [];
+                $errors    = [];
                 for ($i = 1; $i <= 10; $i++) {
                     $wg->add();
-                    go(function () use ($client, $wg, &$responses, $i) {
+                    go(function () use ($client, $wg, &$responses, &$errors, $i) {
                         try {
                             $responses[$i] = $client->request(self::newRequest('/', "burst-{$i}"), 10);
+                        } catch (\Throwable $e) {
+                            $errors[$i] = $e;
                         } finally {
                             $wg->done();
                         }
@@ -210,6 +229,7 @@ class MultiplexClientTest extends TestCase
                 }
                 $wg->wait();
 
+                $this->assertSame([], $errors);
                 $this->assertCount(10, $responses);
                 foreach ($responses as $i => $response) {
                     $this->assertInstanceOf(Response::class, $response);
@@ -225,11 +245,12 @@ class MultiplexClientTest extends TestCase
     public function testIdleClose(): void
     {
         run(function () {
-            $server = $this->startServer();
-            $keeper = $this->newClient($server, ['heartbeat_idle_time' => 0]); // idle closing disabled
-            $closer = $this->newClient($server, ['heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.5]);
+            $server  = $this->startServer();
+            $keeper  = $this->newClient($server, ['heartbeat_idle_time' => 0]); // idle closing disabled
+            $closer  = $this->newClient($server, ['heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.5]);
+            $clamped = $this->newClient($server, ['heartbeat_check_interval' => 0, 'heartbeat_idle_time' => 0.5]);
             try {
-                foreach ([$keeper, $closer] as $client) {
+                foreach ([$keeper, $closer, $clamped] as $client) {
                     $this->assertTrue($client->connect());
                     $this->assertInstanceOf(Response::class, $client->request(self::newRequest('/', 'ping')));
                 }
@@ -238,14 +259,22 @@ class MultiplexClientTest extends TestCase
                 Coroutine::sleep(1.5);
                 $this->assertFalse($closer->connected);
                 $this->assertTrue($keeper->connected);
+                // A non-positive check interval falls back to the 3 s default instead of disabling
+                // the checker or spinning: this client has simply not been checked yet.
+                $this->assertTrue($clamped->connected);
 
                 // An idle-closed client reconnects transparently on the next request.
                 $response = $closer->request(self::newRequest('/', 'wake'));
                 $this->assertInstanceOf(Response::class, $response);
                 $this->assertSame('wake', $response->data);
+
+                Coroutine::sleep(2.2); // past the clamped client's first (default-interval) check
+                $this->assertFalse($clamped->connected);
+                $this->assertTrue($keeper->connected);
             } finally {
                 $keeper->close();
                 $closer->close();
+                $clamped->close();
                 $server->shutdown();
             }
         });
@@ -284,8 +313,27 @@ class MultiplexClientTest extends TestCase
             $client->set(['timeout' => 0.5]);
             try {
                 $this->assertFalse($client->request(self::newRequest('/', 'nobody-home')));
+                // The errCode must be connect()'s precise one (e.g. ECONNREFUSED), not the generic
+                // no-connection code a doomed send() would have overwritten it with.
+                $this->assertNotSame(0, $client->errCode);
+                $this->assertNotSame(SWOOLE_ERROR_CLIENT_NO_CONNECTION, $client->errCode);
             } finally {
                 $client->close();
+            }
+        });
+    }
+
+    public function testFrameLevelApiIsDisabled(): void
+    {
+        run(function () {
+            $client = new MultiplexClient('127.0.0.1', 1);
+            foreach (['recv' => [], 'read' => [], 'write' => [1, 'x'], 'goaway' => []] as $method => $args) {
+                try {
+                    $client->{$method}(...$args);
+                    $this->fail("{$method}() must throw");
+                } catch (\BadMethodCallException $e) {
+                    $this->assertNotSame('', $e->getMessage());
+                }
             }
         });
     }
