@@ -6,7 +6,7 @@ jobs:
   # Every image in the matrix gets built and booted, which is what proves the extension still compiles against
   # each PHP version. The checks on top of that each run on a subset of the matrix, as noted on the step.
   tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
