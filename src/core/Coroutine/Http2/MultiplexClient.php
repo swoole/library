@@ -100,8 +100,11 @@ class MultiplexClient extends Client
      * @param float $timeout seconds to wait for the response. Non-positive values fall back to the
      *                       client's `timeout` setting; without that setting the wait is unbounded.
      * @return false|Response the response, or false on failure: the connection could not be
-     *                        established, sending failed, the wait timed out, or the connection
-     *                        was closed while waiting — errCode/errMsg describe the cause
+     *                        established, sending failed, the wait timed out or was canceled, or
+     *                        the connection was closed while waiting. errCode/errMsg describe the
+     *                        cause — best-effort only: they live on the shared client, so read
+     *                        them immediately after the false return, before yielding; a
+     *                        concurrently failing request may overwrite them.
      */
     public function request(Request $request, float $timeout = -1): false|Response
     {
@@ -131,7 +134,7 @@ class MultiplexClient extends Client
                 // The client was closed while send() yielded, and the flush has already dropped any
                 // response parked for this stream: fail fast instead of waiting out the timeout on
                 // a channel nothing will ever push to.
-                $this->setError(SWOOLE_ERROR_SESSION_CLOSED, 'the connection was closed while the request was being sent');
+                $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed while the request was being sent');
                 return false;
             }
             $chan = $this->openStreamChannel($streamId);
@@ -141,16 +144,24 @@ class MultiplexClient extends Client
             $data = $chan->pop($timeout);
         } finally {
             $this->closeStreamChannel($streamId);
-            if ($data === false && $chan->errCode === SWOOLE_CHANNEL_TIMEOUT) {
-                // Nobody waits for this stream anymore; the recv loop must drop its late response
-                // instead of parking it, which would leak the parked channel until the connection
-                // closes. On connection teardown (SWOOLE_CHANNEL_CLOSED) no marker may be left:
-                // stream IDs restart after a reconnect, and a stale marker would drop a response
-                // of the next connection.
-                $this->abandonedStreams[$streamId] = true;
-                $this->setError(SWOOLE_ERROR_CO_TIMEDOUT, 'the response timed out');
-            } elseif ($data === false && $chan->errCode === SWOOLE_CHANNEL_CLOSED) {
-                $this->setError(SWOOLE_ERROR_SESSION_CLOSED, 'the connection was closed while waiting for the response');
+            if ($data === false) {
+                if ($chan->errCode === SWOOLE_CHANNEL_CLOSED) {
+                    // Connection teardown: no abandoned-stream marker may be left behind — stream
+                    // IDs restart after a reconnect, and a stale marker would drop a response of
+                    // the next connection.
+                    $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed while waiting for the response');
+                } else {
+                    // Timed out or canceled: nobody waits for this stream anymore, but the
+                    // connection lives on — the recv loop must drop the late response instead of
+                    // parking it, which would leak the parked channel (and block idle closing)
+                    // until the connection closes.
+                    $this->abandonedStreams[$streamId] = true;
+                    if ($chan->errCode === SWOOLE_CHANNEL_TIMEOUT) {
+                        $this->setError(SWOOLE_ERROR_CO_TIMEDOUT, 'the response timed out');
+                    } else {
+                        $this->setError(SWOOLE_ERROR_CO_CANCELED, 'the wait for the response was canceled');
+                    }
+                }
             }
         }
 
@@ -163,24 +174,39 @@ class MultiplexClient extends Client
      *
      * The client remains usable: the next request() reconnects.
      *
-     * @return bool whether the underlying connection was open and has been closed now. It is false
-     *              when there was nothing left to close — a repeated close(), or a connection the
-     *              heartbeat checker or the recv loop closed already — even though the multiplexer
-     *              teardown itself did run.
+     * @return bool whether there was a connection (or a running recv loop) to tear down; false
+     *              when there was nothing left to close, e.g. a repeated close() or a connection
+     *              already closed by the heartbeat checker or the recv loop. Unlike in the base
+     *              class, the value does not reflect the raw socket close: that reports failure
+     *              whenever a coroutine is still bound to the socket, which on this class is the
+     *              normal case — the recv loop reads the connection permanently.
      */
     public function close(): bool
     {
-        // Invalidate the connection before waking anyone: the recv loop keys off the cleared token
-        // (so a stale loop cannot tear down a successor connection), and a requester woken by the
-        // flush below may retry immediately — it must find the connection closed and reconnect
-        // instead of sending into the socket being torn down.
+        $wasUp = $this->connected || $this->recvLoopToken !== null;
+        // Invalidate the connection before waking anyone: every requester woken during the
+        // teardown may retry immediately, and must find the token cleared and reconnect instead
+        // of sending into the socket being torn down. parent::close() itself resumes coroutines
+        // bound to the socket (the recv loop, senders mid-send()) and reports
+        // SW_ERROR_CO_SOCKET_CLOSE_WAIT on errCode while doing so — mechanics, not a failure —
+        // so the error slot is restored afterwards.
         $this->recvLoopToken = null;
-        $result              = parent::close();
+        $errCode             = $this->errCode;
+        $errMsg              = $this->errMsg;
+        parent::close();
+        $this->errCode = $errCode;
+        $this->errMsg  = $errMsg;
         $this->flushStreamChannels();
         $this->abandonedStreams = [];
-        $this->sleepChannel?->close();
+        // Clear the property before closing, as with the startup barrier: the close resumes the
+        // heartbeat checker immediately, and when a requester woken above has already started a
+        // new connection generation, the checker does not exit — it must find the property null
+        // and create a fresh channel, not re-enter pop() on the closed one, which returns without
+        // yielding: a busy spin that would starve the event loop.
+        $sleepChannel       = $this->sleepChannel;
         $this->sleepChannel = null;
-        return $result;
+        $sleepChannel?->close();
+        return $wasUp;
     }
 
     /**
@@ -308,7 +334,7 @@ class MultiplexClient extends Client
             // stopped to everyone else, and the next request would spawn a second reader onto the
             // same socket.
             if ($this->recvLoopToken !== $token) {
-                $this->setError(SWOOLE_ERROR_SESSION_CLOSED, 'the connection was closed during startup');
+                $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed during startup');
                 return false;
             }
             go(fn () => $this->recvLoop($token));
