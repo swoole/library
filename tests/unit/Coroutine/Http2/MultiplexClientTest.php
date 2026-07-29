@@ -208,8 +208,8 @@ class MultiplexClientTest extends TestCase
                 $this->assertInstanceOf(Response::class, $client->request(self::newRequest('/', 'ping')));
             }
 
-            // The idle check compares whole seconds, so the 0.5 s idle time triggers within ~2 s.
-            Coroutine::sleep(2.5);
+            // With a 0.5 s idle time and a 0.1 s check interval, the close lands within ~0.7 s.
+            Coroutine::sleep(1.5);
             $this->assertFalse($closer->connected);
             $this->assertTrue($keeper->connected);
 
