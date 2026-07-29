@@ -113,7 +113,16 @@ class MultiplexClient extends Client
         }
         // The response can arrive before send() returns when send() yields on socket I/O; the recv
         // loop then has registered the stream channel already, with the response buffered in it.
-        $chan = $this->streamChannels[$streamId] ?? $this->openStreamChannel($streamId);
+        $chan = $this->streamChannels[$streamId] ?? null;
+        if ($chan === null) {
+            if ($this->recvLoopToken === null) {
+                // The client was closed while send() yielded, and the flush has already dropped any
+                // response parked for this stream: fail fast instead of waiting out the timeout on
+                // a channel nothing will ever push to.
+                return false;
+            }
+            $chan = $this->openStreamChannel($streamId);
+        }
         $data = false;
         try {
             $data = $chan->pop($timeout);
@@ -140,12 +149,17 @@ class MultiplexClient extends Client
      */
     public function close(): bool
     {
+        // Invalidate the connection before waking anyone: the recv loop keys off the cleared token
+        // (so a stale loop cannot tear down a successor connection), and a requester woken by the
+        // flush below may retry immediately — it must find the connection closed and reconnect
+        // instead of sending into the socket being torn down.
+        $this->recvLoopToken = null;
+        $result              = parent::close();
         $this->flushStreamChannels();
         $this->abandonedStreams = [];
-        $this->recvLoopToken    = null;
         $this->sleepChannel?->close();
         $this->sleepChannel = null;
-        return parent::close();
+        return $result;
     }
 
     /**
@@ -207,6 +221,8 @@ class MultiplexClient extends Client
         }
 
         $this->startupBarrier = new Channel(1);
+        $spawned              = false;
+        $token                = null;
         try {
             $token = $this->recvLoopToken = new \stdClass();
             // The connection is being (re)established: reset the idle clock, or the heartbeat
@@ -217,8 +233,21 @@ class MultiplexClient extends Client
             if (!$this->ping()) {
                 $this->reconnect();
             }
-            go(fn () => $this->recvLoop($token));
+            // close() may have cleared the token while ping()/reconnect() yielded. A loop spawned
+            // with that stale token would park in recv() — binding the socket — while looking
+            // stopped to everyone else, and the next request would spawn a second reader onto the
+            // same socket.
+            if ($this->recvLoopToken === $token) {
+                go(fn () => $this->recvLoop($token));
+                $spawned = true;
+            }
         } finally {
+            if (!$spawned && $this->recvLoopToken === $token) {
+                // Startup died before the recv loop was spawned (an exception from the health
+                // check or reconnect): leave no token behind, or every later request would skip
+                // reconnection and send with no coroutine reading the connection.
+                $this->recvLoopToken = null;
+            }
             // Clear the property before closing: close() resumes the waiters immediately, and a
             // waiter that still saw the barrier set would re-enter pop() on the closed channel,
             // which returns synchronously — a busy spin that never yields back to this coroutine.
