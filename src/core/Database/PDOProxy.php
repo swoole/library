@@ -70,8 +70,7 @@ class PDOProxy extends ObjectProxy
 
     public function reconnect(): void
     {
-        $constructor = $this->constructor;
-        parent::__construct($constructor());
+        parent::__construct(($this->constructor)());
         $this->__object->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $this->round++;
         /* restore context */
@@ -80,7 +79,7 @@ class PDOProxy extends ObjectProxy
         }
     }
 
-    public function setAttribute(int $attribute, $value): bool
+    public function setAttribute(int $attribute, mixed $value): bool
     {
         $this->setAttributeContext[$attribute] = $value;
         return $this->__object->setAttribute($attribute, $value);

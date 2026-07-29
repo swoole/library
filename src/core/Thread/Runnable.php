@@ -20,7 +20,7 @@ abstract class Runnable
 
     protected int $id;
 
-    public function __construct($running, $index)
+    public function __construct(Atomic $running, int $index)
     {
         $this->running = $running;
         $this->id      = $index;

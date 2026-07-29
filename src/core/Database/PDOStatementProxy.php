@@ -23,7 +23,7 @@ class PDOStatementProxy extends ObjectProxy
 
     protected array $setAttributeContext = [];
 
-    protected array $setFetchModeContext;
+    protected array $setFetchModeContext = [];
 
     protected array $bindParamContext = [];
 
@@ -31,15 +31,12 @@ class PDOStatementProxy extends ObjectProxy
 
     protected array $bindValueContext = [];
 
-    protected PDOProxy $parent;
-
     /** @var int */
     protected $parentRound;
 
-    public function __construct(\PDOStatement $object, PDOProxy $parent)
+    public function __construct(\PDOStatement $object, protected PDOProxy $parent)
     {
         parent::__construct($object);
-        $this->parent      = $parent;
         $this->parentRound = $parent->getRound();
     }
 
@@ -53,8 +50,12 @@ class PDOStatementProxy extends ObjectProxy
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent         = $this->parent->__getObject();
-                $this->__object = $parent->prepare($this->__object->queryString);
+                $parent    = $this->parent->__getObject();
+                $statement = $parent->prepare($this->__object->queryString);
+                if ($statement === false) {
+                    throw $e;
+                }
+                $this->__object = $statement;
 
                 foreach ($this->setAttributeContext as $attribute => $value) {
                     $this->__object->setAttribute($attribute, $value);
@@ -80,7 +81,7 @@ class PDOStatementProxy extends ObjectProxy
         return $ret;
     }
 
-    public function setAttribute(int $attribute, $value): bool
+    public function setAttribute(int $attribute, mixed $value): bool
     {
         $this->setAttributeContext[$attribute] = $value;
         return $this->__object->setAttribute($attribute, $value);
@@ -91,7 +92,7 @@ class PDOStatementProxy extends ObjectProxy
      *
      * @see https://www.php.net/manual/en/pdostatement.setfetchmode.php
      */
-    public function setFetchMode(int $mode, ...$params): bool
+    public function setFetchMode(int $mode, mixed ...$params): bool
     {
         $this->setFetchModeContext = func_get_args();
         return $this->__object->setFetchMode(...$this->setFetchModeContext);

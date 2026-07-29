@@ -20,18 +20,15 @@ class MysqliStatementProxy extends ObjectProxy
 
     protected array $attrSetContext = [];
 
-    protected array $bindParamContext;
+    protected array $bindParamContext = [];
 
-    protected array $bindResultContext;
-
-    protected MysqliProxy $parent;
+    protected array $bindResultContext = [];
 
     protected int $parentRound;
 
-    public function __construct(\mysqli_stmt $object, protected ?string $queryString, MysqliProxy $parent)
+    public function __construct(\mysqli_stmt $object, protected ?string $queryString, protected MysqliProxy $parent)
     {
         parent::__construct($object);
-        $this->parent      = $parent;
         $this->parentRound = $parent->getRound();
     }
 
@@ -52,11 +49,12 @@ class MysqliStatementProxy extends ObjectProxy
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent         = $this->parent->__getObject();
-                $this->__object = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
-                if ($this->__object === false) {
+                $parent    = $this->parent->__getObject();
+                $statement = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
+                if ($statement === false) {
                     throw new MysqliException($parent->error, $parent->errno);
                 }
+                $this->__object = $statement;
                 if (!empty($this->bindParamContext)) {
                     $this->__object->bind_param($this->bindParamContext[0], ...$this->bindParamContext[1]);
                 }
@@ -77,19 +75,19 @@ class MysqliStatementProxy extends ObjectProxy
         return $ret;
     }
 
-    public function attr_set($attr, $mode): bool
+    public function attr_set(int $attr, int $mode): bool
     {
         $this->attrSetContext[$attr] = $mode;
         return $this->__object->attr_set($attr, $mode);
     }
 
-    public function bind_param($types, &...$arguments): bool
+    public function bind_param(string $types, mixed &...$arguments): bool
     {
         $this->bindParamContext = [$types, $arguments];
         return $this->__object->bind_param($types, ...$arguments);
     }
 
-    public function bind_result(&...$arguments): bool
+    public function bind_result(mixed &...$arguments): bool
     {
         $this->bindResultContext = $arguments;
         return $this->__object->bind_result(...$arguments);

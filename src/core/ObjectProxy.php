@@ -31,12 +31,12 @@ class ObjectProxy
         return $this->__object->{$name};
     }
 
-    public function __set(string $name, $value): void
+    public function __set(string $name, mixed $value): void
     {
         $this->__object->{$name} = $value;
     }
 
-    public function __isset($name)
+    public function __isset(string $name)
     {
         return isset($this->__object->{$name});
     }
@@ -51,7 +51,7 @@ class ObjectProxy
         return $this->__object->{$name}(...$arguments);
     }
 
-    public function __invoke(...$arguments)
+    public function __invoke(mixed ...$arguments)
     {
         /** @var mixed $object */
         $object = $this->__object;

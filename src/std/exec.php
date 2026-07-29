@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 use Swoole\Coroutine\System;
 
-function swoole_exec(string $command, &$output = null, &$returnVar = null)
+function swoole_exec(string $command, mixed &$output = null, mixed &$returnVar = null): string|false
 {
     $result = System::exec($command);
     if ($result) {
@@ -23,21 +23,26 @@ function swoole_exec(string $command, &$output = null, &$returnVar = null)
             array_pop($outputList);
             $endLine = end($outputList);
         }
-        if ($output) {
+        /* Like exec(), append when the variable already holds an array; anything else is replaced. */
+        if (is_array($output) && $output) {
             $output = array_merge($output, $outputList);
         } else {
             $output = $outputList;
         }
         $returnVar = $result['code'];
-        return $endLine;
+        /* Like exec(), report a command that succeeds without output as an empty string, not as a failure. */
+        return $endLine === false ? '' : $endLine;
     }
     return false;
 }
 
-function swoole_shell_exec(string $cmd)
+function swoole_shell_exec(string $cmd): string|false|null
 {
     $result = System::exec($cmd);
-    if ($result && $result['output'] !== '') {
+    if ($result === false) {
+        return false;
+    }
+    if ($result['output'] !== '') {
         return $result['output'];
     }
     return null;

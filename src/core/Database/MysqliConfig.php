@@ -47,7 +47,7 @@ class MysqliConfig
 
     public function getUnixSocket(): ?string
     {
-        return $this->unixSocket ?? null;
+        return $this->unixSocket;
     }
 
     public function withUnixSocket(?string $unixSocket): self

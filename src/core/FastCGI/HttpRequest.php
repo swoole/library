@@ -156,7 +156,7 @@ class HttpRequest extends Request
         unset($this->params['REQUEST_URI']);
     }
 
-    public function withQuery($query): self
+    public function withQuery(string|array $query): self
     {
         if (is_array($query)) {
             $query = http_build_query($query);

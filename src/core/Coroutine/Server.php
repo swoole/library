@@ -63,7 +63,7 @@ class Server
         $this->host = $host;
 
         $socket = new Socket($this->type, SOCK_STREAM, 0);
-        if ($reuse_port and defined('SO_REUSEPORT')) {
+        if ($reuse_port && defined('SO_REUSEPORT')) {
             $socket->setOption(SOL_SOCKET, SO_REUSEPORT, true);
         }
         if (!$socket->bind($this->host, $port)) {
@@ -130,7 +130,7 @@ class Server
                     goto _wait;
                 }
             } else {
-                if ($socket->errCode == SOCKET_EMFILE or $socket->errCode == SOCKET_ENFILE) {
+                if ($socket->errCode == SOCKET_EMFILE || $socket->errCode == SOCKET_ENFILE) {
                     _wait:
                     Coroutine::sleep(1);
                     continue;

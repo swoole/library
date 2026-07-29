@@ -21,12 +21,9 @@ use Swoole\Http\Status;
 
 final class Handler implements \Stringable
 {
-    /**
-     * @var Client|null
-     */
-    private $client;
+    private ?Client $client = null;
 
-    private $info = [
+    private array $info = [
         'url'                     => '',
         'content_type'            => '',
         'http_code'               => 0,
@@ -60,79 +57,81 @@ final class Handler implements \Stringable
         'private'                 => '',
     ];
 
-    private $withHeaderOut = false;
+    private bool $withHeaderOut = false;
 
-    private $withFileTime = false;
+    private bool $withFileTime = false;
 
-    private $urlInfo;
+    private ?array $urlInfo = null;
 
-    private $postData;
+    private mixed $postData = null;
 
-    private $infile;
+    /** @var resource|null */
+    private mixed $infile = null;
 
-    private $infileSize = PHP_INT_MAX;
+    private int $infileSize = PHP_INT_MAX;
 
-    private $outputStream;
+    /** @var resource|null */
+    private mixed $outputStream = null;
 
-    private $proxyType;
+    private ?int $proxyType = null;
 
-    private $proxy;
+    private ?string $proxy = null;
 
-    private $proxyPort = 1080;
+    private int $proxyPort = 1080;
 
-    private $proxyUsername;
+    private ?string $proxyUsername = null;
 
-    private $proxyPassword;
+    private ?string $proxyPassword = null;
 
-    private $clientOptions = [];
+    private array $clientOptions = [];
 
-    private $followLocation = false;
+    private bool $followLocation = false;
 
-    private $autoReferer = false;
+    private bool $autoReferer = false;
 
-    private $maxRedirects;
+    private ?int $maxRedirects = null;
 
-    private $withHeader = false;
+    private bool $withHeader = false;
 
-    private $nobody = false;
-
-    /** @var callable|null */
-    private $headerFunction;
-
-    /** @var callable|null */
-    private $readFunction;
-
-    private $noProgress = true;
+    private bool $nobody = false;
 
     /** @var callable|null */
-    private $progressFunction;
+    private mixed $headerFunction = null;
 
     /** @var callable|null */
-    private $prereqFunction;
+    private mixed $readFunction = null;
 
-    private $returnTransfer = false;
+    private bool $noProgress = true;
 
-    private $method = '';
+    /** @var callable|null */
+    private mixed $progressFunction = null;
 
-    private $headers = [];
+    /** @var callable|null */
+    private mixed $prereqFunction = null;
 
-    private $headerMap = [];
+    private bool $returnTransfer = false;
 
-    private $transfer;
+    private string $method = '';
 
-    private $errCode = 0;
+    private array $headers = [];
 
-    private $errMsg = '';
+    private array $headerMap = [];
 
-    private $failOnError = false;
+    private ?string $transfer = null;
 
-    private $closed = false;
+    private int $errCode = 0;
 
-    private $cookieJar = '';
+    private string $errMsg = '';
 
-    private $resolve = [];
+    private bool $failOnError = false;
 
-    private $unix_socket_path = '';
+    private bool $closed = false;
+
+    private string $cookieJar = '';
+
+    private array $resolve = [];
+
+    private string $unix_socket_path = '';
 
     public function __construct(string $url = '')
     {
@@ -158,12 +157,12 @@ final class Handler implements \Stringable
         return true;
     }
 
-    public function setOpt(int $opt, $value): bool
+    public function setOpt(int $opt, mixed $value): bool
     {
-        return $this->isAvailable() and $this->setOption($opt, $value);
+        return $this->isAvailable() && $this->setOption($opt, $value);
     }
 
-    public function exec()
+    public function exec(): string|bool
     {
         if (!$this->isAvailable()) {
             return false;
@@ -171,7 +170,7 @@ final class Handler implements \Stringable
         return $this->execute();
     }
 
-    public function getInfo()
+    public function getInfo(): array|false
     {
         return $this->isAvailable() ? $this->info : false;
     }
@@ -186,7 +185,7 @@ final class Handler implements \Stringable
         return $this->isAvailable() ? $this->errMsg : '';
     }
 
-    public function reset()
+    public function reset(): bool
     {
         if (!$this->isAvailable()) {
             return false;
@@ -194,12 +193,13 @@ final class Handler implements \Stringable
         foreach ((new \ReflectionClass(self::class))->getDefaultProperties() as $name => $value) {
             $this->{$name} = $value;
         }
+        return true;
     }
 
-    public function getContent()
+    public function getContent(): ?string
     {
         if (!$this->isAvailable()) {
-            return false;
+            return null;
         }
         return $this->transfer;
     }
@@ -209,8 +209,9 @@ final class Handler implements \Stringable
         if (!$this->isAvailable()) {
             return;
         }
-        foreach ($this as &$property) { // @phpstan-ignore foreach.nonIterable
-            $property = null;
+        /* Release all references (connections, streams, callbacks) by restoring default property values. */
+        foreach ((new \ReflectionClass(self::class))->getDefaultProperties() as $name => $value) {
+            $this->{$name} = $value;
         }
         $this->closed = true;
     }
@@ -291,7 +292,7 @@ final class Handler implements \Stringable
             $urlInfo['scheme'] = 'http';
         }
         $scheme = $urlInfo['scheme'];
-        if ($scheme !== 'http' and $scheme !== 'https') {
+        if ($scheme !== 'http' && $scheme !== 'https') {
             $this->setError(CURLE_UNSUPPORTED_PROTOCOL, "Protocol \"{$scheme}\" not supported or disabled in libcurl");
             return false;
         }
@@ -328,10 +329,10 @@ final class Handler implements \Stringable
         }
     }
 
-    private function setError($code, $msg = ''): void
+    private function setError(int $code, string $msg = ''): void
     {
         $this->errCode = $code;
-        $this->errMsg  = $msg ?: curl_strerror($code);
+        $this->errMsg  = $msg ?: (curl_strerror($code) ?? '');
     }
 
     private function hasHeader(string $headerName): bool
@@ -408,22 +409,22 @@ final class Handler implements \Stringable
                 $this->setHeader('Accept-Encoding', $value);
                 break;
             case CURLOPT_PROXYTYPE:
-                if ($value !== CURLPROXY_HTTP and $value !== CURLPROXY_SOCKS5) {
+                if ($value !== CURLPROXY_HTTP && $value !== CURLPROXY_SOCKS5) {
                     throw new CurlException('swoole_curl_setopt(): Only support following CURLOPT_PROXYTYPE values: CURLPROXY_HTTP, CURLPROXY_SOCKS5');
                 }
                 $this->proxyType = $value;
                 break;
             case CURLOPT_PROXY:
-                $this->proxy = $value;
+                $this->proxy = (string) $value;
                 break;
             case CURLOPT_PROXYPORT:
-                $this->proxyPort = $value;
+                $this->proxyPort = (int) $value;
                 break;
             case CURLOPT_PROXYUSERNAME:
-                $this->proxyUsername = $value;
+                $this->proxyUsername = (string) $value;
                 break;
             case CURLOPT_PROXYPASSWORD:
-                $this->proxyPassword = $value;
+                $this->proxyPassword = (string) $value;
                 break;
             case CURLOPT_PROXYUSERPWD:
                 $usernamePassword    = explode(':', (string) $value);
@@ -465,7 +466,7 @@ final class Handler implements \Stringable
                 }
                 break;
             case CURLOPT_IPRESOLVE:
-                if ($value !== CURL_IPRESOLVE_WHATEVER and $value !== CURL_IPRESOLVE_V4) {
+                if ($value !== CURL_IPRESOLVE_WHATEVER && $value !== CURL_IPRESOLVE_V4) {
                     throw new CurlException('swoole_curl_setopt(): Only support following CURLOPT_IPRESOLVE values: CURL_IPRESOLVE_WHATEVER, CURL_IPRESOLVE_V4');
                 }
                 break;
@@ -546,7 +547,7 @@ final class Handler implements \Stringable
                  * Http Header
                  */
             case CURLOPT_HTTPHEADER:
-                if (!is_array($value) and !is_iterable($value)) {
+                if (!is_array($value) && !is_iterable($value)) {
                     trigger_error('swoole_curl_setopt(): You must pass either an object or an array with the CURLOPT_HTTPHEADER argument', E_USER_WARNING);
                     return false;
                 }
@@ -589,7 +590,7 @@ final class Handler implements \Stringable
                 }
                 break;
             case CURLOPT_FAILONERROR:
-                $this->failOnError = $value;
+                $this->failOnError = (bool) $value;
                 break;
                 /*
                  * Http Cookie
@@ -621,7 +622,7 @@ final class Handler implements \Stringable
                 $this->outputStream = $value;
                 break;
             case CURLOPT_HEADER:
-                $this->withHeader = $value;
+                $this->withHeader = (bool) $value;
                 break;
             case CURLOPT_HEADERFUNCTION:
                 $this->headerFunction = $value;
@@ -633,7 +634,7 @@ final class Handler implements \Stringable
                 $this->clientOptions[Constant::OPTION_WRITE_FUNC] = fn ($client, $data) => $value($this, $data);
                 break;
             case CURLOPT_NOPROGRESS:
-                $this->noProgress = $value;
+                $this->noProgress = (bool) $value;
                 break;
             case CURLOPT_PROGRESSFUNCTION:
                 $this->progressFunction = $value;
@@ -651,13 +652,13 @@ final class Handler implements \Stringable
                 $this->setHeader('Authorization', 'Basic ' . base64_encode($value));
                 break;
             case CURLOPT_FOLLOWLOCATION:
-                $this->followLocation = $value;
+                $this->followLocation = (bool) $value;
                 break;
             case CURLOPT_AUTOREFERER:
-                $this->autoReferer = $value;
+                $this->autoReferer = (bool) $value;
                 break;
             case CURLOPT_MAXREDIRS:
-                $this->maxRedirects = $value;
+                $this->maxRedirects = (int) $value;
                 break;
             case CURLOPT_PUT:
             case CURLOPT_UPLOAD:
@@ -668,7 +669,7 @@ final class Handler implements \Stringable
                 $this->infile = $value;
                 break;
             case CURLOPT_INFILESIZE:
-                $this->infileSize = $value;
+                $this->infileSize = (int) $value;
                 break;
             case CURLOPT_HTTPGET:
                 /* Since GET is the default, this is only necessary if the request method has been changed. */
@@ -680,7 +681,7 @@ final class Handler implements \Stringable
         return true;
     }
 
-    private function execute()
+    private function execute(): string|bool
     {
         $this->info['redirect_count'] = $this->info['starttransfer_time'] = 0;
         $this->info['redirect_url']   = '';
@@ -811,7 +812,7 @@ final class Handler implements \Stringable
             $executeResult = $client->execute($this->getUrl());
             if (!$executeResult) {
                 $errCode = $client->errCode;
-                if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED or $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
+                if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED || $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
                     $this->setError(CURLE_COULDNT_RESOLVE_HOST, 'Could not resolve host: ' . $client->host);
                 } else {
                     $this->setError($errCode, $client->errMsg);
@@ -819,10 +820,10 @@ final class Handler implements \Stringable
                 $this->info['total_time'] = microtime(true) - $timeBegin;
                 return false;
             }
-            if ($client->statusCode >= 300 and $client->statusCode < 400 and isset($client->headers['location'])) {
+            if ($client->statusCode >= 300 && $client->statusCode < 400 && isset($client->headers['location'])) {
                 $redirectParsedUrl = $this->getRedirectUrl($client->headers['location']);
                 $redirectUrl       = self::unparseUrl($redirectParsedUrl);
-                if ($this->followLocation and ($this->maxRedirects === null or $this->info['redirect_count'] < $this->maxRedirects)) {
+                if ($this->followLocation && ($this->maxRedirects === null || $this->info['redirect_count'] < $this->maxRedirects)) {
                     if ($this->info['redirect_count'] === 0) {
                         $this->info['starttransfer_time'] = microtime(true) - $timeBegin;
                         $redirectBeginTime                = microtime(true);
@@ -895,7 +896,7 @@ final class Handler implements \Stringable
             $this->info['header_size'] = 0;
         }
 
-        if ($client->body and $this->readFunction) {
+        if ($client->body && $this->readFunction) {
             $cb = $this->readFunction;
             $cb($this, $this->outputStream, strlen($client->body));
         }
@@ -1015,9 +1016,9 @@ final class Handler implements \Stringable
         $port     = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
         $user     = $parsedUrl['user'] ?? '';
         $pass     = isset($parsedUrl['pass']) ? ':' . $parsedUrl['pass'] : '';
-        $pass     = ($user or $pass) ? "{$pass}@" : '';
+        $pass     = ($user || $pass) ? "{$pass}@" : '';
         $path     = $parsedUrl['path'] ?? '';
-        $query    = (isset($parsedUrl['query']) and $parsedUrl['query'] !== '') ? '?' . $parsedUrl['query'] : '';
+        $query    = (isset($parsedUrl['query']) && $parsedUrl['query'] !== '') ? '?' . $parsedUrl['query'] : '';
         $fragment = isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '';
         return $scheme . $user . $pass . $host . $port . $path . $query . $fragment;
     }
@@ -1040,7 +1041,7 @@ final class Handler implements \Stringable
                 if ($path === '.') {
                     $path = '/';
                 }
-                if (isset($location[1]) and str_starts_with($location, './')) {
+                if (isset($location[1]) && str_starts_with($location, './')) {
                     $location = substr($location, 2);
                 }
                 $redirectUri['path'] = $path . $location;

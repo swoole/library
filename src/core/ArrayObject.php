@@ -105,7 +105,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return ArrayObject|StringObject
+     * @return mixed the value at the given key, with a string or an array wrapped in a StringObject or an ArrayObject
      */
     public function get(mixed $key)
     {
@@ -116,7 +116,8 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return ArrayObject|StringObject
+     * @return mixed the value at the given key (with a string or an array wrapped in a StringObject or an
+     *               ArrayObject), or the default value if the key does not exist
      */
     public function getOr(mixed $key, mixed $default = null)
     {
@@ -251,7 +252,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return mixed
+     * @return int|string|false the key of the first matching element, or false if the value is not found
      */
     public function indexOf(mixed $value, bool $strict = true)
     {
@@ -259,7 +260,8 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return mixed
+     * @return int|string|null the key of the last matching element, or null (unlike indexOf()) if the value is not
+     *                         found
      */
     public function lastIndexOf(mixed $value, bool $strict = true)
     {
@@ -277,7 +279,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return mixed
+     * @return int|string|false the key of the first matching element, or false if the value is not found
      */
     public function search(mixed $needle, bool $strict = true)
     {
@@ -332,7 +334,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return array_unshift($this->array, $value);
     }
 
-    public function append(...$values): ArrayObject
+    public function append(mixed ...$values): ArrayObject
     {
         array_push($this->array, ...$values);
         return $this;
@@ -388,7 +390,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return ArrayObject|mixed|StringObject
+     * @return mixed a randomly picked value, with a string or an array wrapped in a StringObject or an ArrayObject
      */
     public function randomGet()
     {
@@ -402,27 +404,20 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return $this;
     }
 
-    /**
-     * @param array $args
-     */
-    public function map(callable $fn, ...$args): static
+    public function map(callable $fn, array ...$args): static
     {
         return new static(array_map($fn, $this->array, ...$args)); // @phpstan-ignore new.static
     }
 
     /**
-     * @param null $initial
      * @return mixed
      */
-    public function reduce(callable $fn, $initial = null)
+    public function reduce(callable $fn, mixed $initial = null)
     {
         return array_reduce($this->array, $fn, $initial);
     }
 
-    /**
-     * @param array $args
-     */
-    public function keys(...$args): static
+    public function keys(mixed ...$args): static
     {
         return new static(array_keys($this->array, ...$args)); // @phpstan-ignore new.static
     }
@@ -583,7 +578,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return ArrayObject|mixed|StringObject
+     * @return mixed the value as is, with a string or an array wrapped in a StringObject or an ArrayObject
      */
     protected static function detectType(mixed $value)
     {

@@ -123,12 +123,12 @@ function swoole_table(int $size, string $fields): Swoole\Table
     return $table;
 }
 
-function swoole_array_list(...$arrray): Swoole\ArrayObject
+function swoole_array_list(mixed ...$arrray): Swoole\ArrayObject
 {
     return new Swoole\ArrayObject($arrray);
 }
 
-function swoole_array_default_value(array $array, $key, $default_value = null)
+function swoole_array_default_value(array $array, mixed $key, mixed $default_value = null): mixed
 {
     return array_key_exists($key, $array) ? $array[$key] : $default_value;
 }
@@ -186,7 +186,7 @@ function swoole_init_default_remote_object_server(): void
         $print_log("create dir[{$dir}]");
     } else {
         if (is_file($pid_file)
-            and posix_kill(intval(file_get_contents($pid_file)), 0)) {
+            && posix_kill(intval(file_get_contents($pid_file)), 0)) {
             $print_log('remote object server already running');
             return;
         }
@@ -302,7 +302,7 @@ function swoole_init_default_remote_object_server(): void
 
     $hook_flags = Swoole\Runtime::getHookFlags();
     // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
-    if (defined('SWOOLE_HOOK_MONGODB') and $hook_flags & SWOOLE_HOOK_MONGODB and !is_dir($dir . '/vendor/mongodb/mongodb')) {
+    if (defined('SWOOLE_HOOK_MONGODB') && $hook_flags & SWOOLE_HOOK_MONGODB && !is_dir($dir . '/vendor/mongodb/mongodb')) {
         system("cd {$dir} && composer require mongodb/mongodb");
         $print_log('install mongodb library');
     }
@@ -319,7 +319,7 @@ function swoole_init_default_remote_object_server(): void
     $print_log('start remote object server');
 
     $status = proc_get_status($proc);
-    if (!$status['running'] or !$status['pid']) {
+    if (!$status['running'] || !$status['pid']) {
         throw new RuntimeException('failed to start remote object server');
     }
     $print_log("remote object server pid: {$status['pid']}");

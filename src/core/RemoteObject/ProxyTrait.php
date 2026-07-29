@@ -35,7 +35,7 @@ trait ProxyTrait
         return $this->getObject()->__toString();
     }
 
-    public function __invoke(...$args)
+    public function __invoke(mixed ...$args)
     {
         return $this->getObject()->__invoke(...$args);
     }

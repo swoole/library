@@ -22,11 +22,11 @@ use Swoole\NameResolver;
 
 class Redis extends NameResolver
 {
-    private $serverHost;
+    private string $serverHost;
 
-    private $serverPort;
+    private int $serverPort;
 
-    public function __construct($url, $prefix = 'swoole:service:')
+    public function __construct(string $url, string $prefix = 'swoole:service:')
     {
         parent::__construct($url, $prefix);
         $this->serverHost = $this->info['ip'];

@@ -22,9 +22,10 @@ abstract class NameResolver
 
     protected $info;
 
+    /** @var callable|null */
     private $filter_fn;
 
-    public function __construct($url, protected $prefix = 'swoole_service_')
+    public function __construct(string $url, protected $prefix = 'swoole_service_')
     {
         $this->checkServerUrl($url);
     }
@@ -54,13 +55,14 @@ abstract class NameResolver
     /**
      * return string: final result, non-empty string must be a valid IP address,
      * and an empty string indicates name lookup failed, and lookup operation will not continue.
+     * return array: the single node of the cluster, as returned by Cluster::pop()
      * return Cluster: has multiple nodes and failover is possible
      * return false or null: try another name resolver
-     * @return Cluster|false|string|null
+     * @return Cluster|array|false|string|null
      */
     public function lookup(string $name)
     {
-        if ($this->hasFilter() and ($this->getFilter())($name) !== true) {
+        if ($this->hasFilter() && ($this->getFilter())($name) !== true) {
             return null;
         }
         $cluster = $this->getCluster($name);
@@ -81,7 +83,7 @@ abstract class NameResolver
     protected function checkServerUrl(string $url)
     {
         $info = parse_url($url);
-        if (empty($info['scheme']) or empty($info['host'])) {
+        if (empty($info['scheme']) || empty($info['host'])) {
             throw new \RuntimeException("invalid url parameter '{$url}'");
         }
         if (!filter_var($info['host'], FILTER_VALIDATE_IP)) {

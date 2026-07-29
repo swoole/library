@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 use Swoole\Coroutine\System;
 
-function swoole_gethostbynamel(string $domain)
+function swoole_gethostbynamel(string $domain): array|false
 {
     return System::getaddrinfo($domain);
 }

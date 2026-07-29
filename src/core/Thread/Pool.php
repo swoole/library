@@ -32,9 +32,9 @@ class Pool
 
     private array $arguments = [];
 
-    private object $running;
+    private Atomic $running;
 
-    private object $queue;
+    private Queue $queue;
 
     private array $indexes = [];
 
@@ -46,7 +46,7 @@ class Pool
         $this->threadNum = $threadNum;
     }
 
-    public function withArguments(...$arguments): static
+    public function withArguments(mixed ...$arguments): static
     {
         $this->arguments = $arguments;
         return $this;
@@ -69,7 +69,7 @@ class Pool
      */
     public function start(): void
     {
-        if (empty($this->classDefinitionFile) and class_exists($this->runnableClass, false)) {
+        if (empty($this->classDefinitionFile) && class_exists($this->runnableClass, false)) {
             $file = (new \ReflectionClass($this->runnableClass))->getFileName();
             if (!$this->isValidPhpFile($file)) {
                 throw new \Exception('class definition file must not contain any expressions.');
@@ -150,7 +150,7 @@ class Pool
         $this->running->set(0);
     }
 
-    protected function isValidPhpFile($filePath): bool
+    protected function isValidPhpFile(string $filePath): bool
     {
         $allowedNodeTypes = [
             \PhpParser\Node\Stmt\Class_::class,
@@ -186,7 +186,7 @@ class Pool
         return true;
     }
 
-    protected function createThread($index): void
+    protected function createThread(int $index): void
     {
         $thread = new Thread($this->proxyFile,
             $this->autoloader,

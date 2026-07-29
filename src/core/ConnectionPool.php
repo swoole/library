@@ -22,13 +22,11 @@ class ConnectionPool
     /** @var callable */
     protected $constructor;
 
-    protected int $size;
-
     protected int $num = 0;
 
-    public function __construct(callable $constructor, int $size = self::DEFAULT_SIZE, protected ?string $proxy = null)
+    public function __construct(callable $constructor, protected int $size = self::DEFAULT_SIZE, protected ?string $proxy = null)
     {
-        $this->pool        = new Channel($this->size = $size);
+        $this->pool        = new Channel($this->size);
         $this->constructor = $constructor;
     }
 
@@ -43,7 +41,7 @@ class ConnectionPool
      * Get a connection from the pool.
      *
      * @param float $timeout > 0 means waiting for the specified number of seconds. other means no waiting.
-     * @return mixed|false Returns a connection object from the pool, or false if the pool is full and the timeout is reached.
+     * @return mixed a connection object from the pool, or false if no connection is available before the timeout is reached
      */
     public function get(float $timeout = -1)
     {
@@ -56,7 +54,7 @@ class ConnectionPool
         return $this->pool->pop($timeout);
     }
 
-    public function put($connection): void
+    public function put(mixed $connection): void
     {
         if ($this->pool === null) {
             return;
@@ -84,8 +82,7 @@ class ConnectionPool
             if ($this->proxy) {
                 $connection = new $this->proxy($this->constructor);
             } else {
-                $constructor = $this->constructor;
-                $connection  = $constructor();
+                $connection = ($this->constructor)();
             }
         } catch (\Throwable $throwable) {
             $this->num--;

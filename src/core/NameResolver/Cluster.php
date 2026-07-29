@@ -25,17 +25,19 @@ class Cluster
         if (!filter_var($host, FILTER_VALIDATE_IP)) {
             throw new Exception("Bad IP Address [{$host}]");
         }
-        if ($port < 0 or $port > 65535) {
+        if ($port < 0 || $port > 65535) {
             throw new Exception("Bad Port [{$port}]");
         }
-        if ($weight < 0 or $weight > 100) {
+        if ($weight < 0 || $weight > 100) {
             throw new Exception("Bad Weight [{$weight}]");
         }
         $this->nodes[] = ['host' => $host, 'port' => $port, 'weight' => $weight];
     }
 
     /**
-     * @return false|string
+     * Remove and return a random node, or false if the cluster is empty.
+     *
+     * @return array|false a node as ['host' => string, 'port' => int, 'weight' => int], or false
      */
     public function pop()
     {

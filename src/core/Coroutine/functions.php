@@ -13,7 +13,7 @@ namespace Swoole\Coroutine;
 
 use Swoole\Coroutine;
 
-function run(callable $fn, ...$args)
+function run(callable $fn, mixed ...$args): bool
 {
     $s       = new Scheduler();
     $options = Coroutine::getOptions();
@@ -24,12 +24,12 @@ function run(callable $fn, ...$args)
     return $s->start();
 }
 
-function go(callable $fn, ...$args)
+function go(callable $fn, mixed ...$args): int|false
 {
     return Coroutine::create($fn, ...$args);
 }
 
-function defer(callable $fn)
+function defer(callable $fn): void
 {
     Coroutine::defer($fn);
 }
@@ -89,7 +89,7 @@ function map(array $list, callable $fn, float $timeout = -1): array
     return $list;
 }
 
-function deadlock_check()
+function deadlock_check(): void
 {
     $all_coroutines = Coroutine::list();
     $count          = Coroutine::stats()['coroutine_num'];

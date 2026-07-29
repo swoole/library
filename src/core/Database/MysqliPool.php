@@ -11,12 +11,11 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use mysqli;
 use Swoole\ConnectionPool;
 
 /**
- * @method \mysqli|MysqliProxy get()
- * @method void put(mysqli|MysqliProxy $connection)
+ * @method \mysqli|MysqliProxy|false get(float $timeout = -1)
+ * @method void put(\mysqli|MysqliProxy $connection)
  */
 class MysqliPool extends ConnectionPool
 {

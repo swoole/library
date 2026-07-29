@@ -19,7 +19,7 @@ class Barrier
 {
     private int $cid = -1;
 
-    private $timer = -1;
+    private int $timer = -1;
 
     private static array $cancel_list = [];
 

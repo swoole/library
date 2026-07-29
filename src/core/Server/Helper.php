@@ -239,7 +239,7 @@ class Helper
 
     public static function onWorkerStart(Server $server, int $workerId): void
     {
-        if (!empty($server->setting['stats_file']) and $workerId == 0) {
+        if (!empty($server->setting['stats_file']) && $workerId == 0) {
             $interval_ms = empty($server->setting['stats_timer_interval']) ? self::STATS_TIMER_INTERVAL_TIME : intval($server->setting['stats_timer_interval']);
 
             $server->stats_timer = Timer::tick($interval_ms, function () use ($server) {

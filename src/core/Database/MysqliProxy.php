@@ -27,11 +27,11 @@ class MysqliProxy extends ObjectProxy
     /** @var \mysqli */
     protected $__object;
 
-    protected string $charsetContext;
+    protected string $charsetContext = '';
 
     protected array $setOptContext = [];
 
-    protected array $changeUserContext;
+    protected array $changeUserContext = [];
 
     /** @var callable */
     protected $constructor;
@@ -78,8 +78,7 @@ class MysqliProxy extends ObjectProxy
 
     public function reconnect(): void
     {
-        $constructor = $this->constructor;
-        parent::__construct($constructor());
+        parent::__construct(($this->constructor)());
         $this->round++;
         /* restore context */
         if (!empty($this->charsetContext)) {
@@ -93,13 +92,13 @@ class MysqliProxy extends ObjectProxy
         }
     }
 
-    public function options(int $option, $value): bool
+    public function options(int $option, mixed $value): bool
     {
         $this->setOptContext[$option] = $value;
         return $this->__object->options($option, $value);
     }
 
-    public function set_opt(int $option, $value): bool
+    public function set_opt(int $option, mixed $value): bool
     {
         return $this->options($option, $value);
     }

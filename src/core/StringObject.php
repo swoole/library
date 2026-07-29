@@ -121,9 +121,12 @@ class StringObject implements \Stringable
     }
 
     /**
-     * @param int|null $count
+     * A native type on the by-reference $count would be checked on the way in, rejecting the
+     * reused (or falsy-initialized) variables that str_replace() out-parameter callers pass.
+     *
+     * @param-out int $count
      */
-    public function replace(string $search, string $replace, &$count = null): static
+    public function replace(string $search, string $replace, mixed &$count = null): static
     {
         return new static(str_replace($search, $replace, $this->string, $count)); // @phpstan-ignore new.static
     }
@@ -138,7 +141,7 @@ class StringObject implements \Stringable
         return strrpos($this->string, $needle) === (strlen($this->string) - strlen($needle));
     }
 
-    public function equals($str, bool $strict = false): bool
+    public function equals(mixed $str, bool $strict = false): bool
     {
         if ($str instanceof StringObject) {
             $str = strval($str);

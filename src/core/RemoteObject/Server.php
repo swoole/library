@@ -84,7 +84,7 @@ class Server
     public function onRequest(Request $request, Response $response): void
     {
         $ctx = new Context($request, $response);
-        if ($this->apiKey and $this->apiKey !== $request->header['x-api-key']) {
+        if ($this->apiKey && $this->apiKey !== $request->header['x-api-key']) {
             $response->status(403);
             $ctx->end(['code' => -3, 'msg' => 'invalid api key']);
             return;
@@ -105,7 +105,10 @@ class Server
         }
     }
 
-    private function addObject($object): int
+    /**
+     * @param object|resource $object
+     */
+    private function addObject(mixed $object): int
     {
         // The spl_object_id/spl_object_hash cannot be used,
         // as the IDs they generate will be reused after the objects are destroyed.
@@ -116,7 +119,7 @@ class Server
 
     private function marshal(Context $ctx, mixed $data): mixed
     {
-        if (is_object($data) or is_resource($data)) {
+        if (is_object($data) || is_resource($data)) {
             $object_id = $this->addObject($data);
             return RemoteObject::marshal($object_id, $ctx->getCoroutineId(), $ctx->getClientId());
         }
@@ -128,9 +131,9 @@ class Server
         return $data;
     }
 
-    private function unmarshal($data): mixed
+    private function unmarshal(mixed $data): mixed
     {
-        if (is_object($data) and $data instanceof RemoteObject) {
+        if ($data instanceof RemoteObject) {
             return $this->objects[$data->getObjectId()];
         }
         if (is_array($data)) {
@@ -148,7 +151,7 @@ class Server
     private function _new(Context $ctx): void
     {
         $class = trim($ctx->getParam('class'), '\ ');
-        if (count($this->allowedClasses) > 0 and !isset($this->allowedClasses[$class])) {
+        if (count($this->allowedClasses) > 0 && !isset($this->allowedClasses[$class])) {
             throw new Exception("class[{$class}] not allowed");
         }
         $class = '\\' . $class;
@@ -164,7 +167,7 @@ class Server
     private function _call_function(Context $ctx): void
     {
         $fn = trim($ctx->getParam('function'), '\ ');
-        if (count($this->allowedFunctions) > 0 and !isset($this->allowedFunctions[$fn])) {
+        if (count($this->allowedFunctions) > 0 && !isset($this->allowedFunctions[$fn])) {
             throw new Exception("function[{$fn}] not allowed");
         }
         $args = $ctx->getDataParam('args');

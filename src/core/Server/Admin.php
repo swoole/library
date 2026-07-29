@@ -408,7 +408,7 @@ class Admin
 
         $admin_server->handle('/api', function (Request $req, Response $resp) use ($server) {
             $path_array = swoole_string($req->server['request_uri'])->trim('/')->split('/');
-            if ($path_array->count() < 2 or $path_array->count() > 3) {
+            if ($path_array->count() < 2 || $path_array->count() > 3) {
                 $resp->status(403);
                 $resp->end(self::json('Bad API path', 4003));
                 return;
@@ -1021,7 +1021,7 @@ class Admin
         return self::json($result);
     }
 
-    private static function handlerMulti(Server $server, array $list)
+    private static function handlerMulti(Server $server, array $list): array
     {
         $return_list = [];
         foreach ($list as $key => $content) {
@@ -1075,7 +1075,7 @@ class Admin
         return $return_list;
     }
 
-    private static function handlerGetAll(Server $server, StringObject $process, $cmd, $data, bool $json_decode = true)
+    private static function handlerGetAll(Server $server, StringObject $process, string $cmd, ?array $data, bool $json_decode = true): array
     {
         if ($process->equals('all')) {
             $result = self::handlerGetMaster($cmd, $data, $server, $json_decode) +
@@ -1115,19 +1115,19 @@ class Admin
         return $result;
     }
 
-    private static function handlerGetMaster($cmd, $data, Server $server, bool $json_decode = false)
+    private static function handlerGetMaster(string $cmd, ?array $data, Server $server, bool $json_decode = false): array
     {
         $list['master'] = $server->command($cmd, 0, SWOOLE_SERVER_COMMAND_MASTER, $data, $json_decode);
         return $list;
     }
 
-    private static function handlerGetManager($cmd, $data, Server $server, bool $json_decode = false)
+    private static function handlerGetManager(string $cmd, ?array $data, Server $server, bool $json_decode = false): array
     {
         $list['manager'] = $server->command($cmd, 0, SWOOLE_SERVER_COMMAND_MANAGER, $data, $json_decode);
         return $list;
     }
 
-    private static function handlerGetAllReactor($cmd, $data, Server $server, bool $json_decode = false)
+    private static function handlerGetAllReactor(string $cmd, ?array $data, Server $server, bool $json_decode = false): array
     {
         $list = [];
         if ($server->mode === SWOOLE_BASE) {
@@ -1145,7 +1145,7 @@ class Admin
         return $list;
     }
 
-    private static function handlerGetAllWorker($cmd, $data, Server $server, bool $json_decode = false)
+    private static function handlerGetAllWorker(string $cmd, ?array $data, Server $server, bool $json_decode = false): array
     {
         $process_type = SWOOLE_SERVER_COMMAND_EVENT_WORKER;
         $worker_num   = $server->setting['worker_num'];
@@ -1156,7 +1156,7 @@ class Admin
         return $list;
     }
 
-    private static function handlerGetAllTaskWorker($cmd, $data, Server $server, bool $json_decode = false)
+    private static function handlerGetAllTaskWorker(string $cmd, ?array $data, Server $server, bool $json_decode = false): array
     {
         $process_type = SWOOLE_SERVER_COMMAND_TASK_WORKER;
         $list         = [];
@@ -1170,7 +1170,7 @@ class Admin
         return $list;
     }
 
-    private static function getProcessCpuUsage($pid)
+    private static function getProcessCpuUsage(string|int $pid): array
     {
         // TODO: Support other OS
         if (PHP_OS_FAMILY !== 'Linux' || !file_exists("/proc/{$pid}/stat")) {
@@ -1184,7 +1184,7 @@ class Admin
         assert($dataAll[0] === 'cpu', '/proc/stat malformed');
         $dataProc = preg_split("/[ \t]+/", $statProc, 15);
 
-        if (isset($dataProc[13]) and isset($dataProc[14])) {
+        if (isset($dataProc[13], $dataProc[14])) {
             return [
                 (int) $dataAll[1] + (int) $dataAll[2] + (int) $dataAll[3] + (int) $dataAll[4],
                 (int) $dataProc[13] + (int) $dataProc[14],
@@ -1193,16 +1193,16 @@ class Admin
         return [(int) $dataAll[1] + (int) $dataAll[2] + (int) $dataAll[3] + (int) $dataAll[4]];
     }
 
-    private static function getProcessMemoryRealUsage($pid = 'self')
+    private static function getProcessMemoryRealUsage(string|int $pid = 'self'): int
     {
         $status = self::getProcessStatus($pid);
-        if (!is_array($status) || !isset($status['VmRSS'])) {
+        if (!isset($status['VmRSS'])) {
             return 0;
         }
         return intval($status['VmRSS']) * 1024;
     }
 
-    private static function getProcessStatus($pid = 'self')
+    private static function getProcessStatus(string|int $pid = 'self'): array
     {
         $array = [];
         // TODO: Support other OS
@@ -1282,7 +1282,7 @@ class Admin
         return true;
     }
 
-    private static function json($data, $code = 0)
+    private static function json(mixed $data, int $code = 0): string|false
     {
         $result = json_encode(['code' => $code, 'data' => $data], JSON_INVALID_UTF8_IGNORE);
         if (empty($result)) {

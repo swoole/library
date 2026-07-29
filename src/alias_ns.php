@@ -14,17 +14,17 @@ namespace Co;
 use Swoole\Coroutine;
 
 if (SWOOLE_USE_SHORTNAME) {
-    function run(callable $fn, ...$args)
+    function run(callable $fn, mixed ...$args): bool
     {
         return \Swoole\Coroutine\run($fn, ...$args);
     }
 
-    function go(callable $fn, ...$args)
+    function go(callable $fn, mixed ...$args): int|false
     {
         return Coroutine::create($fn, ...$args);
     }
 
-    function defer(callable $fn)
+    function defer(callable $fn): void
     {
         Coroutine::defer($fn);
     }

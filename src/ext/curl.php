@@ -16,12 +16,12 @@ function swoole_curl_init(string $url = ''): Swoole\Curl\Handler
     return new Swoole\Curl\Handler($url);
 }
 
-function swoole_curl_setopt(Swoole\Curl\Handler $obj, int $opt, $value): bool
+function swoole_curl_setopt(Swoole\Curl\Handler $obj, int $opt, mixed $value): bool
 {
     return $obj->setOpt($opt, $value);
 }
 
-function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, $array): bool
+function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, array $array): bool
 {
     foreach ($array as $k => $v) {
         if ($obj->setOpt($k, $v) !== true) {
@@ -31,15 +31,15 @@ function swoole_curl_setopt_array(Swoole\Curl\Handler $obj, $array): bool
     return true;
 }
 
-function swoole_curl_exec(Swoole\Curl\Handler $obj)
+function swoole_curl_exec(Swoole\Curl\Handler $obj): string|bool
 {
     return $obj->exec();
 }
 
-function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0)
+function swoole_curl_getinfo(Swoole\Curl\Handler $obj, int $opt = 0): mixed
 {
     $info = $obj->getInfo();
-    if (is_array($info) and $opt) {
+    if (is_array($info) && $opt) {
         return match ($opt) {
             CURLINFO_EFFECTIVE_URL      => $info['url'],
             CURLINFO_HTTP_CODE          => $info['http_code'],
@@ -70,9 +70,9 @@ function swoole_curl_error(Swoole\Curl\Handler $obj): string
     return $obj->error();
 }
 
-function swoole_curl_reset(Swoole\Curl\Handler $obj)
+function swoole_curl_reset(Swoole\Curl\Handler $obj): void
 {
-    return $obj->reset();
+    $obj->reset();
 }
 
 function swoole_curl_close(Swoole\Curl\Handler $obj): void
@@ -80,7 +80,7 @@ function swoole_curl_close(Swoole\Curl\Handler $obj): void
     $obj->close();
 }
 
-function swoole_curl_multi_getcontent(Swoole\Curl\Handler $obj)
+function swoole_curl_multi_getcontent(Swoole\Curl\Handler $obj): ?string
 {
     return $obj->getContent();
 }

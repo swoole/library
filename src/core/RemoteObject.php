@@ -31,7 +31,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         // No remote calls are executed during destruction.
         // If the objectId is 0, it indicates that the object may have been a temporary object created by a function call
         // and does not need to be destructed.
-        if ($this->client and $this->objectId > 0) {
+        if ($this->client && $this->objectId > 0) {
             try {
                 $this->execute('/destroy', [
                     'object' => $this->objectId,
@@ -102,7 +102,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         return (string) $rs['value'];
     }
 
-    public function __invoke(...$args)
+    public function __invoke(mixed ...$args)
     {
         $rs = $this->execute('/call_method', [
             'object' => $this->objectId,
