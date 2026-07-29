@@ -36,7 +36,8 @@ if (!class_exists(Client::class, false)) {
  * Besides the settings understood by the underlying client, set() accepts:
  * - heartbeat_check_interval: seconds between two idle checks (default: 3)
  * - heartbeat_idle_time: seconds without a new request after which a connection with no in-flight
- *   requests is closed automatically (default: 10); a non-positive value disables idle closing
+ *   requests is closed automatically (default: 10); a non-positive value disables idle closing, in
+ *   which case the connection stays open until close() is called or the peer closes it
  */
 class MultiplexClient extends Client
 {
@@ -76,10 +77,10 @@ class MultiplexClient extends Client
     protected bool $heartbeatCheckerRunning = false;
 
     /**
-     * @var int Unix timestamp of the most recent send; the heartbeat checker measures idleness
-     *          against it
+     * @var float Unix timestamp of the most recent activity (connection startup or send); the
+     *            heartbeat checker measures idleness against it
      */
-    protected int $lastSendTime = 0;
+    protected float $lastActiveTime = 0;
 
     /**
      * Sends a request over the shared connection and waits for its response.
@@ -101,8 +102,11 @@ class MultiplexClient extends Client
             $timeout = (float) ($this->setting['timeout'] ?? -1);
         }
         $this->ensureRecvLoop();
-        $streamId           = $this->send($request);
-        $this->lastSendTime = time();
+        // Stamped on both sides of send(): before, so that a send in progress never counts as idle
+        // time (send() can yield); after, so that idleness is measured from send completion.
+        $this->lastActiveTime = microtime(true);
+        $streamId             = $this->send($request);
+        $this->lastActiveTime = microtime(true);
 
         if ($streamId === false) {
             return false;
@@ -205,6 +209,11 @@ class MultiplexClient extends Client
         $this->startupBarrier = new Channel(1);
         try {
             $token = $this->recvLoopToken = new \stdClass();
+            // The connection is being (re)established: reset the idle clock, or the heartbeat
+            // checker could close the connection mid-startup based on a stale (or zero) stamp —
+            // no stream channel is registered before send() returns, so nothing else marks this
+            // request as in flight yet.
+            $this->lastActiveTime = microtime(true);
             if (!$this->ping()) {
                 $this->reconnect();
             }
@@ -231,7 +240,12 @@ class MultiplexClient extends Client
         $reason = '';
         try {
             while (true) {
-                $response = $this->recv();
+                // Wait without a read timeout: recv() called without one falls back to the socket's
+                // read timeout (the `timeout` setting, 60 seconds when unset), which would tear down
+                // a merely quiet connection as broken — aborting every in-flight request with it —
+                // and cap how long any single response may take regardless of the timeout passed to
+                // request(). Idle teardown belongs to the heartbeat checker alone.
+                $response = $this->recv(-1);
 
                 if ($this->recvLoopToken !== $token) {
                     $reason = 'client closed.';
@@ -289,7 +303,7 @@ class MultiplexClient extends Client
                         if ($this->recvLoopToken === null) {
                             break;
                         }
-                        if ($this->streamChannels === [] && time() - $this->lastSendTime > $maxIdleTime) {
+                        if ($this->streamChannels === [] && microtime(true) - $this->lastActiveTime > $maxIdleTime) {
                             $this->close();
                             break;
                         }
