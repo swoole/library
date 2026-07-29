@@ -35,21 +35,26 @@ if (!class_exists(Client::class, false)) {
  *
  * The connection is owned by that machinery: the frame-level API inherited from the base class
  * (recv(), read(), write(), goaway()) is disabled and throws, and send() must not be called
- * directly — the response to a stream that request() did not register would be parked forever,
+ * directly -- the response to a stream that request() did not register would be parked forever,
  * and the connection could then never idle-close. Use request().
  *
  * Besides the settings understood by the underlying client, set() accepts two options that borrow
- * Swoole\Server's heartbeat vocabulary — here they govern the client's own outbound connection:
- * - heartbeat_check_interval: seconds between two idle checks (default: 3; non-positive values
- *   fall back to the default)
+ * Swoole\Server's heartbeat vocabulary -- here they govern the client's own outbound connection:
+ * - heartbeat_check_interval: seconds between two idle checks (default:
+ *   DEFAULT_HEARTBEAT_CHECK_INTERVAL; non-positive values fall back to the default)
  * - heartbeat_idle_time: seconds without a new request after which a connection with no in-flight
- *   requests is closed automatically (default: 10); a non-positive value disables idle closing, in
- *   which case the connection stays open until close() is called or the peer closes it
+ *   requests is closed automatically (default: DEFAULT_HEARTBEAT_IDLE_TIME); a non-positive value
+ *   disables idle closing, in which case the connection stays open until close() is called or the
+ *   peer closes it
  * Both are read when the heartbeat checker starts; changing them on a client whose checker is
  * already running takes effect only after the next close().
  */
 class MultiplexClient extends Client
 {
+    protected const DEFAULT_HEARTBEAT_CHECK_INTERVAL = 3;
+
+    protected const DEFAULT_HEARTBEAT_IDLE_TIME = 10;
+
     /**
      * @var object|null identity token of the currently running recv loop; null when none is running.
      *                  A recv loop whose token no longer matches is stale and must exit without
@@ -86,8 +91,15 @@ class MultiplexClient extends Client
     protected bool $heartbeatCheckerRunning = false;
 
     /**
-     * @var float Unix timestamp of the most recent activity (connection startup or send); the
-     *            heartbeat checker measures idleness against it
+     * @var int number of request() calls currently in progress -- including connection setup and
+     *          sending, where no stream channel exists yet; the heartbeat checker must not close
+     *          the connection while one is pending
+     */
+    protected int $pendingRequests = 0;
+
+    /**
+     * @var float Unix timestamp of the completion of the most recent request() call, successful or
+     *            not; the heartbeat checker measures idleness against it
      */
     protected float $lastActiveTime = 0;
 
@@ -102,7 +114,7 @@ class MultiplexClient extends Client
      * @return false|Response the response, or false on failure: the connection could not be
      *                        established, sending failed, the wait timed out or was canceled, or
      *                        the connection was closed while waiting. errCode/errMsg describe the
-     *                        cause — best-effort only: they live on the shared client, so read
+     *                        cause -- best-effort only: they live on the shared client, so read
      *                        them immediately after the false return, before yielding; a
      *                        concurrently failing request may overwrite them.
      */
@@ -114,58 +126,64 @@ class MultiplexClient extends Client
             // forever.
             $timeout = (float) ($this->setting[Constant::OPTION_TIMEOUT] ?? -1);
         }
-        if (!$this->ensureRecvLoop()) {
-            return false;
-        }
-        // Stamped on both sides of send(): before, so that a send in progress never counts as idle
-        // time (send() can yield); after, so that idleness is measured from send completion.
-        $this->lastActiveTime = microtime(true);
-        $streamId             = $this->send($request);
-        $this->lastActiveTime = microtime(true);
-
-        if ($streamId === false) {
-            return false;
-        }
-        // The response can arrive before send() returns when send() yields on socket I/O; the recv
-        // loop then has registered the stream channel already, with the response buffered in it.
-        $chan = $this->streamChannels[$streamId] ?? null;
-        if ($chan === null) {
-            if ($this->recvLoopToken === null) {
-                // The client was closed while send() yielded, and the flush has already dropped any
-                // response parked for this stream: fail fast instead of waiting out the timeout on
-                // a channel nothing will ever push to.
-                $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed while the request was being sent');
+        // The counter -- not the stream-channel registry, which only has an entry once send() has
+        // returned -- is what keeps the heartbeat checker from closing the connection while a
+        // request is still connecting, sending, or waiting.
+        $this->pendingRequests++;
+        try {
+            if (!$this->ensureRecvLoop()) {
                 return false;
             }
-            $chan = $this->openStreamChannel($streamId);
-        }
-        $data = false;
-        try {
-            $data = $chan->pop($timeout);
-        } finally {
-            $this->closeStreamChannel($streamId);
-            if ($data === false) {
-                if ($chan->errCode === SWOOLE_CHANNEL_CLOSED) {
-                    // Connection teardown: no abandoned-stream marker may be left behind — stream
-                    // IDs restart after a reconnect, and a stale marker would drop a response of
-                    // the next connection.
-                    $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed while waiting for the response');
-                } else {
-                    // Timed out or canceled: nobody waits for this stream anymore, but the
-                    // connection lives on — the recv loop must drop the late response instead of
-                    // parking it, which would leak the parked channel (and block idle closing)
-                    // until the connection closes.
-                    $this->abandonedStreams[$streamId] = true;
-                    if ($chan->errCode === SWOOLE_CHANNEL_TIMEOUT) {
-                        $this->setError(SWOOLE_ERROR_CO_TIMEDOUT, 'the response timed out');
+            $streamId = $this->send($request);
+            if ($streamId === false) {
+                return false;
+            }
+            // The response can arrive before send() returns when send() yields on socket I/O; the
+            // recv loop then has registered the stream channel already, with the response buffered
+            // in it.
+            $chan = $this->streamChannels[$streamId] ?? null;
+            if ($chan === null) {
+                if ($this->recvLoopToken === null) {
+                    // The client was closed while send() yielded, and the flush has already dropped
+                    // any response parked for this stream: fail fast instead of waiting out the
+                    // timeout on a channel nothing will ever push to.
+                    $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed while the request was being sent');
+                    return false;
+                }
+                $chan = $this->openStreamChannel($streamId);
+            }
+            $data = false;
+            try {
+                $data = $chan->pop($timeout);
+            } finally {
+                $this->closeStreamChannel($streamId);
+                if ($data === false) {
+                    if ($chan->errCode === SWOOLE_CHANNEL_CLOSED) {
+                        // Connection teardown: no abandoned-stream marker may be left behind --
+                        // stream IDs restart after a reconnect, and a stale marker would drop a
+                        // response of the next connection.
+                        $this->setError(SWOOLE_ERROR_CLIENT_NO_CONNECTION, 'the connection was closed while waiting for the response');
                     } else {
-                        $this->setError(SWOOLE_ERROR_CO_CANCELED, 'the wait for the response was canceled');
+                        // Timed out or canceled: nobody waits for this stream anymore, but the
+                        // connection lives on -- the recv loop must drop the late response instead
+                        // of parking it, which would leak the parked channel (and block idle
+                        // closing) until the connection closes.
+                        $this->abandonedStreams[$streamId] = true;
+                        if ($chan->errCode === SWOOLE_CHANNEL_TIMEOUT) {
+                            $this->setError(SWOOLE_ERROR_CO_TIMEDOUT, 'the response timed out');
+                        } else {
+                            $this->setError(SWOOLE_ERROR_CO_CANCELED, 'the wait for the response was canceled');
+                        }
                     }
                 }
             }
-        }
 
-        return $data;
+            return $data;
+        } finally {
+            $this->pendingRequests--;
+            // Idleness is measured from the completion of the last request, however it ended.
+            $this->lastActiveTime = microtime(true);
+        }
     }
 
     /**
@@ -179,7 +197,7 @@ class MultiplexClient extends Client
      *              already closed by the heartbeat checker or the recv loop. Unlike in the base
      *              class, the value does not reflect the raw socket close: that reports failure
      *              whenever a coroutine is still bound to the socket, which on this class is the
-     *              normal case — the recv loop reads the connection permanently.
+     *              normal case -- the recv loop reads the connection permanently.
      */
     public function close(): bool
     {
@@ -188,7 +206,7 @@ class MultiplexClient extends Client
         // teardown may retry immediately, and must find the token cleared and reconnect instead
         // of sending into the socket being torn down. parent::close() itself resumes coroutines
         // bound to the socket (the recv loop, senders mid-send()) and reports
-        // SW_ERROR_CO_SOCKET_CLOSE_WAIT on errCode while doing so — mechanics, not a failure —
+        // SW_ERROR_CO_SOCKET_CLOSE_WAIT on errCode while doing so -- mechanics, not a failure --
         // so the error slot is restored afterwards.
         $this->recvLoopToken = null;
         $errCode             = $this->errCode;
@@ -200,7 +218,7 @@ class MultiplexClient extends Client
         $this->abandonedStreams = [];
         // Clear the property before closing, as with the startup barrier: the close resumes the
         // heartbeat checker immediately, and when a requester woken above has already started a
-        // new connection generation, the checker does not exit — it must find the property null
+        // new connection generation, the checker does not exit -- it must find the property null
         // and create a fresh channel, not re-enter pop() on the closed one, which returns without
         // yielding: a busy spin that would starve the event loop.
         $sleepChannel       = $this->sleepChannel;
@@ -318,11 +336,6 @@ class MultiplexClient extends Client
         $token                = null;
         try {
             $token = $this->recvLoopToken = new \stdClass();
-            // The connection is being (re)established: reset the idle clock, or the heartbeat
-            // checker could close the connection mid-startup based on a stale (or zero) stamp —
-            // no stream channel is registered before send() returns, so nothing else marks this
-            // request as in flight yet.
-            $this->lastActiveTime = microtime(true);
             if (!$this->ping() && !$this->reconnect()) {
                 // The connection cannot be established; connect() has recorded a precise errCode
                 // (such as a refused connection). Returning here keeps the caller from send()ing,
@@ -330,7 +343,7 @@ class MultiplexClient extends Client
                 return false;
             }
             // close() may have cleared the token while ping()/reconnect() yielded. A loop spawned
-            // with that stale token would park in recv() — binding the socket — while looking
+            // with that stale token would park in recv() -- binding the socket -- while looking
             // stopped to everyone else, and the next request would spawn a second reader onto the
             // same socket.
             if ($this->recvLoopToken !== $token) {
@@ -339,7 +352,11 @@ class MultiplexClient extends Client
             }
             go(fn () => $this->recvLoop($token));
             $spawned = true;
-            return true;
+            // The loop runs immediately until its first yield: on a connection that died between
+            // connect() and the first read, it exits -- and runs close() -- before go() returns, so
+            // an unconditional true here would let the caller send() on the closed client and
+            // overwrite the precise errCode with a generic one.
+            return $this->recvLoopToken === $token;
         } finally {
             if (!$spawned && $this->recvLoopToken === $token) {
                 // Startup died before the recv loop was spawned (an exception from the health
@@ -349,7 +366,7 @@ class MultiplexClient extends Client
             }
             // Clear the property before closing: close() resumes the waiters immediately, and a
             // waiter that still saw the barrier set would re-enter pop() on the closed channel,
-            // which returns synchronously — a busy spin that never yields back to this coroutine.
+            // which returns synchronously -- a busy spin that never yields back to this coroutine.
             $barrier              = $this->startupBarrier;
             $this->startupBarrier = null;
             $barrier->close();
@@ -370,10 +387,10 @@ class MultiplexClient extends Client
             while (true) {
                 // Wait without a read timeout: recv() called without one falls back to the socket's
                 // read timeout (the `timeout` setting, 60 seconds when unset), which would tear down
-                // a merely quiet connection as broken — aborting every in-flight request with it —
+                // a merely quiet connection as broken -- aborting every in-flight request with it --
                 // and cap how long any single response may take regardless of the timeout passed to
                 // request(). Idle teardown belongs to the heartbeat checker alone. (parent:: because
-                // the public recv() is disabled — this loop is the connection's only reader.)
+                // the public recv() is disabled -- this loop is the connection's only reader.)
                 $response = parent::recv(-1);
 
                 if ($this->recvLoopToken !== $token) {
@@ -418,15 +435,15 @@ class MultiplexClient extends Client
         if ($this->heartbeatCheckerRunning) {
             return;
         }
-        $maxIdleTime = (float) ($this->setting[Constant::OPTION_HEARTBEAT_IDLE_TIME] ?? 10);
+        $maxIdleTime = (float) ($this->setting[Constant::OPTION_HEARTBEAT_IDLE_TIME] ?? self::DEFAULT_HEARTBEAT_IDLE_TIME);
         if ($maxIdleTime <= 0) {
             return;
         }
-        $checkInterval = (float) ($this->setting[Constant::OPTION_HEARTBEAT_CHECK_INTERVAL] ?? 3);
+        $checkInterval = (float) ($this->setting[Constant::OPTION_HEARTBEAT_CHECK_INTERVAL] ?? self::DEFAULT_HEARTBEAT_CHECK_INTERVAL);
         if ($checkInterval <= 0) {
-            // A non-positive interval would make interruptibleSleep() wait forever — silently
+            // A non-positive interval would make interruptibleSleep() wait forever -- silently
             // disabling idle closing through the wrong option while pinning the checker coroutine.
-            $checkInterval = 3;
+            $checkInterval = self::DEFAULT_HEARTBEAT_CHECK_INTERVAL;
         }
 
         $this->heartbeatCheckerRunning = true;
@@ -438,7 +455,9 @@ class MultiplexClient extends Client
                         if ($this->recvLoopToken === null) {
                             break;
                         }
-                        if ($this->streamChannels === [] && microtime(true) - $this->lastActiveTime > $maxIdleTime) {
+                        // The pending-requests counter covers requests still connecting or sending;
+                        // the stream-channel registry covers responses parked for pickup.
+                        if ($this->pendingRequests === 0 && $this->streamChannels === [] && microtime(true) - $this->lastActiveTime > $maxIdleTime) {
                             $this->close();
                             break;
                         }
@@ -465,6 +484,8 @@ class MultiplexClient extends Client
      */
     protected function interruptibleSleep(float $seconds): void
     {
+        // Deliberately not the null-coalescing assignment operator: written adjacently it contains
+        // a C trigraph sequence that breaks this file when packed into the extension header.
         $this->sleepChannel = $this->sleepChannel ?? new Channel(1);
         $this->sleepChannel->pop($seconds);
     }
