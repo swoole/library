@@ -29,20 +29,24 @@ if (!class_exists(Client::class, false)) {
  * An HTTP/2 client that multiplexes requests from many coroutines over one shared connection.
  *
  * A single recv-loop coroutine reads every response off the connection and routes it to the
- * requesting coroutine by stream ID. The connection is health-checked before each request and
- * re-established transparently when it is gone; a heartbeat checker closes it after a period
- * without requests.
+ * requesting coroutine by stream ID. The connection is established on demand and re-established
+ * transparently after a teardown (the pre-send health check only verifies the local socket state,
+ * not peer liveness); a heartbeat checker closes it after a period without requests.
  *
  * The connection is owned by that machinery: the frame-level API inherited from the base class
  * (recv(), read(), write(), goaway()) is disabled and throws, and send() must not be called
  * directly — the response to a stream that request() did not register would be parked forever,
  * and the connection could then never idle-close. Use request().
  *
- * Besides the settings understood by the underlying client, set() accepts:
- * - heartbeat_check_interval: seconds between two idle checks (default: 3)
+ * Besides the settings understood by the underlying client, set() accepts two options that borrow
+ * Swoole\Server's heartbeat vocabulary — here they govern the client's own outbound connection:
+ * - heartbeat_check_interval: seconds between two idle checks (default: 3; non-positive values
+ *   fall back to the default)
  * - heartbeat_idle_time: seconds without a new request after which a connection with no in-flight
  *   requests is closed automatically (default: 10); a non-positive value disables idle closing, in
  *   which case the connection stays open until close() is called or the peer closes it
+ * Both are read when the heartbeat checker starts; changing them on a client whose checker is
+ * already running takes effect only after the next close().
  */
 class MultiplexClient extends Client
 {
@@ -105,7 +109,7 @@ class MultiplexClient extends Client
             // The ping check in ensureRecvLoop() only confirms the request could be written out, not
             // that the peer is alive, so an unbounded default wait could hang on a stale connection
             // forever.
-            $timeout = (float) ($this->setting['timeout'] ?? -1);
+            $timeout = (float) ($this->setting[Constant::OPTION_TIMEOUT] ?? -1);
         }
         if (!$this->ensureRecvLoop()) {
             return false;
@@ -158,6 +162,11 @@ class MultiplexClient extends Client
      * and stopping the recv loop and the heartbeat checker.
      *
      * The client remains usable: the next request() reconnects.
+     *
+     * @return bool whether the underlying connection was open and has been closed now. It is false
+     *              when there was nothing left to close — a repeated close(), or a connection the
+     *              heartbeat checker or the recv loop closed already — even though the multiplexer
+     *              teardown itself did run.
      */
     public function close(): bool
     {
@@ -330,7 +339,7 @@ class MultiplexClient extends Client
      */
     protected function recvLoop(object $token): void
     {
-        $reason = '';
+        $reason = 'unknown';
         try {
             while (true) {
                 // Wait without a read timeout: recv() called without one falls back to the socket's
@@ -342,12 +351,12 @@ class MultiplexClient extends Client
                 $response = parent::recv(-1);
 
                 if ($this->recvLoopToken !== $token) {
-                    $reason = 'client closed.';
+                    $reason = 'the client was closed or the loop was superseded';
                     break;
                 }
 
                 if ($response === false) {
-                    $reason = 'connection broken.';
+                    $reason = 'the connection was broken';
                     break;
                 }
 
@@ -364,9 +373,10 @@ class MultiplexClient extends Client
                 }
             }
         } catch (\Throwable $exception) {
+            $reason = 'an exception was thrown: ' . $exception->getMessage();
             swoole_error_log(SWOOLE_LOG_ERROR, (string) $exception);
         } finally {
-            swoole_error_log(SWOOLE_LOG_DEBUG, 'Recv loop broken, wait to restart in next time. The reason is ' . $reason);
+            swoole_error_log(SWOOLE_LOG_DEBUG, 'Recv loop stopped; the next request will restart it. Reason: ' . $reason);
             if ($this->recvLoopToken === $token) {
                 $this->close();
             }
@@ -387,6 +397,11 @@ class MultiplexClient extends Client
             return;
         }
         $checkInterval = (float) ($this->setting[Constant::OPTION_HEARTBEAT_CHECK_INTERVAL] ?? 3);
+        if ($checkInterval <= 0) {
+            // A non-positive interval would make interruptibleSleep() wait forever — silently
+            // disabling idle closing through the wrong option while pinning the checker coroutine.
+            $checkInterval = 3;
+        }
 
         $this->heartbeatCheckerRunning = true;
         go(
