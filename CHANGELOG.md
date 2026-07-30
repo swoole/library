@@ -1,3 +1,122 @@
+## 6.2.2 (2026-07-08)
+
+Built-in PHP library included in [Swoole v6.2.2](https://github.com/swoole/swoole-src/releases/tag/v6.2.2).
+
+Changed:
+
+* Process-related helper functions now use `pcntl_waitpid()` when running in a non-coroutine environment.
+* Refactored how the default remote object server directory is resolved in `src/functions.php`.
+
+Fixed:
+
+* MR swoole/library#189: Fix a PHP 8.5 deprecation notice about null array keys in method `\Swoole\ArrayObject::valid()`.
+
+## 6.2.1 (2026-05-15)
+
+Built-in PHP library included in [Swoole v6.2.1](https://github.com/swoole/swoole-src/releases/tag/v6.2.1).
+
+Changed:
+
+* MR swoole/library#186: Expanded the lost-connection detection heuristics of `\Swoole\Database\DetectsLostConnections` with many additional error message patterns (SSL timeouts, connection-refused/network-unreachable variants, Vitess/VTGate errors, access denied, and more), improving automatic reconnection for the database connection pools.
+* `src/vendor_init.php` now also loads the `ext/curl.php`, `ext/sockets.php`, and `ext/standard.php` coroutine patches when the library is installed via Composer.
+
+Fixed:
+
+* Fix the startup logic of the default remote object server to use `\Swoole\Coroutine\System::waitpid()` instead of `proc_close()`, avoiding blocking behavior outside of a coroutine environment.
+
+## 6.2.0 (2026-04-07)
+
+Built-in PHP library included in [Swoole v6.2.0](https://github.com/swoole/swoole-src/releases/tag/v6.2.0).
+
+Added:
+
+* MR swoole/library#183: Added the [\Swoole\RemoteObject module](https://github.com/swoole/library/tree/v6.2.0/src/core/RemoteObject) for transparently calling objects hosted on a remote server, including a client, context, proxy trait, and server implementation.
+* Added `ext-mongodb` hook support for the Remote Object service.
+* Added examples for the remote object service (client, server bootstrap, MongoDB usage).
+
+Changed:
+
+* The Remote Object service uses PHP serialization instead of JSON encoding for its wire format, since JSON does not support binary content.
+* The default remote object server is now initialized automatically when a remote object call occurs.
+
+Removed:
+
+* Dropped support for PHP 8.0 and 8.1.
+
+## 6.1.9 (2026-07-07)
+
+Built-in PHP library included in [Swoole v6.1.9](https://github.com/swoole/swoole-src/releases/tag/v6.1.9).
+
+This release is the same as Swoole Library [v6.1.8](https://github.com/swoole/library/releases/tag/v6.1.8).
+
+## 6.1.8 (2026-04-28)
+
+Built-in PHP library included in [Swoole v6.1.8](https://github.com/swoole/swoole-src/releases/tag/v6.1.8).
+
+This release is the same as Swoole Library [v6.1.7](https://github.com/swoole/library/releases/tag/v6.1.7).
+
+## 6.1.7 (2026-02-25)
+
+Built-in PHP library included in [Swoole v6.1.7](https://github.com/swoole/swoole-src/releases/tag/v6.1.7).
+
+This release is the same as Swoole Library [v6.1.6](https://github.com/swoole/library/releases/tag/v6.1.6).
+
+## 6.1.6 (2025-12-28)
+
+Built-in PHP library included in [Swoole v6.1.6](https://github.com/swoole/swoole-src/releases/tag/v6.1.6).
+
+This release is the same as Swoole Library [v6.1.5](https://github.com/swoole/library/releases/tag/v6.1.5).
+
+## 6.1.5 (2025-12-21)
+
+Built-in PHP library included in [Swoole v6.1.5](https://github.com/swoole/swoole-src/releases/tag/v6.1.5).
+
+This release is the same as Swoole Library [v6.1.4](https://github.com/swoole/library/releases/tag/v6.1.4).
+
+## 6.1.4 (2025-12-06)
+
+Built-in PHP library included in [Swoole v6.1.4](https://github.com/swoole/swoole-src/releases/tag/v6.1.4).
+
+This release is the same as Swoole Library [v6.1.3](https://github.com/swoole/library/releases/tag/v6.1.3).
+
+## 6.1.3 (2025-11-26)
+
+Built-in PHP library included in [Swoole v6.1.3](https://github.com/swoole/swoole-src/releases/tag/v6.1.3).
+
+This release is the same as Swoole Library [v6.1.2](https://github.com/swoole/library/releases/tag/v6.1.2).
+
+## 6.1.2 (2025-11-11)
+
+Built-in PHP library included in [Swoole v6.1.2](https://github.com/swoole/swoole-src/releases/tag/v6.1.2).
+
+This release is the same as Swoole Library [v6.1.1](https://github.com/swoole/library/releases/tag/v6.1.1).
+
+## 6.1.1 (2025-10-30)
+
+Built-in PHP library included in [Swoole v6.1.1](https://github.com/swoole/swoole-src/releases/tag/v6.1.1).
+
+Changed:
+
+* Prettified the output of function `\Swoole\Coroutine\deadlock_check()`: the deadlock report now uses consistently indented and width-aligned separators, per-coroutine backtrace sections, and a closing separator line, making the fatal deadlock message easier to read (see [swoole/swoole-src#5278](https://github.com/swoole/swoole-src/issues/5278)).
+
+## 6.1.0 (2025-10-24)
+
+Built-in PHP library included in [Swoole v6.1.0](https://github.com/swoole/swoole-src/releases/tag/v6.1.0).
+
+Added:
+
+* The curl handler now supports setting `CURLOPT_WRITEFUNCTION` to `true`, enabling streaming of HTTP chunked data (see [examples/curl/write_func.php](https://github.com/swoole/library/blob/v6.1.0/examples/curl/write_func.php)).
+* Added server port options `ssl_cafile` and `ssl_capath` to class `\Swoole\Constant`.
+
+Removed:
+
+* Removed the obsolete coroutine option `max_concurrency` from class `\Swoole\Constant`.
+
+Fixed:
+
+* The curl handler now handles duplicate HTTP response headers correctly, passing every occurrence to the header callback instead of only the last one.
+* Fix the docblock of method `\Swoole\Database\RedisPool::get()` to include its `$timeout` parameter, improving IDE and static analysis support.
+
 ## 6.0.2 (2025-03-21)
 
 Built-in PHP library included in [Swoole v6.0.2](https://github.com/swoole/swoole-src/releases/tag/v6.0.2).
