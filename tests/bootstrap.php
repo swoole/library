@@ -65,8 +65,9 @@ if (getenv('GITHUB_ACTIONS')) {
 }
 
 // The httpbin service of docker-compose.yml: a local stand-in for httpbin.org (mccutchen/go-httpbin), reached
-// as local.httpbin.org (a Docker link alias, so tests must run inside the app container) on the default HTTP
-// port so that URLs and Host headers look just like the httpbin.org ones. Note that go-httpbin reports
+// as local.httpbin.org (a Docker link alias inside the app container; the Build Swoole workflow instead maps
+// the name onto 127.0.0.1 in /etc/hosts and publishes the port via docker-compose.host.yml) on the default
+// HTTP port so that URLs and Host headers look just like the httpbin.org ones. Note that go-httpbin reports
 // request values (args, headers, form) as arrays of strings, where httpbin.org reports single values as
 // plain strings.
 define('HTTPBIN_SERVER_HOST', 'local.httpbin.org');

@@ -1,5 +1,6 @@
 # Ignore Composer files.
 /composer.lock
+/composer-embedded.lock
 /composer.phar
 /vendor/*
 
