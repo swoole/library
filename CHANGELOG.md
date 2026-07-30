@@ -5,10 +5,12 @@ Added:
 * MR swoole/library#185: Added `\Swoole\Coroutine\Http2\MultiplexClient`, an HTTP/2 client that multiplexes requests from many coroutines over one shared connection (by @tw2066). The connection is established on demand and re-established transparently after a teardown, and an idle connection is closed automatically after a configurable period without requests (options `heartbeat_check_interval` and `heartbeat_idle_time`). The class is available when the Swoole extension is compiled with HTTP/2 support (`--enable-http2`).
 * MR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication, in addition to a password string (by @catchem88).
 * MR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler (by @lazerg).
+* MR swoole/library#191: Support the `http2_max_headers` server option, adding the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS` and registering the option in `\Swoole\Server\Helper` (by @NathanFreeman).
 
 Changed:
 
 * Modernized the codebase for PHP 8.2+ (constructor property promotion, readonly properties, first-class callable syntax, `str_contains()`, and similar), dropping the remaining version-compatibility code paths. Public constructor parameter names and non-final classes are kept unchanged, so subclasses and named arguments keep working.
+* The option arrays and option lookups in `\Swoole\Server\Helper` now use the `\Swoole\Constant::OPTION_*` constants instead of string literals.
 
 Removed:
 
