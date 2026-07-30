@@ -3,14 +3,14 @@ name: swoole-library-release
 description: Use when asked to tag, publish, or release Swoole Library for a specific Swoole extension version (e.g. "release swoole/library for v6.2.3", "publish the library release for 6.1.9", "tag swoole-library for the v6.0.1 Swoole release").
 argument-hint: [version]
 disable-model-invocation: true
-allowed-tools: Bash(git:*), Bash(curl:*), Bash(env -u GH_TOKEN gh:*), Bash(grep:*), Bash(head:*), Bash(awk:*), Bash(sort:*), Read, Write
+allowed-tools: Bash(git:*), Bash(curl:*), Bash(env -u GH_TOKEN gh:*), Bash(grep:*), Bash(head:*), Bash(awk:*), Bash(sort:*), Read, Write, Edit
 ---
 
 # Swoole Library Release
 
 ## Overview
 
-Publishes a `swoole/library` GitHub release (repo `swoole/library`, git remote `origin`) that corresponds to an already-published Swoole extension release. The Swoole extension embeds a snapshot of this library, and every Swoole release records the exact `swoole/library` commit it embeds inside `ext-src/php_swoole_library.h`. This skill tags that commit and publishes a matching GitHub release with a changelog relative to the previous library release.
+Publishes a `swoole/library` GitHub release (repo `swoole/library`, git remote `origin`) that corresponds to an already-published Swoole extension release. The Swoole extension embeds a snapshot of this library, and every Swoole release records the exact `swoole/library` commit it embeds inside `ext-src/php_swoole_library.h`. This skill tags that commit, publishes a matching GitHub release with a changelog relative to the previous library release, and records the same changelog as a new section in `CHANGELOG.md`.
 
 ## Input
 
@@ -133,7 +133,15 @@ Then:
   This release is the same as Swoole Library [$PREV](https://github.com/swoole/library/releases/tag/$PREV).
   ```
 
-- **If there are differences**: write a short changelog based on the commits and diff — a flat bullet list of user-facing changes in plain language (fixes, features, refactorings), no category headers. Reference PR numbers like `#189` when a commit subject contains them. Skip merge commits and pure CI/style noise unless they are the only changes. Lead the bullet list with a `Changes since [$PREV](https://github.com/swoole/library/releases/tag/$PREV):` line followed by a blank line, as v6.1.0 and v6.2.2 do.
+- **If there are differences**: a `Changes since [$PREV](https://github.com/swoole/library/releases/tag/$PREV):` line followed by a blank line, then the changelog content described below.
+
+### Changelog content (shared by the release message and CHANGELOG.md)
+
+The release message and the matching `CHANGELOG.md` section (Step 10) carry the same changelog content, written from the commits and diff of Step 7:
+
+- **What to include**: the major changes since `$PREV` — new features, behavior changes, bug fixes, deprecations/removals, and large internal efforts (e.g. a refactoring or modernization pass across the codebase). Leave out minor housekeeping (coding-style fixes touching a few files, CI tweaks, documentation typos, merge commits) unless such a change is big enough to be worth recording (e.g. a coding-style update across many files) or it is the only change in the release.
+- **Grouping**: group the bullets under Keep-a-Changelog-style category labels, each written as a `Label:` paragraph followed by a blank line and a bullet list — `Added:`, `Changed:`, `Deprecated:`, `Removed:`, `Fixed:`, `Security:`. Include only the categories that have entries, in that order. See the existing sections of `CHANGELOG.md` for examples.
+- **Bullets**: plain language, written from a library user's perspective. Reference PRs and issues the way existing entries do (`MR swoole/library#177`, `Fix issue swoole/library#164`, `swoole/swoole-src#5595`) or link the commit; credit external contributors with `(by @username)`.
 
 ## Step 9 — Publish the release
 
@@ -158,6 +166,15 @@ env -u GH_TOKEN gh api repos/swoole/library/releases/latest --jq .tag_name
 
 If this prints `$VERSION`, do not try to silently correct it (`gh release edit --latest=false` mutates a shared, already-published resource) — call it out in the final report so the user can decide.
 
-## Step 10 — Report
+## Step 10 — Update CHANGELOG.md
 
-Report a short summary: the tag created (or reused), the commit hash it points to, the previous release used for comparison, the URL of the published release, and whether the latest-release check in Step 9 came back clean.
+Record the release in `CHANGELOG.md` on `master` (the file lives on `master`, not on the tagged commit — the tag usually points to an older snapshot commit):
+
+1. Make sure the local `master` branch is checked out, clean, and up to date with `origin/master`.
+2. Insert a new section above the current top-most **version** section, headed `## X.Y.Z (YYYY-MM-DD)` — version without the `v` prefix, date being the day the corresponding Swoole release was published (from Step 1's `gh release view`), falling back to today when that release is not published yet. Its body is the release message minus the `Changes since ...:` line (the per-version heading already scopes the section): the `Built-in PHP library included in ...` line, then either the `This release is the same as ...` line or the grouped changelog content from Step 8.
+3. If an `## Unreleased` section exists at the top of the file, move any of its items that shipped in this release (i.e. their commits are contained in `$PREV..$VERSION`) into the new section, and delete the `## Unreleased` section if that empties it. Items covering commits newer than the tagged commit stay under `## Unreleased`, which remains above the new version section.
+4. Commit with the message `Add CHANGELOG entry for X.Y.Z` and push to `origin master`.
+
+## Step 11 — Report
+
+Report a short summary: the tag created (or reused), the commit hash it points to, the previous release used for comparison, the URL of the published release, whether the latest-release check in Step 9 came back clean, and the `CHANGELOG.md` commit pushed in Step 10.

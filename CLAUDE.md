@@ -98,3 +98,13 @@ docker compose exec app composer cs-fix
 ```
 
 CI runs that same Composer script with `-- --dry-run --show-progress=none`, so the fixer version is pinned by `composer.json` (`^3.0`) in both places and a local pass means a CI pass. Arguments after `--` are forwarded to `php-cs-fixer`, so `composer cs-fix -- src/functions.php` checks a single path.
+
+## Release notes and CHANGELOG.md
+
+Every library release has a GitHub release message and a matching section in `CHANGELOG.md`; the `swoole-library-release` skill (`.claude/skills/swoole-library-release/SKILL.md`) automates publishing and defines the exact message layout. Content rules shared by both:
+
+- Cover the major changes since the last stable release: new features, behavior changes, bug fixes, deprecations/removals, and large internal efforts (e.g. a refactoring or modernization pass across the codebase). Leave out minor housekeeping — coding-style fixes touching a few files, CI tweaks, documentation typos — unless the change is big enough to be worth recording (e.g. a coding-style update across many files) or it is the only change in the release.
+- Group entries under Keep-a-Changelog-style category labels, each a `Label:` paragraph followed by a bullet list: `Added:`, `Changed:`, `Deprecated:`, `Removed:`, `Fixed:`, `Security:` — only the categories that have entries, in that order.
+- Write bullets in plain language from a library user's perspective; reference PRs and issues the way existing entries do (`MR swoole/library#177`, `Fix issue swoole/library#164`, `swoole/swoole-src#5595`) or link the commit, and credit external contributors with `(by @username)`.
+
+`CHANGELOG.md` layout: each release section is headed `## X.Y.Z (YYYY-MM-DD)` (version without the `v` prefix) and opens with the `Built-in PHP library included in [Swoole vX.Y.Z](...)` line; a release with no library changes replaces the grouped entries with a `This release is the same as Swoole Library [vA.B.C](...)` line. Changes that are merged but not yet part of any release are recorded in an `## Unreleased` section kept at the very top of the file; publishing a release folds the shipped Unreleased items into the new version section.
