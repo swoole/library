@@ -17,6 +17,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
+          # The extensions are what the unit tests below need (setup-php installs the Oracle Instant Client
+          # for pdo_oci). They are installed on every PHP version of the matrix, so a version where one of
+          # them cannot be installed fails visibly here even though tests run on a subset of the matrix.
+          extensions: gd, mysqli, pdo_mysql, pdo_pgsql, pdo_sqlite, pdo_oci, pcntl, posix, redis, mongodb, sockets
           tools: composer:v2, phpize
           coverage: none
 
@@ -36,6 +40,9 @@ jobs:
         run: |
           set -ex
 
+          sudo apt-get update -q
+          sudo apt-get install -y -q libcurl4-openssl-dev libssl-dev
+
           cd swoole
           composer install -d ./tools -n -q --no-progress
 
@@ -44,7 +51,10 @@ jobs:
           cat ext-src/php_swoole_library.h | grep '/* $Id:' # the commit # of current Swoole Library.
 
           phpize
-          ./configure
+          # The flags are the ones the Dockerfile builds the app image with, minus the database drivers that
+          # need extra native libraries (c-ares, Oracle Instant Client, coroutine pgsql/sqlite); without those
+          # the corresponding PHP extensions still work, just without coroutine hooks.
+          ./configure --enable-openssl --enable-sockets --enable-mysqlnd --enable-swoole-curl
           make -j$(nproc)
           sudo make install
 
@@ -52,3 +62,33 @@ jobs:
 
       - name: Check Swoole Installation
         run: php -v && php --ri swoole
+
+      # Unlike tests.yml, which loads the library from this repository through Composer, the steps below test
+      # the copy of the library embedded in the extension just built (swoole.enable_library=On, the default).
+      # The main Composer autoloader cannot be loaded in that setup -- it would redeclare the functions and
+      # classes the extension already provides -- so composer-embedded.json installs the test tooling
+      # (PHPUnit, mongodb/mongodb and the test helper classmap) without the library's own autoload rules.
+      #
+      # Tests run on the runner itself, not in the app container: the backing services come from
+      # docker-compose.yml with docker-compose.host.yml publishing their ports on the host, and /etc/hosts
+      # maps the compose service names the tests use onto 127.0.0.1. Like in tests.yml, unit tests run on the
+      # oldest and the newest PHP version of the matrix only; keep the `if` conditions in step with the `php`
+      # matrix above whenever a version is added or dropped.
+      - name: Prepare Test Environment
+        if: matrix.php == '8.2' || matrix.php == '8.5'
+        working-directory: ./swoole/library
+        run: |
+          set -ex
+
+          echo '127.0.0.1 consul local.httpbin.org mongodb mysql oracle pgsql php-fpm redis' | sudo tee -a /etc/hosts
+
+          docker compose -f docker-compose.yml -f docker-compose.host.yml up -d consul httpbin mongodb mysql oracle pgsql php-fpm redis
+
+          COMPOSER=composer-embedded.json composer update -n -q --no-progress
+
+          sleep 40s
+
+      - name: Run Unit Tests
+        if: matrix.php == '8.2' || matrix.php == '8.5'
+        working-directory: ./swoole/library
+        run: php ./vendor/bin/phpunit
