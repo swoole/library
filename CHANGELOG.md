@@ -7,6 +7,10 @@ Added:
 * MR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler. On PHP versions without native support, use the namespaced `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK`, and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` constants (by @lazerg).
 * MR swoole/library#191: Support the `http2_max_headers` server option, adding the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS` and registering the option in `\Swoole\Server\Helper` (by @NathanFreeman).
 
+Changed:
+
+* The option arrays and option lookups in `\Swoole\Server\Helper` now use the `\Swoole\Constant::OPTION_*` constants instead of string literals.
+
 Removed:
 
 * Dropped support for PHP below 8.2 and Swoole below 6.2: `composer.json` now requires PHP >= 8.2 and `ext-swoole` >= 6.2.
