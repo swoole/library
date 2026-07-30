@@ -44,6 +44,7 @@ class Helper
         'http2_init_window_size'       => true,
         'http2_max_frame_size'         => true,
         'http2_max_header_list_size'   => true,
+        'http2_max_headers'            => true,
     ];
 
     public const SERVER_OPTIONS = [
