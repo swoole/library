@@ -91,9 +91,17 @@ services:
     environment:
       PORT: 80
 
+  # MongoDB 8.0+ bundles a tcmalloc that violates the kernel's rseq ABI and corrupts memory shortly after
+  # startup on Linux kernels 6.19 through 7.0.13 (SERVER-121912), so those servers refuse to start on such a
+  # kernel -- both the mongodb/mongodb-community-server entrypoint and mongod itself bail out. Docker Desktop's
+  # linuxkit VM reports kernel 7.0.12, which leaves the service crash-looping on every macOS host, and there is
+  # no supported way to bypass the check. MongoDB 7.0 predates the tcmalloc version at fault and is supported
+  # until August 2027; it runs from the Docker official image because the mongodb/mongodb-community-server
+  # entrypoint refuses to start on these kernels whatever server version it wraps. Once Docker Desktop ships
+  # kernel 7.0.14 or newer this can go back to 8.x. The service deliberately carries no container_name: setting
+  # it to "mongodb" (the service name) makes that name stop resolving from the other containers.
   mongodb:
-    image: mongodb/mongodb-community-server:8.0-ubi8
-    container_name: mongodb
+    image: mongo:7.0
     restart: always
     ports:
         - "27017:27017"
