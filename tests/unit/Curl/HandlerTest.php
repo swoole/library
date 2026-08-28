@@ -23,7 +23,6 @@ use Swoole\Tests\TestCase;
  *
  * @internal
  * @covers \Swoole\Curl\Handler
- * @runTestsInSeparateProcesses
  */
 class HandlerTest extends TestCase
 {

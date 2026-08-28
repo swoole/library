@@ -80,3 +80,16 @@ const DOCUMENT_ROOT = '/var/www/tests/www';
 $remote_object_dir = dirname(__DIR__) . '/examples/remote-object';
 swoole_library_set_option('default_remote_object_server_worker_num', 8);
 swoole_library_set_option('default_remote_object_server_dir', $remote_object_dir);
+
+// Swoole\Curl\Handler -- the library's own curl implementation, and what Curl\HandlerTest exercises -- is
+// installed by SWOOLE_HOOK_CURL, which SWOOLE_HOOK_ALL leaves out: it is mutually exclusive with
+// SWOOLE_HOOK_NATIVE_CURL, and the extension keeps the native one when both are asked for. Hook flags are
+// process-wide and counit fixes them before the scheduler starts, so no test can turn this on for itself:
+// a test flipping it mid-run breaks whatever concurrent test is holding a native handle at that moment.
+// Swap it once, here, for the whole run. The fallback to SWOOLE_HOOK_ALL matters under plain PHPUnit, where
+// nothing is hooked yet at this point; without it the run would end up with curl hooked and nothing else,
+// because setting the flags here also settles the hook_flags option Swoole\Coroutine\run() would otherwise
+// fill in with SWOOLE_HOOK_ALL. The cost is that Coroutine\Http's curl driver is exercised through
+// Swoole\Curl\Handler rather than through native curl; the native path belongs to the extension, not here.
+$hook_flags = Swoole\Runtime::getHookFlags() ?: SWOOLE_HOOK_ALL;
+Swoole\Runtime::setHookFlags(($hook_flags & ~SWOOLE_HOOK_NATIVE_CURL) | SWOOLE_HOOK_CURL);
