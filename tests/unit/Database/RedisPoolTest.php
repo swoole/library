@@ -11,18 +11,15 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Swoole\Tests\DatabaseTestCase;
 use Swoole\Tests\HookFlagsTrait;
-
-use function Swoole\Coroutine\run;
 
 /**
  * Class RedisPoolTest
  *
  * @internal
+ * @covers \Swoole\Database\RedisPool
  */
-#[CoversClass(RedisPool::class)]
 class RedisPoolTest extends DatabaseTestCase
 {
     use HookFlagsTrait;
@@ -34,7 +31,7 @@ class RedisPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $admin = new \Redis();
             $admin->connect(REDIS_SERVER_HOST, REDIS_SERVER_PORT);
             $admin->config('SET', 'requirepass', 'default_user_secret');
@@ -70,7 +67,7 @@ class RedisPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $admin = new \Redis();
             $admin->connect(REDIS_SERVER_HOST, REDIS_SERVER_PORT);
             $admin->rawCommand('ACL', 'SETUSER', 'swoole_tester', 'on', '>acl_user_secret', '~*', '&*', '+@all');
@@ -105,7 +102,7 @@ class RedisPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $config = (new RedisConfig())
                 ->withHost(REDIS_SERVER_HOST)
                 ->withPort(REDIS_SERVER_PORT)

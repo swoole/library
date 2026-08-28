@@ -11,10 +11,11 @@
         "ext-redis": "*",
         "ext-sockets": "*",
         "mongodb/mongodb": "^2.1",
-        "phpunit/phpunit": "^11.5 || ^12.0 || ^13.0"
+        "deminy/counit": "~0.3"
     },
     "autoload": {
         "classmap": [
+            "tests/TestCase.php",
             "tests/DatabaseTestCase.php",
             "tests/HookFlagsTrait.php"
         ]

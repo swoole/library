@@ -26,8 +26,8 @@
         "ext-json": "*",
         "ext-redis": "*",
         "ext-curl": "*",
+        "deminy/counit": "~0.3",
         "mongodb/mongodb": "^2.1",
-        "phpunit/phpunit": "^11.5 || ^12.0 || ^13.0",
         "swoole/ide-helper": "dev-master",
         "phpstan/phpstan": "^2.1",
         "friendsofphp/php-cs-fixer": "^3.0"
@@ -58,6 +58,7 @@
     },
     "autoload-dev": {
         "classmap": [
+            "tests/TestCase.php",
             "tests/DatabaseTestCase.php",
             "tests/HookFlagsTrait.php"
         ]
@@ -66,7 +67,9 @@
         "discard-changes": true
     },
     "scripts": {
-        "test": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit",
+        "test": "/usr/bin/env sh -c 'php -d swoole.enable_library=Off ./vendor/bin/counit --testsuite concurrent; c=$?; php -d swoole.enable_library=Off ./vendor/bin/phpunit --testsuite serial; s=$?; if [ $c -ne 0 ]; then exit $c; fi; exit $s'",
+        "test-concurrent": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/counit --testsuite concurrent",
+        "test-serial": "/usr/bin/env php -d swoole.enable_library=Off ./vendor/bin/phpunit --testsuite serial",
         "cs-fix": "vendor/bin/php-cs-fixer fix $1",
         "post-install-cmd": [
             "rm -rf ./vendor/swoole/ide-helper/src/swoole_library ./vendor/swoole/ide-helper/output/swoole_library"

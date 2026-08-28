@@ -11,13 +11,12 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\MultibyteStringObject
  */
-#[CoversClass(MultibyteStringObject::class)]
 class MultibyteStringObjectTest extends TestCase
 {
     public function testLength(): void

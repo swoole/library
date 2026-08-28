@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace Swoole\Tests;
 
-use PHPUnit\Framework\TestCase;
 use Swoole\ConnectionPool;
 use Swoole\Database\MysqliConfig;
 use Swoole\Database\MysqliPool;

@@ -11,15 +11,14 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 
 /**
  * Class RedisConfigTest
  *
  * @internal
+ * @covers \Swoole\Database\RedisConfig
  */
-#[CoversClass(RedisConfig::class)]
 class RedisConfigTest extends TestCase
 {
     public function testAuthDefaultsToAnEmptyString(): void

@@ -11,21 +11,19 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use Swoole\Coroutine;
 use Swoole\Coroutine\WaitGroup;
 use Swoole\Tests\DatabaseTestCase;
 use Swoole\Tests\HookFlagsTrait;
 
 use function Swoole\Coroutine\go;
-use function Swoole\Coroutine\run;
 
 /**
  * Class PDOPoolTest
  *
  * @internal
+ * @covers \Swoole\Database\PDOPool
  */
-#[CoversClass(PDOPool::class)]
 class PDOPoolTest extends DatabaseTestCase
 {
     use HookFlagsTrait;
@@ -36,7 +34,7 @@ class PDOPoolTest extends DatabaseTestCase
         self::setHookFlags(SWOOLE_HOOK_ALL);
         $expect = ['0', '1', '2', '3', '4'];
         $actual = [];
-        Coroutine\run(function () use (&$actual) {
+        self::coRun(function () use (&$actual) {
             $pool = self::getPdoMysqlPool(2);
             for ($n = 5; $n--;) {
                 Coroutine::create(function () use ($pool, $n, &$actual) {
@@ -67,7 +65,7 @@ class PDOPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $pool = self::getPdoPgsqlPool(10);
             $pdo  = $pool->get();
             $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
@@ -100,7 +98,7 @@ class PDOPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $pool = self::getPdoOraclePool(10);
             $pdo  = $pool->get();
             try {
@@ -140,7 +138,7 @@ class PDOPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $pool = self::getPdoSqlitePool(10);
             $pdo  = $pool->get();
             $pdo->exec('CREATE TABLE IF NOT EXISTS test(id INT);');
@@ -173,7 +171,7 @@ class PDOPoolTest extends DatabaseTestCase
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        run(function () {
+        self::coRun(function () {
             $pool      = self::getPdoMysqlPool(1);
             $waitGroup = new WaitGroup(2); // A wait group to wait for the next 2 coroutines to finish.
 

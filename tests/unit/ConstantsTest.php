@@ -11,13 +11,12 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-use PHPUnit\Framework\Attributes\CoversNothing;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @coversNothing
  */
-#[CoversNothing]
 class ConstantsTest extends TestCase
 {
     public function testCoroutineCurlPrerequisiteConstants(): void

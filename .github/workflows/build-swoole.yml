@@ -91,4 +91,12 @@ jobs:
       - name: Run Unit Tests
         if: matrix.php == '8.2' || matrix.php == '8.5'
         working-directory: ./swoole/library
-        run: php ./vendor/bin/phpunit
+        run: |
+          concurrent=0
+          serial=0
+          php ./vendor/bin/counit --testsuite concurrent || concurrent=$?
+          php ./vendor/bin/phpunit --testsuite serial || serial=$?
+          if [ "$concurrent" -ne 0 ]; then
+            exit "$concurrent"
+          fi
+          exit "$serial"

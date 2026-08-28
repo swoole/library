@@ -11,20 +11,17 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\DataProvider;
-use Swoole\Coroutine;
 use Swoole\Tests\DatabaseTestCase;
 
 /**
  * @internal
+ * @covers \Swoole\Database\PDOStatementProxy
  */
-#[CoversClass(PDOStatementProxy::class)]
 class PDOStatementProxyTest extends DatabaseTestCase
 {
     public function testRun(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             self::assertFalse(
                 self::getPdoMysqlPool()->get()->query("SHOW TABLES like 'NON_EXISTING_TABLE_NAME'")->fetch(\PDO::FETCH_ASSOC),
                 'FALSE is returned if no results found.'
@@ -32,10 +29,12 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
-    #[DataProvider('dataSetFetchMode')]
+    /**
+     * @dataProvider dataSetFetchMode
+     */
     public function testSetFetchMode(array $expected, array $args, string $message): void
     {
-        Coroutine\run(function () use ($expected, $args, $message) {
+        self::coRun(function () use ($expected, $args, $message) {
             $stmt = self::getPdoMysqlPool()->get()->query(
                 'SELECT
                  *
@@ -85,7 +84,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
 
     public function testBindParam(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $stmt  = self::getPdoMysqlPool()->get()->prepare('SHOW TABLES like ?');
             $table = 'NON_EXISTING_TABLE_NAME';
             $stmt->bindParam(1, $table, \PDO::PARAM_STR);

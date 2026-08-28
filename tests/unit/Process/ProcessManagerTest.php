@@ -11,15 +11,14 @@ declare(strict_types=1);
 
 namespace Swoole\Process;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
 use Swoole\Atomic;
 use Swoole\Coroutine;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\Process\ProcessManager
  */
-#[CoversClass(ProcessManager::class)]
 class ProcessManagerTest extends TestCase
 {
     public function testAdd(): void

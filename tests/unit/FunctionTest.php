@@ -11,15 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-use PHPUnit\Framework\Attributes\CoversFunction;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
- * @coversNothing
+ * @covers ::swoole_library_get_options
+ * @covers ::swoole_library_set_options
  */
-#[CoversFunction('swoole_library_get_options')]
-#[CoversFunction('swoole_library_set_options')]
 class FunctionTest extends TestCase
 {
     /**

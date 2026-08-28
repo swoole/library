@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole\Thread;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 use Swoole\Tests\TestThread;
 
 /**
  * @internal
+ * @covers \Swoole\Thread\Pool
  */
-#[CoversClass(Pool::class)]
 class PoolTest extends TestCase
 {
     public function testPool(): void

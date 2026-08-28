@@ -33,14 +33,19 @@ docker compose up -d
 # container's PHP version; composer.lock is git-ignored)
 docker compose exec app composer update -n
 
-# Run the full test suite
+# Run the full test suite: the "concurrent" suite under counit, then the "serial" one under PHPUnit.
+# Both always run, even if the first fails; the exit code is the first failing one.
 docker compose exec app composer test
 
-# Run a single test file
-docker compose exec app php -d swoole.enable_library=Off ./vendor/bin/phpunit tests/unit/StringObjectTest.php
+# Run just one of the two suites
+docker compose exec app composer test-concurrent
+docker compose exec app composer test-serial
+
+# Run a single test file (use ./vendor/bin/phpunit for a file of the "serial" suite)
+docker compose exec app php -d swoole.enable_library=Off ./vendor/bin/counit tests/unit/StringObjectTest.php
 
 # Run a single test by name
-docker compose exec app php -d swoole.enable_library=Off ./vendor/bin/phpunit --filter=testSplit tests/unit/StringObjectTest.php
+docker compose exec app php -d swoole.enable_library=Off ./vendor/bin/counit --filter=testSplit tests/unit/StringObjectTest.php
 
 # Coding style (PHP-CS-Fixer; CI runs the same script with -- --dry-run)
 docker compose exec app composer cs-fix
@@ -56,9 +61,11 @@ Notes:
 
 - Many tests depend on the Docker services defined in `docker-compose.yml`; connection constants (hosts, credentials) are defined in `tests/bootstrap.php`. Give services (especially Oracle/MySQL) time to boot before running database tests.
 - The HTTP/curl tests (`tests/unit/Coroutine/HttpFunctionTest.php`, most of `tests/unit/Curl/HandlerTest.php`) query the `httpbin` service of `docker-compose.yml` (`mccutchen/go-httpbin`, a local stand-in for httpbin.org), which the app container reaches as `local.httpbin.org` on port 80 — no external network access is involved. Mind one difference when writing assertions: go-httpbin reports request values (args, headers, form) as arrays of strings, where httpbin.org reports single values as plain strings.
-- Tooling that loads the Composer autoloader (`composer cs-fix`, PHPStan, PHPUnit) fails on any PHP whose Swoole extension has the embedded library enabled ("Constant SWOOLE_LIBRARY already defined", "Cannot redeclare function"). To run the test suite *against* the embedded library, `composer-embedded.json` installs the test tooling (PHPUnit, mongodb/mongodb, the test-helper classmap) without the library's own autoload rules: `COMPOSER=composer-embedded.json composer update`, then `php ./vendor/bin/phpunit`. The `app` container sets `swoole.enable_library=off` in its php.ini, so these commands work there. On a host with Swoole installed, `php -d swoole.enable_library=Off vendor/bin/php-cs-fixer fix` works for the fixer, but PHPStan needs the setting in an ini file because its worker processes do not inherit `-d` flags.
+- Tooling that loads the Composer autoloader (`composer cs-fix`, PHPStan, PHPUnit) fails on any PHP whose Swoole extension has the embedded library enabled ("Constant SWOOLE_LIBRARY already defined", "Cannot redeclare function"). To run the test suite *against* the embedded library, `composer-embedded.json` installs the test tooling (PHPUnit, counit, mongodb/mongodb, the test-helper classmap) without the library's own autoload rules: `COMPOSER=composer-embedded.json composer update`, then `php ./vendor/bin/counit --testsuite concurrent` and `php ./vendor/bin/phpunit --testsuite serial`. The `app` container sets `swoole.enable_library=off` in its php.ini, so these commands work there. On a host with Swoole installed, `php -d swoole.enable_library=Off vendor/bin/php-cs-fixer fix` works for the fixer, but PHPStan needs the setting in an ini file because its worker processes do not inherit `-d` flags.
 - PHPStan resolves Swoole symbols from the `swoole/ide-helper` stubs, wired up through `scanDirectories` in `phpstan.neon.dist`, so the analysis gives the same result on NTS and ZTS builds. The stubs are what supply `SWOOLE_THREAD` and the `Swoole\Thread` classes, which an NTS build does not expose. Because the stubs are more complete than the extension's own reflection, several `@phpstan-ignore` comments are unnecessary and must not be reintroduced — an unmatched ignore is itself a non-ignorable error. Note that `swoole/ide-helper` is required as `dev-master`, so a stub change can start or stop an error at any time.
-- `tests/unit/Thread` is excluded from the default PHPUnit suite because it requires a ZTS build of PHP/Swoole.
+- `tests/unit/Thread` is excluded from both suites because it requires a ZTS build of PHP/Swoole.
+- The tests are split into two suites in `phpunit.xml.dist`, and `composer test` runs both in turn — both always run, even when the first fails, so one suite's failure cannot hide the other's results, and the exit code is the first failing suite's. The **concurrent** suite runs under `./vendor/bin/counit` (`deminy/counit`), which puts the whole run inside one coroutine and gives every test its own, so time/IO bound tests overlap instead of queueing up: ~180 tests in about 4 seconds, against about 26 seconds for the same tests under plain PHPUnit. The **serial** suite runs under plain `./vendor/bin/phpunit`, because those eight files cannot share a run with the others — see the comment on each `<testsuite>` for why. In short: PHPUnit's process isolation (`@runTestsInSeparateProcesses`) hangs inside a coroutine, Swoole refuses to fork inside one ("must be forked outside the coroutine"), `Database/RedisPoolTest` sets a server-wide Redis `requirepass` that breaks any test using Redis at the same time, and the four `Coroutine` tests assert tight wall-clock windows that only hold when nothing else is running. **A new test that spawns processes, mutates state shared with other tests, or measures elapsed time belongs in the serial suite.**
+- Tests written for the concurrent suite must not call `Swoole\Coroutine\run()`: under counit the run is already inside a coroutine, and a second scheduler cannot be started there. Use `self::coRun()` from `Swoole\Tests\TestCase` (`tests/TestCase.php`) instead — it calls `Coroutine\run()` when there is no coroutine yet and otherwise runs the callback directly, waiting for the coroutines it spawned either way. For the same reason `HookFlagsTrait::setHookFlags()` is a no-op inside a coroutine: hook flags are process-wide, and counit picks them for the run as a whole.
 - CI (GitHub Actions) has two workflows. `tests.yml` runs syntax checks, coding style, static analysis and unit tests in that order, in a single job over a matrix of `phpswoole/swoole` image tags and PHP versions. No check runs across the whole matrix: unit tests run on the oldest and newest PHP version only (8.2 and 8.5), syntax checks run once per PHP version, and coding style and static analysis run once overall (see the `if:` condition and comment on each step). Every combination still builds its image and boots the services, which is what keeps "the extension compiles on this PHP version" covered for the versions in between. Syntax checks come first because they need nothing but the checkout, so they fail before the images are built. `build-swoole.yml` verifies this library still compiles into the Swoole extension from source, then runs the unit tests against that build with the embedded library enabled (`swoole.enable_library=On`), on the oldest and newest PHP version only. Those tests run on the runner itself rather than in the `app` container: the backing services are started from `docker-compose.yml` plus `docker-compose.host.yml` (which publishes their ports on the host), the compose service hostnames are mapped onto 127.0.0.1 in `/etc/hosts`, and the test tooling is installed via `composer-embedded.json` (see the note above).
 
 ## Architecture
@@ -87,7 +94,7 @@ Because the packed files end up as C string literals compiled with `-std=c++14`,
 
 ### Tests
 
-Unit tests live in `tests/unit/`, mirroring the `src/core/` structure. `tests/bootstrap.php` loads the Composer autoloader only when the embedded library is disabled, and defines service connection constants. Shared helpers: `tests/DatabaseTestCase.php`, `tests/HookFlagsTrait.php`. `tests/www/` is the document root used by FastCGI/HTTP tests.
+Unit tests live in `tests/unit/`, mirroring the `src/core/` structure. `tests/bootstrap.php` loads the Composer autoloader only when the embedded library is disabled, and defines service connection constants. Every test class extends `Swoole\Tests\TestCase` (`tests/TestCase.php`), which extends counit's test case and carries `coRun()`; `tests/DatabaseTestCase.php` extends it in turn and adds the connection-pool helpers. Shared helpers: `tests/TestCase.php`, `tests/DatabaseTestCase.php`, `tests/HookFlagsTrait.php` — all three are loaded through the `classmap` of `composer.json` and `composer-embedded.json`, so a new one has to be added there. `tests/www/` is the document root used by FastCGI/HTTP tests.
 
 ### Coding style
 

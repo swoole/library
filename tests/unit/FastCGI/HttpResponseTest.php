@@ -11,21 +11,20 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
-use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
 use Swoole\FastCGI\Record\EndRequest;
 use Swoole\FastCGI\Record\Stdout;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\FastCGI\HttpResponse
  */
-#[CoversClass(HttpResponse::class)]
 class HttpResponseTest extends TestCase
 {
-    #[DataProvider('dataHeaders')]
+    /**
+     * @dataProvider dataHeaders
+     */
     public function testHeaders(array $expectedHeaders, string $contentData, string $message): void
     {
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
@@ -70,10 +69,12 @@ Hello world!',
         ];
     }
 
-    #[DataProvider('dataHeadersFromFPM')]
+    /**
+     * @dataProvider dataHeadersFromFPM
+     */
     public function testHeadersFromFPM(array $expectedHeaders, string $filename, string $message): void
     {
-        Coroutine\run(
+        self::coRun(
             function () use ($expectedHeaders, $filename, $message) {
                 $client   = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));
@@ -132,7 +133,9 @@ Hello world!',
         ];
     }
 
-    #[DataProvider('dataStatus')]
+    /**
+     * @dataProvider dataStatus
+     */
     public function testStatus(int $expectedStatusCode, string $expectedReasonPhrase, string $contentData): void
     {
         $contentData = str_replace("\n", "\r\n", $contentData); // Our files uses LF but not CRLF.
@@ -175,10 +178,12 @@ Hello world!',
         ];
     }
 
-    #[DataProvider('dataStatusFromFPM')]
+    /**
+     * @dataProvider dataStatusFromFPM
+     */
     public function testStatusFromFPM(int $expectedStatusCode, string $expectedReasonPhrase, string $filename): void
     {
-        Coroutine\run(
+        self::coRun(
             function () use ($expectedStatusCode, $expectedReasonPhrase, $filename) {
                 $client   = new Client('php-fpm', 9000);
                 $response = $client->execute((new HttpRequest())->withScriptFilename($filename));

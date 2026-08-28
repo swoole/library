@@ -11,21 +11,19 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine\Http2;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Http\Server;
 use Swoole\Coroutine\WaitGroup;
 use Swoole\Http2\Request;
 use Swoole\Http2\Response;
+use Swoole\Tests\TestCase;
 
 use function Swoole\Coroutine\go;
-use function Swoole\Coroutine\run;
 
 /**
  * @internal
+ * @covers \Swoole\Coroutine\Http2\MultiplexClient
  */
-#[CoversClass(MultiplexClient::class)]
 class MultiplexClientTest extends TestCase
 {
     protected function setUp(): void
@@ -38,7 +36,7 @@ class MultiplexClientTest extends TestCase
 
     public function testRequest(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server);
             try {
@@ -80,7 +78,7 @@ class MultiplexClientTest extends TestCase
 
     public function testRequestWithoutExplicitConnect(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server);
             try {
@@ -97,7 +95,7 @@ class MultiplexClientTest extends TestCase
 
     public function testRequestTimeout(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server);
             try {
@@ -132,7 +130,7 @@ class MultiplexClientTest extends TestCase
 
     public function testReconnectAfterServerClosesConnection(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server);
             try {
@@ -159,7 +157,7 @@ class MultiplexClientTest extends TestCase
 
     public function testCloseWithRequestInFlight(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server);
             try {
@@ -202,7 +200,7 @@ class MultiplexClientTest extends TestCase
 
     public function testConcurrentRequestsAfterClose(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server);
             try {
@@ -244,7 +242,7 @@ class MultiplexClientTest extends TestCase
 
     public function testIdleClose(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server  = $this->startServer();
             $keeper  = $this->newClient($server, ['heartbeat_idle_time' => 0]); // idle closing disabled
             $closer  = $this->newClient($server, ['heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.5]);
@@ -282,7 +280,7 @@ class MultiplexClientTest extends TestCase
 
     public function testIdleCloseSparesInFlightRequest(): void
     {
-        run(function () {
+        self::coRun(function () {
             $server = $this->startServer();
             $client = $this->newClient($server, ['heartbeat_check_interval' => 0.1, 'heartbeat_idle_time' => 0.2]);
             try {
@@ -302,7 +300,7 @@ class MultiplexClientTest extends TestCase
 
     public function testRequestAgainstUnreachableServer(): void
     {
-        run(function () {
+        self::coRun(function () {
             // Reserve a port with a throwaway server, then shut it down so nothing listens on it.
             $server = $this->startServer();
             $port   = $server->port;
@@ -325,7 +323,7 @@ class MultiplexClientTest extends TestCase
 
     public function testFrameLevelApiIsDisabled(): void
     {
-        run(function () {
+        self::coRun(function () {
             $client = new MultiplexClient('127.0.0.1', 1);
             foreach (['recv' => [], 'read' => [], 'write' => [1, 'x'], 'goaway' => []] as $method => $args) {
                 try {

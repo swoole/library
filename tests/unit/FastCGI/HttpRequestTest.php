@@ -11,15 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
-use Swoole\Coroutine;
 use Swoole\Coroutine\FastCGI\Client;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\FastCGI\HttpRequest
  */
-#[CoversClass(HttpRequest::class)]
 class HttpRequestTest extends TestCase
 {
     /**
@@ -29,7 +27,7 @@ class HttpRequestTest extends TestCase
      */
     public function testKeepAlive(): void
     {
-        Coroutine\run(
+        self::coRun(
             function (): void {
                 $client = new Client('php-fpm', 9000);
 

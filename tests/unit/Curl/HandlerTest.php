@@ -11,12 +11,10 @@ declare(strict_types=1);
 
 namespace Swoole\Curl;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Http\Server;
 use Swoole\Tests\HookFlagsTrait;
+use Swoole\Tests\TestCase;
 
 /**
  * Class HandlerTest
@@ -24,9 +22,9 @@ use Swoole\Tests\HookFlagsTrait;
  * Most of the tests here query the httpbin service of docker-compose.yml, a local stand-in for httpbin.org.
  *
  * @internal
+ * @covers \Swoole\Curl\Handler
+ * @runTestsInSeparateProcesses
  */
-#[CoversClass(Handler::class)]
-#[RunTestsInSeparateProcesses]
 class HandlerTest extends TestCase
 {
     use HookFlagsTrait;
@@ -51,7 +49,7 @@ class HandlerTest extends TestCase
 
     public function testRedirect(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $ch = curl_init(HTTPBIN_SERVER_URL . '/redirect/2');
             self::assertInstanceOf(Handler::class, $ch, 'Variable $ch should be a Handler object instead of a curl resource');
 
@@ -64,7 +62,7 @@ class HandlerTest extends TestCase
 
     public function testToString(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $ch = curl_init();
             self::assertMatchesRegularExpression('/Object\(\w+\) of type \(curl\)/', (string) $ch);
         });
@@ -72,7 +70,7 @@ class HandlerTest extends TestCase
 
     public function testPrereqFunction(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $invocations = 0;
             $args        = [];
             $ch          = curl_init(HTTPBIN_SERVER_URL . '/get');
@@ -105,7 +103,7 @@ class HandlerTest extends TestCase
 
     public function testPrereqFunctionWithRedirects(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $invocations = 0;
             $localPorts  = [];
             $ch          = curl_init(HTTPBIN_SERVER_URL . '/redirect/2');
@@ -127,7 +125,7 @@ class HandlerTest extends TestCase
 
     public function testPrereqFunctionAbort(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $invocations = 0;
             $ch          = curl_init(HTTPBIN_SERVER_URL . '/get');
 
@@ -147,7 +145,7 @@ class HandlerTest extends TestCase
 
     public function testPrereqFunctionBadReturnValue(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
@@ -172,7 +170,7 @@ class HandlerTest extends TestCase
 
     public function testCustomHost(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $ip = Coroutine::gethostbyname(HTTPBIN_SERVER_HOST);
             $ch = curl_init("http://{$ip}/get");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -184,7 +182,7 @@ class HandlerTest extends TestCase
 
     public function testHeaderName(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
             curl_setopt($ch, CURLOPT_HEADER, true);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -199,7 +197,7 @@ class HandlerTest extends TestCase
 
     public function testWriteFunction(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $url     = HTTPBIN_SERVER_URL . '/get';
             $ch      = curl_init();
             $content = '';
@@ -220,7 +218,7 @@ class HandlerTest extends TestCase
 
     public function testResolve(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $host = HTTPBIN_SERVER_HOST;
             $port = HTTPBIN_SERVER_PORT;
             $url  = HTTPBIN_SERVER_URL . '/get';
@@ -243,7 +241,7 @@ class HandlerTest extends TestCase
 
     public function testInvalidResolve(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $host = HTTPBIN_SERVER_HOST;
             $port = HTTPBIN_SERVER_PORT;
             $url  = HTTPBIN_SERVER_URL . '/get';
@@ -265,7 +263,7 @@ class HandlerTest extends TestCase
 
     public function testResolve2(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $host = HTTPBIN_SERVER_HOST;
             $port = HTTPBIN_SERVER_PORT;
             $url  = HTTPBIN_SERVER_URL . '/get';
@@ -288,7 +286,7 @@ class HandlerTest extends TestCase
 
     public function testInvalidResolve2(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $host = HTTPBIN_SERVER_HOST;
             $port = HTTPBIN_SERVER_PORT;
             $url  = HTTPBIN_SERVER_URL . '/get';
@@ -310,7 +308,7 @@ class HandlerTest extends TestCase
 
     public function testInvalidResolve3(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $host = HTTPBIN_SERVER_HOST;
             $port = HTTPBIN_SERVER_PORT;
             $url  = HTTPBIN_SERVER_URL . '/get';
@@ -332,7 +330,7 @@ class HandlerTest extends TestCase
 
     public function testResolve3(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $host = HTTPBIN_SERVER_HOST;
             $port = HTTPBIN_SERVER_PORT;
             $url  = HTTPBIN_SERVER_URL . '/get';
@@ -355,7 +353,7 @@ class HandlerTest extends TestCase
 
     public function testOptPrivate(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $url     = HTTPBIN_SERVER_URL . '/get';
             $private = 'swoole';
 
@@ -376,7 +374,7 @@ class HandlerTest extends TestCase
 
     public function testRepeatHeader(): void
     {
-        Coroutine\run(function () {
+        self::coRun(function () {
             $server = new Server('127.0.0.1', 0);
             Coroutine\go(function () use ($server) {
                 $server->handle('/', function ($request, $response) {

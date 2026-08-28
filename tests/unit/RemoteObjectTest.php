@@ -12,23 +12,20 @@ declare(strict_types=1);
 namespace Swoole;
 
 use MongoDB\BSON\UTCDateTime;
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
-
-use function Swoole\Coroutine\run;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\RemoteObject
+ * @covers \Swoole\RemoteObject\Client
+ * @covers \Swoole\RemoteObject\Context
+ * @covers \Swoole\RemoteObject\Server
  */
-#[CoversClass(RemoteObject::class)]
-#[CoversClass(RemoteObject\Context::class)]
-#[CoversClass(RemoteObject\Server::class)]
-#[CoversClass(RemoteObject\Client::class)]
 class RemoteObjectTest extends TestCase
 {
     public function testCallFunction(): void
     {
-        run(function () {
+        self::coRun(function () {
             $client = swoole_get_default_remote_object_client();
             $this->assertEquals('x86_64', $client->call('php_uname', 'm'));
             $gd_info = $client->call('gd_info');
@@ -39,7 +36,7 @@ class RemoteObjectTest extends TestCase
 
     public function testInvoke()
     {
-        run(function () {
+        self::coRun(function () {
             $client    = swoole_get_default_remote_object_client();
             $o         = $client->create(\Greeter::class, 'Hello swoole');
             $this->assertEquals('Hello swoole, my name is Tianfeng.Han!', $o('my name is Tianfeng.Han'));
@@ -48,7 +45,7 @@ class RemoteObjectTest extends TestCase
 
     public function testIterator()
     {
-        run(function () {
+        self::coRun(function () {
             $client    = swoole_get_default_remote_object_client();
             $o         = $client->create(\Greeter::class, 'hello swoole');
             $list      =  iterator_to_array($o);
@@ -59,7 +56,7 @@ class RemoteObjectTest extends TestCase
 
     public function testResource()
     {
-        run(function () {
+        self::coRun(function () {
             $client = swoole_get_default_remote_object_client();
             $fp     = $client->call('fopen', '/tmp/data.txt', 'w');
 
@@ -77,7 +74,7 @@ class RemoteObjectTest extends TestCase
 
     public function testMongoDb(): void
     {
-        run(function () {
+        self::coRun(function () {
             $mongo = new class {
                 private $collection;
 

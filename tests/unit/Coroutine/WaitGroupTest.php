@@ -11,18 +11,17 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\Coroutine\WaitGroup
  */
-#[CoversClass(WaitGroup::class)]
 class WaitGroupTest extends TestCase
 {
     public function testWait(): void
     {
-        run(function () {
+        self::coRun(function () {
             $wg = new WaitGroup(4);
             $N  = 4;
             $st = microtime(true);

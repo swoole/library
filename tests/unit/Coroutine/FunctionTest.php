@@ -11,23 +11,21 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
-use PHPUnit\Framework\Attributes\CoversFunction;
-use PHPUnit\Framework\TestCase;
 use Swoole\Runtime;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
- * @coversNothing
+ * @covers \Swoole\Coroutine\batch
+ * @covers \Swoole\Coroutine\go
+ * @covers \Swoole\Coroutine\map
+ * @covers \Swoole\Coroutine\parallel
  */
-#[CoversFunction('Swoole\Coroutine\batch')]
-#[CoversFunction('Swoole\Coroutine\go')]
-#[CoversFunction('Swoole\Coroutine\parallel')]
-#[CoversFunction('Swoole\Coroutine\map')]
 class FunctionTest extends TestCase
 {
     public function testBatchTimeout(): void
     {
-        run(function () {
+        self::coRun(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
             $start   = microtime(true);
             $results = batch([
@@ -59,7 +57,7 @@ class FunctionTest extends TestCase
 
     public function testBatch(): void
     {
-        run(function () {
+        self::coRun(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
             $start   = microtime(true);
             $results = batch([
@@ -92,7 +90,7 @@ class FunctionTest extends TestCase
 
     public function testGo(): void
     {
-        run(function () {
+        self::coRun(function () {
             $cid = go(function () {
                 System::sleep(0.001);
             });
@@ -102,7 +100,7 @@ class FunctionTest extends TestCase
 
     public function testParallel(): void
     {
-        run(function () {
+        self::coRun(function () {
             $start   = microtime(true);
             $c       = 4;
             $results = [];
@@ -123,7 +121,7 @@ class FunctionTest extends TestCase
 
     public function testMap(): void
     {
-        run(function () {
+        self::coRun(function () {
             $start   = microtime(true);
             $list    = [1, 2, 3, 4];
             $results = map($list, function (int $i): int {

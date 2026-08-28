@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI\Record;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
 use Swoole\FastCGI;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\FastCGI\Record\GetValuesResult
  */
-#[CoversClass(GetValuesResult::class)]
 class GetValuesResultTest extends TestCase
 {
     protected static string $rawMessage = '010a0001001206000f01464347495f4d5058535f434f4e4e5331000000000000';

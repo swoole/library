@@ -11,19 +11,18 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\Coroutine\Barrier
  */
-#[CoversClass(Barrier::class)]
 class BarrierTest extends TestCase
 {
     public function testWait(): void
     {
-        run(function () {
+        self::coRun(function () {
             $barrier = Barrier::make();
             $count   = 0;
             $N       = 4;
@@ -43,7 +42,7 @@ class BarrierTest extends TestCase
 
     public function testWaitTimeout(): void
     {
-        run(function () {
+        self::coRun(function () {
             $barrier = Barrier::make();
             $count   = 0;
             $N       = 4;
@@ -71,7 +70,7 @@ class BarrierTest extends TestCase
      */
     public function testNoCoroutineSwitching(): void
     {
-        run(function () {
+        self::coRun(function () {
             $barrier = Barrier::make();
             $count   = 0;
             $N       = 4;
@@ -91,7 +90,7 @@ class BarrierTest extends TestCase
      */
     public function testWithoutAnyChildCoroutines(): void
     {
-        run(function () {
+        self::coRun(function () {
             $barrier = Barrier::make();
             Barrier::wait($barrier);
             self::assertNull($barrier, 'To check if there is any possible PHP warnings/errors.');
@@ -103,7 +102,7 @@ class BarrierTest extends TestCase
      */
     public function testUnexpectedDestroy(): void
     {
-        run(function () {
+        self::coRun(function () {
             $barrier = Barrier::make();
             $count   = 0;
             Coroutine::create(function () use (&$barrier, &$count) {
@@ -121,7 +120,7 @@ class BarrierTest extends TestCase
      */
     public function testUnexpectedDestroyWithCoroutineSwitching(): void
     {
-        run(function () {
+        self::coRun(function () {
             $barrier = Barrier::make();
             $count   = 0;
             $st      = microtime(true);

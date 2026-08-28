@@ -4,15 +4,56 @@
     backupGlobals="false"
     bootstrap="tests/bootstrap.php"
     beStrictAboutTestsThatDoNotTestAnything="false"
-    cacheDirectory=".phpunit.cache"
-    displayDetailsOnTestsThatTriggerDeprecations="true"
-    displayDetailsOnTestsThatTriggerWarnings="true"
-    displayDetailsOnPhpunitDeprecations="true"
-    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd">
-  <testsuite name="default">
-    <directory suffix="Test.php">tests/unit</directory>
-    <exclude>tests/unit/Thread</exclude>
-  </testsuite>
+    cacheResultFile=".phpunit.cache/test-results"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd">
+  <testsuites>
+    <!--
+      Run with ./vendor/bin/counit, which puts the whole run inside one coroutine and gives every test its own,
+      so time/IO bound tests overlap instead of queueing up behind each other.
+    -->
+    <testsuite name="concurrent">
+      <directory suffix="Test.php">tests/unit</directory>
+      <exclude>tests/unit/Thread</exclude>
+      <exclude>tests/unit/Coroutine/BarrierTest.php</exclude>
+      <exclude>tests/unit/Coroutine/FunctionTest.php</exclude>
+      <exclude>tests/unit/Coroutine/Http2/MultiplexClientTest.php</exclude>
+      <exclude>tests/unit/Coroutine/WaitGroupTest.php</exclude>
+      <exclude>tests/unit/Curl/HandlerTest.php</exclude>
+      <exclude>tests/unit/Database/RedisPoolTest.php</exclude>
+      <exclude>tests/unit/Process/ProcessManagerTest.php</exclude>
+      <exclude>tests/unit/RemoteObjectTest.php</exclude>
+    </testsuite>
+    <!--
+      Run with ./vendor/bin/phpunit. These tests cannot share a run with the ones above:
+
+      - Curl/HandlerTest is @runTestsInSeparateProcesses, and PHPUnit's process isolation does not work from
+        inside a coroutine: the parent blocks reading the child's pipe and keeps spawning further children
+        without ever reaping one, so the run hangs. A test body of `assertSame(2, 1 + 1)` is enough to hang it.
+      - Process/ProcessManagerTest and RemoteObjectTest fork worker processes, and Swoole refuses to fork from
+        inside a coroutine ("must be forked outside the coroutine" from Swoole\Process\Pool::start()).
+      - Database/RedisPoolTest sets a server-wide `requirepass` and creates ACL users on the shared Redis
+        server. That is invisible while tests run one at a time, but it breaks any test using Redis
+        concurrently: NameResolverTest's Redis cases fail whenever the two overlap.
+      - The four Coroutine tests assert tight wall-clock windows around a sleep or a timeout (e.g. "takes
+        about 0.50 to 0.55 second"). Those windows only hold when the scheduler has nothing else to run:
+        with other tests in flight the coroutine is resumed late and the measurement overshoots, so all
+        seven such assertions failed in a concurrent run while passing on their own. Loosening them would
+        throw away what they actually test, which is Barrier/WaitGroup/batch/parallel timing behavior.
+    -->
+    <testsuite name="serial">
+      <file>tests/unit/Coroutine/BarrierTest.php</file>
+      <file>tests/unit/Coroutine/FunctionTest.php</file>
+      <file>tests/unit/Coroutine/Http2/MultiplexClientTest.php</file>
+      <file>tests/unit/Coroutine/WaitGroupTest.php</file>
+      <file>tests/unit/Curl/HandlerTest.php</file>
+      <file>tests/unit/Database/RedisPoolTest.php</file>
+      <file>tests/unit/Process/ProcessManagerTest.php</file>
+      <file>tests/unit/RemoteObjectTest.php</file>
+    </testsuite>
+  </testsuites>
+  <extensions>
+    <extension class="Deminy\Counit\CounitExtension"/>
+  </extensions>
   <php>
     <ini name="error_reporting" value="-1"/>
     <ini name="display_errors" value="On"/>

@@ -11,13 +11,12 @@ declare(strict_types=1);
 
 namespace Swoole;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use Swoole\Tests\TestCase;
 
 /**
  * @internal
+ * @covers \Swoole\StringObject
  */
-#[CoversClass(StringObject::class)]
 class StringObjectTest extends TestCase
 {
     public function testReplace(): void
