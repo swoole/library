@@ -355,8 +355,8 @@ function swoole_get_default_remote_object_server_dir(): string
 function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
 {
     if (!SwooleLibrary::$remote_object_server_initiated) {
-        SwooleLibrary::$remote_object_server_initiated = true;
         swoole_init_default_remote_object_server();
+        SwooleLibrary::$remote_object_server_initiated = true;
     }
     if (!SwooleLibrary::$remote_object_server_socket_file) {
         $dir                                             = swoole_get_default_remote_object_server_dir();
