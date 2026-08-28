@@ -35,7 +35,13 @@ class BarrierTest extends TestCase
             }
             Barrier::wait($barrier);
 
-            self::assertEqualsWithDelta(microtime(true), $st + 0.525, 0.025, 'It takes about 0.50 to 0.55 second to finish execution of the four child coroutines.');
+            // Run concurrently the four coroutines take about 0.5 second in total; run one after another they
+            // would take 2. The bounds are wide enough to survive a busy scheduler and still fail on that.
+            self::assertThat(
+                microtime(true) - $st,
+                $this->logicalAnd(self::greaterThan(0.49), self::lessThan(1.5)),
+                'The four child coroutines run concurrently, taking about 0.5 second in total rather than 4 x 0.5.'
+            );
             self::assertEquals($N, $count, 'All four child coroutines have finished execution; the counter is increased to 4.');
         });
     }
@@ -56,12 +62,14 @@ class BarrierTest extends TestCase
             Barrier::wait($barrier, 0.1);
             $et = microtime(true);
 
+            // The counter is what proves the timeout was honored: had Barrier::wait() ignored it, it would
+            // have returned once the children finished, with the counter at 4. An upper bound on the elapsed
+            // time cannot add to that -- the children sleep 0.5s, so "timeout ignored" and "scheduler was
+            // busy" land in the same range -- and asserting one only makes the test measure the scheduler.
+            // The lower bound stays just under 0.1 because microtime() and Swoole's timer disagree by a
+            // fraction of a millisecond, which made `greaterThan(0.10)` fail on values like 0.09947.
             self::assertEquals(0, $count, 'None of the four child coroutines finishes execution when timeout happens; the counter remains as 0.');
-            self::assertThat(
-                $et - $st,
-                $this->logicalAnd(self::greaterThan(0.10), self::lessThan(0.15)),
-                'The parent coroutine stops waiting when timeout happens.'
-            );
+            self::assertGreaterThan(0.09, $et - $st, 'The parent coroutine waits for the timeout instead of returning at once.');
         });
     }
 

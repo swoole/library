@@ -14,41 +14,48 @@
     <testsuite name="concurrent">
       <directory suffix="Test.php">tests/unit</directory>
       <exclude>tests/unit/Thread</exclude>
-      <exclude>tests/unit/Coroutine/BarrierTest.php</exclude>
       <exclude>tests/unit/Coroutine/FunctionTest.php</exclude>
-      <exclude>tests/unit/Coroutine/Http2/MultiplexClientTest.php</exclude>
-      <exclude>tests/unit/Coroutine/WaitGroupTest.php</exclude>
+      <exclude>tests/unit/Coroutine/HttpFunctionTest.php</exclude>
       <exclude>tests/unit/Curl/HandlerTest.php</exclude>
+      <exclude>tests/unit/Database/PDOPoolTest.php</exclude>
       <exclude>tests/unit/Database/RedisPoolTest.php</exclude>
       <exclude>tests/unit/Process/ProcessManagerTest.php</exclude>
-      <exclude>tests/unit/RemoteObjectTest.php</exclude>
     </testsuite>
     <!--
       Run with ./vendor/bin/phpunit. These tests cannot share a run with the ones above:
 
-      - Curl/HandlerTest is @runTestsInSeparateProcesses, and PHPUnit's process isolation does not work from
-        inside a coroutine: the parent blocks reading the child's pipe and keeps spawning further children
-        without ever reaping one, so the run hangs. A test body of `assertSame(2, 1 + 1)` is enough to hang it.
-      - Process/ProcessManagerTest and RemoteObjectTest fork worker processes, and Swoole refuses to fork from
-        inside a coroutine ("must be forked outside the coroutine" from Swoole\Process\Pool::start()).
+      - Coroutine/FunctionTest calls Swoole\Runtime::setHookFlags() directly in its test bodies. That takes
+        effect process-wide and immediately, even from inside a running coroutine, so it turns on the STDIO
+        and file hooks counit excludes on purpose and then unhooks everything for whatever is in flight;
+        with it running concurrently, Barrier and Http2/MultiplexClient failed every time. It also calls
+        sleep()/usleep() unqualified from namespace Swoole\Coroutine, where counit installs shims of its
+        own, so under counit it would stop exercising Swoole's sleep hook altogether.
+      - Coroutine/HttpFunctionTest sets the process-wide http_client_driver option, which
+        Coroutine\Http\request() reads on every call. Concurrent tests overwrite each other's choice after
+        the first yield, so the driver-specific tests silently stop testing the driver they selected.
+      - Curl/HandlerTest is @runTestsInSeparateProcesses. The isolation is there for the hook flags, not for
+        forking: SWOOLE_HOOK_ALL leaves out SWOOLE_HOOK_CURL, which is mutually exclusive with
+        SWOOLE_HOOK_NATIVE_CURL, so Swoole\Curl\Handler is not installed unless a run swaps the two. Note
+        that the hang seen when running it under counit is not a coroutine limitation: PHPUnit replays the
+        parent's included files into each isolated child and only recognises phpunit's own Composer bin
+        proxy, so vendor/deminy/counit/counit is replayed and the child starts a nested counit run.
+      - Database/PDOPoolTest::testOracle blocks the scheduler: PDO_OCI is not coroutine-hooked, so its round
+        trips are blocking syscalls and no timer fires meanwhile. Measured at roughly 0.9s of timer lateness
+        for every other test in the run, which invalidates any wall-clock assertion in the concurrent suite.
       - Database/RedisPoolTest sets a server-wide `requirepass` and creates ACL users on the shared Redis
         server. That is invisible while tests run one at a time, but it breaks any test using Redis
         concurrently: NameResolverTest's Redis cases fail whenever the two overlap.
-      - The four Coroutine tests assert tight wall-clock windows around a sleep or a timeout (e.g. "takes
-        about 0.50 to 0.55 second"). Those windows only hold when the scheduler has nothing else to run:
-        with other tests in flight the coroutine is resumed late and the measurement overshoots, so all
-        seven such assertions failed in a concurrent run while passing on their own. Loosening them would
-        throw away what they actually test, which is Barrier/WaitGroup/batch/parallel timing behavior.
+      - Process/ProcessManagerTest forks worker processes, and Swoole refuses to fork from inside a
+        coroutine ("must be forked outside the coroutine" from Swoole\Process\Pool::start()). Under counit
+        the run dies at exit 255 with no summary at all, because PHPUnit's output buffer swallows the fatal.
     -->
     <testsuite name="serial">
-      <file>tests/unit/Coroutine/BarrierTest.php</file>
       <file>tests/unit/Coroutine/FunctionTest.php</file>
-      <file>tests/unit/Coroutine/Http2/MultiplexClientTest.php</file>
-      <file>tests/unit/Coroutine/WaitGroupTest.php</file>
+      <file>tests/unit/Coroutine/HttpFunctionTest.php</file>
       <file>tests/unit/Curl/HandlerTest.php</file>
+      <file>tests/unit/Database/PDOPoolTest.php</file>
       <file>tests/unit/Database/RedisPoolTest.php</file>
       <file>tests/unit/Process/ProcessManagerTest.php</file>
-      <file>tests/unit/RemoteObjectTest.php</file>
     </testsuite>
   </testsuites>
   <extensions>

@@ -21,6 +21,25 @@ use Swoole\Tests\TestCase;
  */
 class NameResolverTest extends TestCase
 {
+    private mixed $httpClientDriver = null;
+
+    /**
+     * The http_client_driver option is process-wide and is read on every Coroutine\Http\request() call,
+     * so a test leaving it set changes which client the tests after it exercise. setUp()/tearDown() run
+     * inside the test's own coroutine, so the value is restored promptly.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->httpClientDriver = swoole_library_get_option('http_client_driver');
+    }
+
+    protected function tearDown(): void
+    {
+        swoole_library_set_option('http_client_driver', $this->httpClientDriver);
+        parent::tearDown();
+    }
+
     public function testRedis(): void
     {
         $ns = new NameResolver\Redis(REDIS_SERVER_URL);

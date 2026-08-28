@@ -172,21 +172,18 @@ class PDOPoolTest extends DatabaseTestCase
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
         self::coRun(function () {
-            $pool      = self::getPdoMysqlPool(1);
-            $waitGroup = new WaitGroup(2); // A wait group to wait for the next 2 coroutines to finish.
+            // The pool is exhausted synchronously rather than by racing two coroutines against a 0.1s sleep.
+            // ConnectionPool::make() increments its counter before the connection's constructor returns and
+            // only pushes to the channel afterwards, so a second coroutine arriving inside that window saw
+            // the pool as full, parked on the channel, and was handed the new connection -- leaving the
+            // first coroutine blocked forever and this assertion inverted.
+            $pool = self::getPdoMysqlPool(1);
+            $held = $pool->get(); // The pool's only connection, taken before anything else can ask for it.
+            self::assertNotFalse($held, 'The pool hands out its only connection.');
 
-            go(function () use ($pool, $waitGroup) {
-                $pool->get()->exec('SELECT SLEEP(1)'); // Hold the connection for 1 second before putting it back into the pool.
-                $waitGroup->done();
-            });
+            self::assertFalse($pool->get(0.5), 'Failed to get a 2nd connection from the pool within 0.5 seconds');
 
-            go(function () use ($pool, $waitGroup) {
-                Coroutine::sleep(0.1); // Sleep for 0.1 second to ensure the 1st connection is in use by the 1st coroutine.
-                self::assertFalse($pool->get(0.5), 'Failed to get a 2nd connection from the pool within 0.5 seconds');
-                $waitGroup->done();
-            });
-
-            $waitGroup->wait();
+            $pool->put($held);
             $pool->close();
             self::restoreHookFlags();
         });

@@ -23,6 +23,21 @@ use Swoole\Tests\TestCase;
  */
 class RemoteObjectTest extends TestCase
 {
+    /**
+     * Starts the default remote-object server, and waits for its socket, before any test coroutine runs.
+     *
+     * swoole_get_default_remote_object_client() marks the server as initiated before it is listening, so
+     * under counit the first test yields inside that call, PHPUnit moves on, and the remaining tests skip
+     * the readiness wait and connect to a socket that does not exist yet ("No such file or directory").
+     * This is a warm-up only: nothing is torn down afterwards, so it does not run into the class-level
+     * fixture problem described in CLAUDE.md.
+     */
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        swoole_get_default_remote_object_client();
+    }
+
     public function testCallFunction(): void
     {
         self::coRun(function () {

@@ -117,7 +117,9 @@ class FunctionTest extends TestCase
             $this->assertEquals(count($results), $c);
             self::assertThat(
                 $end - $start,
-                $this->logicalAnd(self::greaterThan(0.2), self::lessThan(0.22)),
+                // Lower bound just under 0.2: microtime() and Swoole's timer disagree by a fraction of a
+                // millisecond, which made `greaterThan(0.2)` fail on values like 0.19958.
+                $this->logicalAnd(self::greaterThan(0.19), self::lessThan(0.22)),
                 'Four invocations of the callback function should take barely over 0.2 second to finish.'
             );
         });
