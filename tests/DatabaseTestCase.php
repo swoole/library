@@ -27,25 +27,6 @@ use Swoole\Database\RedisPool;
  */
 class DatabaseTestCase extends TestCase
 {
-    protected static string $sqliteDatabaseFile;
-
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        static::$sqliteDatabaseFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('swoole_pdo_pool_sqlite_test_', true);
-        if (file_exists(static::$sqliteDatabaseFile)) {
-            unlink(static::$sqliteDatabaseFile);
-        }
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        if (file_exists(static::$sqliteDatabaseFile)) {
-            unlink(static::$sqliteDatabaseFile);
-        }
-        parent::tearDownAfterClass();
-    }
-
     protected static function getMysqliPool(int $size = ConnectionPool::DEFAULT_SIZE): MysqliPool
     {
         $config = (new MysqliConfig())
@@ -103,9 +84,24 @@ class DatabaseTestCase extends TestCase
         return new PDOPool($config, $size);
     }
 
+    /**
+     * Every call gets a SQLite database file of its own, removed when the run ends.
+     *
+     * The file cannot be shared between tests, nor picked and deleted from setUpBeforeClass() and
+     * tearDownAfterClass(): PHPUnit runs those two hooks outside the test coroutines, so under counit a
+     * test returns to PHPUnit at its first yield and the file was deleted while the test using it was
+     * still running, which SQLite reports as "General error: 10 disk I/O error". Removing it at shutdown
+     * keeps the cleanup off the concurrent path altogether.
+     */
     protected static function getPdoSqlitePool(int $size = ConnectionPool::DEFAULT_SIZE): PDOPool
     {
-        $config = (new PDOConfig())->withDriver('sqlite')->withDbname(static::$sqliteDatabaseFile);
+        $file = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('swoole_pdo_pool_sqlite_test_', true);
+        register_shutdown_function(static function () use ($file): void {
+            if (file_exists($file)) {
+                unlink($file);
+            }
+        });
+        $config = (new PDOConfig())->withDriver('sqlite')->withDbname($file);
 
         return new PDOPool($config, $size);
     }

@@ -75,9 +75,13 @@ class FunctionTest extends TestCase
             Runtime::setHookFlags(0);
             $end = microtime(true);
             $this->assertEquals(count($results), 4);
+            // The lower bound allows for a little clock skew rather than being exactly 1: the batch is timed
+            // with microtime() while sleep(1) is served by Swoole's timer, and on a virtualized CI runner the
+            // two can disagree by a fraction of a millisecond (0.9996709823608398 was seen in CI). What the
+            // bounds are really for is the upper one, which is what fails if the tasks run one after another.
             self::assertThat(
                 $end - $start,
-                $this->logicalAnd(self::greaterThan(1), self::lessThan(1.2)),
+                $this->logicalAnd(self::greaterThan(0.99), self::lessThan(1.2)),
                 'Those batch tasks should take barely over a second to finish.'
             );
 
