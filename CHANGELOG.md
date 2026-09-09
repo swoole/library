@@ -16,6 +16,10 @@ Removed:
 
 * Dropped support for PHP below 8.2 and Swoole below 6.2: `composer.json` now requires PHP >= 8.2 and `ext-swoole` >= 6.2.
 
+Fixed:
+
+* MR swoole/library#192: Report fatal `\Swoole\Coroutine\Server` accept failures through `start()` and `errCode` (by @binaryfire).
+
 ## 6.2.2 (2026-07-08)
 
 Built-in PHP library included in [Swoole v6.2.2](https://github.com/swoole/swoole-src/releases/tag/v6.2.2).
