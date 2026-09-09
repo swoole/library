@@ -141,8 +141,9 @@ class Server
                 if ($socket->errCode == SOCKET_ECANCELED) {
                     break;
                 }
+                $this->errCode = $socket->errCode;
                 trigger_error("accept failed, Error: {$socket->errMsg}[{$socket->errCode}]", E_USER_WARNING);
-                break;
+                return false;
             }
         }
 
