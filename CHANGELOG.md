@@ -16,6 +16,10 @@ Removed:
 
 * Dropped support for PHP below 8.2 and Swoole below 6.2: `composer.json` now requires PHP >= 8.2 and `ext-swoole` >= 6.2.
 
+Fixed:
+
+* MR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client` (by @NathanFreeman). Every client was kept alive for the lifetime of the process, so each hooked `dns_get_record()`, `checkdnsrr()`, `getmxrr()`, `mail()` and `gethostbyaddr()` call leaked a client, its HTTP client and an open unix socket. Fix issue swoole/swoole-src#6191.
+
 ## 6.1.10 (2026-09-15)
 
 Built-in PHP library included in [Swoole v6.1.10](https://github.com/swoole/swoole-src/releases/tag/v6.1.10).

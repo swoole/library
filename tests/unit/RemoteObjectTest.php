@@ -72,6 +72,73 @@ class RemoteObjectTest extends TestCase
         });
     }
 
+    /**
+     * Anything call() brings back as an object or a resource arrives as a RemoteObject, and that RemoteObject
+     * has to be bound to the client that fetched it.
+     *
+     * The server marshals such a result into a RemoteObject carrying only an object id and a client id, and
+     * RemoteObject::__unserialize() re-binds it through Swoole\RemoteObject\Client::getInstance(). An unbound
+     * one is useless twice over: every call on it throws ("This remote object is not bound to a client"), and
+     * RemoteObject::__destruct() sends /destroy only when a client is set, so the object it stands for is
+     * never released on the server either. testResource() above does not catch that, because a RemoteObject
+     * passed back as an argument is resolved server-side by object id and needs no client at all.
+     */
+    public function testCallReturnsBoundRemoteObject(): void
+    {
+        self::coRun(function () {
+            $file   = '/tmp/remote-object-bound.txt';
+            $client = swoole_get_default_remote_object_client();
+            $bound  = new \ReflectionProperty(RemoteObject::class, 'client');
+
+            $date = $client->call('date_create_immutable', '2026-01-02 03:04:05');
+            $this->assertInstanceOf(RemoteObject::class, $date);
+            $this->assertSame($client, $bound->getValue($date));
+            $this->assertEquals('2026-01-02 03:04:05', $date->format('Y-m-d H:i:s'));
+
+            $fp = $client->call('fopen', $file, 'w');
+            $this->assertInstanceOf(RemoteObject::class, $fp);
+            $this->assertSame($client, $bound->getValue($fp));
+            $this->assertGreaterThan(0, $fp->getObjectId());
+
+            $client->call('fclose', $fp);
+            // Remove the file through the same client: it was created by the remote object server, which is a
+            // long-lived daemon and need not run as the user this test does.
+            $client->call('unlink', $file);
+        });
+    }
+
+    /**
+     * A client outlives the remote objects it produced, and no longer than that.
+     *
+     * Both halves matter, and both rest on RemoteObject::$client being a strong reference. It is what makes a
+     * weak client registry safe: a client stays reachable for exactly as long as one of its remote objects can
+     * still need to send /destroy through it. Making that reference weak too, a symmetry that looks tempting,
+     * would take the leak of swoole/swoole-src#6191 apart at the other end -- every call() result would go
+     * unbound the moment the caller dropped the client, and would silently stop releasing its server-side
+     * object. Conversely, nothing may pin a client once its last remote object is gone: every hooked
+     * dns_get_record()/checkdnsrr()/getmxrr()/mail()/gethostbyaddr() call builds one of its own, so a client
+     * held for the lifetime of the process costs about 140 KB and one open unix socket per call.
+     */
+    public function testClientOutlivesItsRemoteObjects(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $id     = $client->getId();
+            $this->assertSame($client, RemoteObject\Client::getInstance($id));
+
+            $date = $client->call('date_create_immutable', '2026-01-02 03:04:05');
+            unset($client);
+
+            // The remote object is the only thing holding the client now, and that has to be enough: to keep
+            // the client in the registry, and to keep the object itself usable.
+            $this->assertSame($id, RemoteObject\Client::getInstance($id)?->getId());
+            $this->assertEquals('2026-01-02 03:04:05', $date->format('Y-m-d H:i:s'));
+
+            unset($date);
+            $this->assertNull(RemoteObject\Client::getInstance($id));
+        });
+    }
+
     public function testMongoDb(): void
     {
         self::coRun(function () {
