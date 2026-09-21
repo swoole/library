@@ -72,6 +72,131 @@ class RemoteObjectTest extends TestCase
         });
     }
 
+    /**
+     * An object or a resource that call() brings back arrives as a RemoteObject bound to the client that fetched
+     * it; unbound, it could neither be used nor release its server-side counterpart. testResource() cannot tell,
+     * because a RemoteObject passed back as an argument is resolved server-side by object id alone.
+     */
+    public function testCallReturnsBoundRemoteObject(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $bound  = new \ReflectionProperty(RemoteObject::class, 'client');
+
+            $date = $client->call('date_create_immutable', '2026-01-02 03:04:05');
+            $this->assertInstanceOf(RemoteObject::class, $date);
+            $this->assertSame($client, $bound->getValue($date));
+            $this->assertEquals('2026-01-02 03:04:05', $date->format('Y-m-d H:i:s'));
+
+            $fp = $client->call('fopen', 'php://memory', 'w');
+            $this->assertInstanceOf(RemoteObject::class, $fp);
+            $this->assertSame($client, $bound->getValue($fp));
+            $this->assertGreaterThan(0, $fp->getObjectId());
+            $client->call('fclose', $fp);
+        });
+    }
+
+    /**
+     * A client lives exactly as long as the remote objects it produced, whether they came from call() or from
+     * create(): RemoteObject::$client is the strong reference that keeps it in the weak registry, see
+     * Swoole\RemoteObject\Client::$clients.
+     */
+    public function testClientOutlivesItsRemoteObjects(): void
+    {
+        self::coRun(function () {
+            $registry  = new \ReflectionProperty(RemoteObject\Client::class, 'clients');
+            $producers = [
+                'call()'   => fn (RemoteObject\Client $client) => $client->call('date_create_immutable', '2026-01-02 03:04:05'),
+                'create()' => fn (RemoteObject\Client $client) => $client->create(\DateTimeImmutable::class, '2026-01-02 03:04:05'),
+            ];
+
+            foreach ($producers as $producer => $produce) {
+                $client = swoole_get_default_remote_object_client();
+                $id     = $client->getId();
+                $this->assertSame($client, RemoteObject\Client::getInstance($id), $producer);
+
+                $date = $produce($client);
+                unset($client);
+
+                // Only the remote object holds the client now; that has to keep it registered, and the object usable.
+                $this->assertSame($id, RemoteObject\Client::getInstance($id)?->getId(), $producer);
+                $this->assertEquals('2026-01-02 03:04:05', $date->format('Y-m-d H:i:s'), $producer);
+
+                // Look at the registry itself first: getInstance() drops a dead entry, which would hide a client
+                // that failed to unregister.
+                unset($date);
+                $this->assertArrayNotHasKey($id, $registry->getValue(), $producer);
+                $this->assertNull(RemoteObject\Client::getInstance($id), $producer);
+            }
+        });
+    }
+
+    /**
+     * Destroying a RemoteObject releases the object it stands for on the server. A second handle on the same
+     * object id is what makes that observable: it works before the first one is destroyed, and not after.
+     */
+    public function testDestructReleasesServerSideObject(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $date   = $client->call('date_create_immutable', '2026-01-02 03:04:05');
+            $twin   = unserialize(serialize($date));
+            $id     = $date->getObjectId();
+            $this->assertSame($id, $twin->getObjectId());
+            $this->assertEquals('2026', $twin->format('Y'));
+
+            unset($date);
+
+            try {
+                $twin->format('Y');
+                $this->fail('The server-side object survived its RemoteObject');
+            } catch (RemoteObject\Exception $e) {
+                $this->assertStringContainsString("object[#{$id}] not found", $e->getMessage());
+            } finally {
+                // Disarm the twin: a second /destroy would fail, and RemoteObject::__destruct() would log it.
+                (new \ReflectionProperty(RemoteObject::class, 'objectId'))->setValue($twin, 0);
+            }
+        });
+    }
+
+    /**
+     * A registry entry belongs to the one client that registered it. Neither an instance built without the
+     * constructor nor one forged with a live client's id may take that entry away, and a client cannot be cloned.
+     */
+    public function testRegistryEntryBelongsToItsClient(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $id     = $client->getId();
+            $class  = RemoteObject\Client::class;
+
+            $ghost = (new \ReflectionClass($class))->newInstanceWithoutConstructor();
+            unset($ghost);
+            $this->assertSame($client, RemoteObject\Client::getInstance($id));
+
+            $property = "\0{$class}\0id";
+            $forged   = unserialize(sprintf(
+                'O:%d:"%s":1:{s:%d:"%s";s:%d:"%s";}',
+                strlen($class),
+                $class,
+                strlen($property),
+                $property,
+                strlen($id),
+                $id
+            ));
+            $this->assertSame($id, $forged->getId());
+            unset($forged);
+            $this->assertSame($client, RemoteObject\Client::getInstance($id));
+
+            try {
+                $copy = clone $client;
+                $this->fail('A client must not be cloneable');
+            } catch (\Error $e) {
+                $this->assertStringContainsString('__clone', $e->getMessage());
+            }
+        });
+    }
+
     public function testMongoDb(): void
     {
         self::coRun(function () {

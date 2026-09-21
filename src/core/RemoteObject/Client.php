@@ -17,11 +17,22 @@ use Swoole\RemoteObject;
 
 class Client
 {
+    /**
+     * The live clients, keyed by client id.
+     *
+     * The references are weak on purpose. A RemoteObject holds a strong reference to the client it came
+     * from, so a client stays reachable here for exactly as long as one of its remote objects is alive,
+     * which is the lifetime RemoteObject::__destruct() needs to be able to send /destroy. A client nobody
+     * else holds on to is freed right away instead of being pinned for the lifetime of the process.
+     *
+     * @var array<string, \WeakReference>
+     */
     private static array $clients = [];
 
     private readonly HttpClient $client;
 
-    private readonly string $id;
+    // Not readonly, so that it has a default: __destruct() also runs on an instance built without the constructor.
+    private string $id = '';
 
     private readonly int $ownerCoroutineId;
 
@@ -39,7 +50,25 @@ class Client
             $headers['x-api-key'] = $options['api_key'];
         }
         $this->client->setHeaders($headers);
-        self::$clients[$this->id] = $this;
+
+        // RemoteObject::__unserialize() looks the client up here by id to re-bind remote objects the server returns.
+        self::$clients[$this->id] = \WeakReference::create($this);
+    }
+
+    public function __destruct()
+    {
+        // self::$clients only holds a weak reference, so its entry would outlive the client. Drop it here, but only
+        // if it is this instance's own: one built without the constructor has no entry.
+        if ((self::$clients[$this->id] ?? null)?->get() === $this) {
+            unset(self::$clients[$this->id]);
+        }
+    }
+
+    /**
+     * A clone would share the id, the registry entry and the HTTP connection of the client it was made from.
+     */
+    private function __clone()
+    {
     }
 
     public function create(string $class, mixed ...$args): RemoteObject
@@ -60,10 +89,13 @@ class Client
         if (empty($clientId)) {
             throw new Exception('RemoteObject is not bound to a client');
         }
-        if (!isset(self::$clients[$clientId])) {
+        $client = (self::$clients[$clientId] ?? null)?->get();
+        if ($client === null) {
+            // Drop a dead reference if one is ever found.
+            unset(self::$clients[$clientId]);
             return null;
         }
-        return self::$clients[$clientId];
+        return $client instanceof static ? $client : null;
     }
 
     public function getId(): string
