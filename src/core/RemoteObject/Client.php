@@ -17,6 +17,16 @@ use Swoole\RemoteObject;
 
 class Client
 {
+    /**
+     * Every live client, keyed by client id.
+     *
+     * The references are weak on purpose. A RemoteObject holds a strong reference to the client it came
+     * from, so a client stays reachable here for exactly as long as one of its remote objects is alive,
+     * which is the lifetime RemoteObject::__destruct() needs to be able to send /destroy. A client nobody
+     * else holds on to is freed right away instead of being pinned for the lifetime of the process.
+     *
+     * @var array<string, \WeakReference>
+     */
     private static array $clients = [];
 
     private HttpClient $client;
@@ -39,13 +49,22 @@ class Client
             $headers['x-api-key'] = $options['api_key'];
         }
         $this->client->setHeaders($headers);
+
+        // Registering here, rather than in create(), is what lets RemoteObject::__unserialize() re-bind the
+        // remote objects that call() brings back: the server marshals every object or resource it returns
+        // into a RemoteObject carrying nothing but this client id.
+        self::$clients[$this->id] = \WeakReference::create($this);
+    }
+
+    public function __destruct()
+    {
+        // self::$clients only holds a weak reference, so its entry outlives the client. Drop it here instead
+        // of leaving a dead reference behind on every client that is ever created.
+        unset(self::$clients[$this->id]);
     }
 
     public function create(string $class, mixed ...$args): RemoteObject
     {
-        if (!isset(self::$clients[$this->id])) {
-            self::$clients[$this->id] = $this;
-        }
         return RemoteObject::create($this, $class, $args);
     }
 
@@ -62,10 +81,15 @@ class Client
         if (empty($clientId)) {
             throw new Exception('RemoteObject is not bound to a client');
         }
-        if (!isset(self::$clients[$clientId])) {
+        $client = (self::$clients[$clientId] ?? null)?->get();
+        if ($client === null) {
+            // Belt and braces. __destruct() is what keeps the registry clean, and a single unset() cannot
+            // fail, so a reference whose client is already gone should never be found here; drop it anyway
+            // rather than let a stale entry survive a lookup.
+            unset(self::$clients[$clientId]);
             return null;
         }
-        return self::$clients[$clientId];
+        return $client instanceof static ? $client : null;
     }
 
     public function getId(): string
