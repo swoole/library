@@ -39,11 +39,13 @@ class Client
             $headers['x-api-key'] = $options['api_key'];
         }
         $this->client->setHeaders($headers);
-        self::$clients[$this->id] = $this;
     }
 
     public function create(string $class, mixed ...$args): RemoteObject
     {
+        if (!isset(self::$clients[$this->id])) {
+            self::$clients[$this->id] = $this;
+        }
         return RemoteObject::create($this, $class, $args);
     }
 
