@@ -14,6 +14,7 @@ Removed:
 
 Fixed:
 
+* MR swoole/library#192: Report fatal `\Swoole\Coroutine\Server` accept failures through `start()` and `errCode` (by @binaryfire).
 * MR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client`, present since 6.2.0. Every client was kept alive for the lifetime of the process, so each hooked `dns_get_record()`, `checkdnsrr()`, `getmxrr()`, `mail()` and `gethostbyaddr()` call, and each `\Swoole\MongoDB\Client`, leaked a client, its HTTP client and an open unix socket. Clients are now released as soon as nothing uses them, so `\Swoole\RemoteObject\Client::getInstance()` returns `null` for a client that is gone; a client can no longer be cloned. Fix issue swoole/swoole-src#6191.
 
 ## 6.1.10 (2026-09-15)
