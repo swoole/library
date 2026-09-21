@@ -18,7 +18,7 @@ use Swoole\RemoteObject;
 class Client
 {
     /**
-     * Every live client, keyed by client id.
+     * The live clients, keyed by client id.
      *
      * The references are weak on purpose. A RemoteObject holds a strong reference to the client it came
      * from, so a client stays reachable here for exactly as long as one of its remote objects is alive,
@@ -31,7 +31,8 @@ class Client
 
     private readonly HttpClient $client;
 
-    private readonly string $id;
+    // Not readonly, so that it has a default: __destruct() also runs on an instance built without the constructor.
+    private string $id = '';
 
     private readonly int $ownerCoroutineId;
 
@@ -50,17 +51,24 @@ class Client
         }
         $this->client->setHeaders($headers);
 
-        // Registering here, rather than in create(), is what lets RemoteObject::__unserialize() re-bind the
-        // remote objects that call() brings back: the server marshals every object or resource it returns
-        // into a RemoteObject carrying nothing but this client id.
+        // RemoteObject::__unserialize() looks the client up here by id to re-bind remote objects the server returns.
         self::$clients[$this->id] = \WeakReference::create($this);
     }
 
     public function __destruct()
     {
-        // self::$clients only holds a weak reference, so its entry outlives the client. Drop it here instead
-        // of leaving a dead reference behind on every client that is ever created.
-        unset(self::$clients[$this->id]);
+        // self::$clients only holds a weak reference, so its entry would outlive the client. Drop it here, but only
+        // if it is this instance's own: one built without the constructor has no entry.
+        if ((self::$clients[$this->id] ?? null)?->get() === $this) {
+            unset(self::$clients[$this->id]);
+        }
+    }
+
+    /**
+     * A clone would share the id, the registry entry and the HTTP connection of the client it was made from.
+     */
+    private function __clone()
+    {
     }
 
     public function create(string $class, mixed ...$args): RemoteObject
@@ -83,9 +91,7 @@ class Client
         }
         $client = (self::$clients[$clientId] ?? null)?->get();
         if ($client === null) {
-            // Belt and braces. __destruct() is what keeps the registry clean, and a single unset() cannot
-            // fail, so a reference whose client is already gone should never be found here; drop it anyway
-            // rather than let a stale entry survive a lookup.
+            // Drop a dead reference if one is ever found.
             unset(self::$clients[$clientId]);
             return null;
         }
