@@ -14,6 +14,7 @@ namespace Swoole\Tests;
 use Swoole\ConnectionPool;
 use Swoole\Database\MysqliConfig;
 use Swoole\Database\MysqliPool;
+use Swoole\Database\MysqliProxy;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
 use Swoole\Database\RedisConfig;
@@ -39,6 +40,21 @@ class DatabaseTestCase extends TestCase
         ;
 
         return new MysqliPool($config, $size);
+    }
+
+    /**
+     * Kills the server-side thread of a pooled mysqli connection from a second connection, so that the proxy's
+     * next call runs into a lost connection. Killing it from the connection itself would make that very call
+     * fail with a non-IO error instead, which is not the situation the tests using this are about.
+     */
+    protected static function killMysqliConnection(MysqliProxy $connection): void
+    {
+        $admin = new \mysqli(MYSQL_SERVER_HOST, MYSQL_SERVER_USER, MYSQL_SERVER_PWD, MYSQL_SERVER_DB, MYSQL_SERVER_PORT);
+        try {
+            $admin->query('KILL ' . $connection->thread_id);
+        } finally {
+            $admin->close();
+        }
     }
 
     protected static function getPdoMysqlPool(int $size = ConnectionPool::DEFAULT_SIZE): PDOPool

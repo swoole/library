@@ -40,7 +40,7 @@ class MysqliPoolTest extends DatabaseTestCase
             $mysqli = $pool->get();
             self::assertSame(0, $mysqli->getRound());
 
-            self::killConnection($mysqli);
+            self::killMysqliConnection($mysqli);
 
             $result = $mysqli->query('SELECT 42 AS answer');
             self::assertEquals(42, $result->fetch_assoc()['answer'], 'The query is re-run on a fresh connection.');
@@ -68,7 +68,7 @@ class MysqliPoolTest extends DatabaseTestCase
             self::assertSame(42, $answer);
 
             $answer = null;
-            self::killConnection($mysqli);
+            self::killMysqliConnection($mysqli);
 
             $statement->execute();
             self::assertTrue($statement->fetch());
@@ -81,17 +81,46 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
-     * Kills the server-side thread of a pooled connection from a second connection, so that the proxy's next
-     * call runs into a lost connection. Killing it from the connection itself would make that very call fail
-     * with a non-IO error instead, which is not the situation these tests are about.
+     * A connection lost while the rows are being read cannot be recovered by the proxy: the rows went down with
+     * it. The proxy used to reconnect, prepare the statement again and fetch from it without executing it, which
+     * fails with "Commands out of sync" (2014) in place of the lost connection.
+     *
+     * A loss in the middle of a result set cannot be forced deterministically, so the statement here is a
+     * mysqli_stmt subclass (see the end of this file) whose fetch() fails the way a lost connection does.
      */
-    private static function killConnection(MysqliProxy $connection): void
+    public function testLostConnectionWhileFetchingIsReported(): void
     {
-        $admin = new \mysqli(MYSQL_SERVER_HOST, MYSQL_SERVER_USER, MYSQL_SERVER_PWD, MYSQL_SERVER_DB, MYSQL_SERVER_PORT);
-        try {
-            $admin->query('KILL ' . $connection->thread_id);
-        } finally {
-            $admin->close();
-        }
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+
+            $statement = new MysqliStatementProxy(
+                new LostConnectionMysqliStatement($mysqli->__getObject(), 'SELECT 42'),
+                'SELECT 42',
+                $mysqli
+            );
+            self::assertTrue($statement->execute());
+            try {
+                $statement->fetch();
+                self::fail('The lost connection is reported.');
+            } catch (\mysqli_sql_exception $e) {
+                self::assertSame(2006, $e->getCode(), 'The lost connection itself is reported, not an error of a retried fetch().');
+            }
+            self::assertSame(0, $mysqli->getRound(), 'There is nothing to retry, so there is no reconnect either.');
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+}
+
+/**
+ * A prepared statement whose fetch() fails the way it does on a lost connection under the default report mode.
+ */
+class LostConnectionMysqliStatement extends \mysqli_stmt
+{
+    public function fetch(): ?bool
+    {
+        throw new \mysqli_sql_exception('MySQL server has gone away', 2006);
     }
 }

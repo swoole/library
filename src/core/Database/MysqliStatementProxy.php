@@ -13,7 +13,12 @@ namespace Swoole\Database;
 
 class MysqliStatementProxy extends ObjectProxy
 {
-    public const IO_METHOD_REGEX = '/^(close|execute|fetch|prepare)$/i';
+    /**
+     * The methods that are run again on a fresh connection after a lost one. fetch() is not one of them: it reads
+     * the result of an execute() that went down with the connection, and running it on a statement that was
+     * prepared again but never executed fails with "Commands out of sync" in place of the lost connection.
+     */
+    public const IO_METHOD_REGEX = '/^(close|execute|prepare)$/i';
 
     /** @var \mysqli_stmt */
     protected $__object;
@@ -55,6 +60,11 @@ class MysqliStatementProxy extends ObjectProxy
                 if (!preg_match(static::IO_METHOD_REGEX, $name)) {
                     if ($exception) {
                         throw $exception;
+                    }
+                    if (in_array($errno, $this->parent::IO_ERRORS, true)) {
+                        // False from fetch(), get_result(), store_result() and the like can mean there is nothing to
+                        // return; with a lost-connection errno it means the connection is gone, and that is reported.
+                        throw new MysqliException($this->__object->error, $errno);
                     }
                     break;
                 }
