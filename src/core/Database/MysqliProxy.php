@@ -16,7 +16,7 @@ namespace Swoole\Database;
  */
 class MysqliProxy extends ObjectProxy
 {
-    public const IO_METHOD_REGEX = '/^autocommit|begin_transaction|change_user|close|commit|kill|multi_query|ping|prepare|query|real_connect|real_query|reap_async_query|refresh|release_savepoint|rollback|savepoint|select_db|send_query|set_charset|ssl_set$/i';
+    public const IO_METHOD_REGEX = '/^(autocommit|begin_transaction|change_user|close|commit|execute_query|kill|multi_query|ping|prepare|query|real_connect|real_query|reap_async_query|refresh|release_savepoint|rollback|savepoint|select_db|send_query|set_charset|ssl_set)$/i';
 
     public const IO_ERRORS = [
         2002, // MYSQLND_CR_CONNECTION_ERROR
@@ -47,15 +47,29 @@ class MysqliProxy extends ObjectProxy
     public function __call(string $name, array $arguments)
     {
         for ($n = 3; $n--;) {
-            $ret = @$this->__object->{$name}(...$arguments);
+            // Under the default report mode (MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT since PHP 8.1) a failure
+            // throws a mysqli_sql_exception instead of returning false; both forms are handled the same way below.
+            $exception = null;
+            try {
+                $ret = @$this->__object->{$name}(...$arguments);
+            } catch (\mysqli_sql_exception $exception) {
+                $ret = false;
+            }
             if ($ret === false) {
+                $errno = $exception ? $exception->getCode() : $this->__object->errno;
                 /* non-IO method */
                 if (!preg_match(static::IO_METHOD_REGEX, $name)) {
+                    if ($exception) {
+                        throw $exception;
+                    }
                     break;
                 }
                 /* no more chances or non-IO failures */
-                if (!in_array($this->__object->errno, static::IO_ERRORS, true) || ($n === 0)) {
-                    throw new MysqliException($this->__object->error, $this->__object->errno);
+                if (!in_array($errno, static::IO_ERRORS, true) || ($n === 0)) {
+                    if ($exception) {
+                        throw $exception;
+                    }
+                    throw new MysqliException($this->__object->error, $errno);
                 }
                 $this->reconnect();
                 continue;
