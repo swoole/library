@@ -148,6 +148,34 @@ class PDOStatementProxyTest extends DatabaseTestCase
             $pool->close();
         });
     }
+
+    /**
+     * After reconnecting the parent once, the statement has to remember the parent's new round. It did not, so a
+     * second lost connection looked like one the parent had already recovered from: the statement was prepared
+     * again on the dead connection and the retried execute() failed with the lost connection.
+     */
+    public function testReconnectsAgainAfterASecondLostConnection(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $statement = $pdo->prepare('SELECT 42 AS answer');
+
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $pdo->getRound());
+
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(2, $pdo->getRound(), 'The second lost connection reconnects the parent again.');
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
 }
 
 /**
