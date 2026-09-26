@@ -14,10 +14,10 @@ Changed:
 
 Added:
 
-* MR swoole/library#185: Added `\Swoole\Coroutine\Http2\MultiplexClient`, an HTTP/2 client that multiplexes requests from many coroutines over one shared connection, reconnects on demand, and closes an idle connection after a configurable period (options `heartbeat_check_interval` and `heartbeat_idle_time`) (by @tw2066).
-* MR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication (by @catchem88).
-* MR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler; on PHP versions without the native constants, use `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK` and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` (by @lazerg).
-* MR swoole/library#191: Support the `http2_max_headers` server option, with the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS`; it takes effect on Swoole 6.3.0 and later (by @NathanFreeman).
+* PR swoole/library#185: Added `\Swoole\Coroutine\Http2\MultiplexClient`, an HTTP/2 client that multiplexes requests from many coroutines over one shared connection, reconnects on demand, and closes an idle connection after a configurable period (options `heartbeat_check_interval` and `heartbeat_idle_time`) (by @tw2066).
+* PR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication (by @catchem88).
+* PR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler; on PHP versions without the native constants, use `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK` and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` (by @lazerg).
+* PR swoole/library#191: Support the `http2_max_headers` server option, with the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS`; it takes effect on Swoole 6.3.0 and later (by @NathanFreeman).
 
 Changed:
 
@@ -31,8 +31,8 @@ Removed:
 
 Fixed:
 
-* MR swoole/library#192: Report fatal `\Swoole\Coroutine\Server` accept failures through `start()` and `errCode` (by @binaryfire).
-* MR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client`, present since 6.2.0: every client, including the ones behind the hooked `dns_get_record()`, `mail()` and `gethostbyaddr()` calls and behind `\Swoole\MongoDB\Client`, was kept alive for the lifetime of the process. Clients are now released as soon as nothing uses them, so `\Swoole\RemoteObject\Client::getInstance()` returns `null` for a client that is gone, and a client can no longer be cloned. Fix issue swoole/swoole-src#6191.
+* PR swoole/library#192: Report fatal `\Swoole\Coroutine\Server` accept failures through `start()` and `errCode` (by @binaryfire).
+* PR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client`, present since 6.2.0: every client, including the ones behind the hooked `dns_get_record()`, `mail()` and `gethostbyaddr()` calls and behind `\Swoole\MongoDB\Client`, was kept alive for the lifetime of the process. Clients are now released as soon as nothing uses them, so `\Swoole\RemoteObject\Client::getInstance()` returns `null` for a client that is gone, and a client can no longer be cloned. Fix issue swoole/swoole-src#6191.
 * Fixed a startup race in the default remote object server that let a coroutine see the server as ready while another one was still starting it ([commit](https://github.com/swoole/library/commit/b0ba7b46d995feff9427b83ceedfcc87e8ca96e8)).
 * Hardened three error paths ([commit](https://github.com/swoole/library/commit/63f1fe387f78627ff1904de3e49ee6894adfd240)): a failed reconnect no longer leaves a database statement proxy wrapping `false`; `\Swoole\RemoteObject\Client` throws a `\Swoole\RemoteObject\Exception` on a response that does not unserialize; an empty FastCGI response is reported as `502 Invalid FastCGI Response`.
 * A `\Swoole\RemoteObject\Client` used from several coroutines at once ended the process with a fatal "Socket has already been bound to another coroutine"; calls through one client are now serialized.
@@ -69,7 +69,7 @@ Changed:
 
 Fixed:
 
-* MR swoole/library#189: Fix a PHP 8.5 deprecation notice about null array keys in method `\Swoole\ArrayObject::valid()`.
+* PR swoole/library#189: Fix a PHP 8.5 deprecation notice about null array keys in method `\Swoole\ArrayObject::valid()`.
 
 ## 6.2.1 (2026-05-15)
 
@@ -77,7 +77,7 @@ Built-in PHP library included in [Swoole v6.2.1](https://github.com/swoole/swool
 
 Changed:
 
-* MR swoole/library#186: Expanded the lost-connection detection heuristics of `\Swoole\Database\DetectsLostConnections` with many additional error message patterns (SSL timeouts, connection-refused/network-unreachable variants, Vitess/VTGate errors, access denied, and more), improving automatic reconnection for the database connection pools.
+* PR swoole/library#186: Expanded the lost-connection detection heuristics of `\Swoole\Database\DetectsLostConnections` with many additional error message patterns (SSL timeouts, connection-refused/network-unreachable variants, Vitess/VTGate errors, access denied, and more), improving automatic reconnection for the database connection pools.
 * `src/vendor_init.php` now also loads the `ext/curl.php`, `ext/sockets.php`, and `ext/standard.php` coroutine patches when the library is installed via Composer.
 
 Fixed:
@@ -90,7 +90,7 @@ Built-in PHP library included in [Swoole v6.2.0](https://github.com/swoole/swool
 
 Added:
 
-* MR swoole/library#183: Added the [\Swoole\RemoteObject module](https://github.com/swoole/library/tree/v6.2.0/src/core/RemoteObject) for transparently calling objects hosted on a remote server, including a client, context, proxy trait, and server implementation.
+* PR swoole/library#183: Added the [\Swoole\RemoteObject module](https://github.com/swoole/library/tree/v6.2.0/src/core/RemoteObject) for transparently calling objects hosted on a remote server, including a client, context, proxy trait, and server implementation.
 * Added `ext-mongodb` hook support for the Remote Object service.
 * Added examples for the remote object service (client, server bootstrap, MongoDB usage).
 
@@ -203,7 +203,7 @@ Removed:
 Added:
 
 * Added [\Swoole\Thread classes](https://github.com/swoole/library/tree/v6.0.0/src/core/Thread).
-* MR swoole/library#177: Added io_uring constants.
+* PR swoole/library#177: Added io_uring constants.
 
 Fixed:
 
@@ -219,9 +219,9 @@ Built-in PHP library included in [Swoole v5.1.3](https://github.com/swoole/swool
 
 Fixed:
 
-* MR swoole/library#169: Fix broken requests when keep-alive is turned on in the FastCGI client. (by @NathanFreeman)
-* MR swoole/library#170: Enhance database pool stability by verifying PDO connection existence while fetching. (by @DevZer0x00)
-* MR swoole/library#172: Add keyword "Broken Pipe" for detecting lost DB connections. (by @kingIZZZY)
+* PR swoole/library#169: Fix broken requests when keep-alive is turned on in the FastCGI client. (by @NathanFreeman)
+* PR swoole/library#170: Enhance database pool stability by verifying PDO connection existence while fetching. (by @DevZer0x00)
+* PR swoole/library#172: Add keyword "Broken Pipe" for detecting lost DB connections. (by @kingIZZZY)
 * Fix accessing undefined properties in method \Swoole\NameResolver::checkResponse(). ([commit](https://github.com/swoole/library/commit/7a6396e45f4d4517a049584a746285d6501cf71d))
 * Fix the implementation of method `\Swoole\MultibyteStringObject::chunk()`. ([commit](https://github.com/swoole/library/commit/031eba5f6db2ffac66ce1cca6d1d63a213203724))
 * Connection pool in Swoole does not support in-memory or temporary SQLite databases. ([commit](https://github.com/swoole/library/commit/eaf6a43f2fdd403e7d4968fd6f4bd0d1b05e48c3))
@@ -254,8 +254,8 @@ Fixed:
 
 Changed:
 
-* MR swoole/library#160: Allow to pass array key/index to the callback function of function _\Swoole\Coroutine::map()_. (by @maxiaozhi)
-* MR swoole/library#166: Support configurable options for _Redis_. (by @sy-records)
+* PR swoole/library#160: Allow to pass array key/index to the callback function of function _\Swoole\Coroutine::map()_. (by @maxiaozhi)
+* PR swoole/library#166: Support configurable options for _Redis_. (by @sy-records)
 * Add option _write_func_ to class _\Swoole\Constant_. ([commit](https://github.com/swoole/library/commit/9504fec3ee5e8583aba99cf524a73b6f1b316d14))
 * Improved type declarations and return types.
 
@@ -271,7 +271,7 @@ Built-in PHP library included in [Swoole v5.1.0](https://github.com/swoole/swool
 
 Added:
 
-* MR swoole/library#163: support database connection pools of _ODBC_, _SQLite_, _PostgreSQL_, and _Oracle_ via PDO. (by @NathanFreeman)
+* PR swoole/library#163: support database connection pools of _ODBC_, _SQLite_, _PostgreSQL_, and _Oracle_ via PDO. (by @NathanFreeman)
 
 Fixed:
 

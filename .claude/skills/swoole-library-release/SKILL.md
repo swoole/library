@@ -141,7 +141,7 @@ The release message and the matching `CHANGELOG.md` section (Step 10) carry the 
 
 - **What to include**: the major changes since `$PREV` — new features, behavior changes, bug fixes, deprecations/removals, and large internal efforts (e.g. a refactoring or modernization pass across the codebase). Leave out minor housekeeping (coding-style fixes touching a few files, CI tweaks, documentation typos, merge commits) unless such a change is big enough to be worth recording (e.g. a coding-style update across many files) or it is the only change in the release.
 - **Grouping**: group the bullets under Keep-a-Changelog-style category labels, each written as a `Label:` paragraph followed by a blank line and a bullet list — `Added:`, `Changed:`, `Deprecated:`, `Removed:`, `Fixed:`, `Security:`. Include only the categories that have entries, in that order. See the existing sections of `CHANGELOG.md` for examples.
-- **Bullets**: plain language, written from a library user's perspective. Reference PRs and issues the way existing entries do (`MR swoole/library#177`, `Fix issue swoole/library#164`, `swoole/swoole-src#5595`) or link the commit; credit external contributors with `(by @username)`.
+- **Bullets**: plain language, written from a library user's perspective. Reference PRs and issues the way existing entries do (`PR swoole/library#177`, `Fix issue swoole/library#164`, `swoole/swoole-src#5595`) or link the commit; credit external contributors with `(by @username)`.
 
 ## Step 9 — Publish the release
 
