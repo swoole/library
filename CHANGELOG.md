@@ -29,6 +29,7 @@ Fixed:
 * `\Swoole\Database\RedisPool` passed the `connect()` arguments in the wrong positions when only some of the connect timeout, retry interval and read timeout were configured: a retry interval without a connect timeout, or a read timeout together with a connect timeout but without a retry interval, failed with a TypeError, and a read timeout on its own was applied as the connect timeout.
 * `\Swoole\Coroutine\Server` did not back off when a coroutine could not be created for an accepted connection: `\Swoole\Coroutine::create()` returns `false` on failure, which the check for a negative return value never matched.
 * A FastCGI request body of `"0"` is now sent; it used to be dropped as empty.
+* `\Swoole\Database\PDOStatementProxy` turned a connection lost while the rows of a statement were being read into an empty result: it reconnected, prepared the statement again and fetched from it without executing it. Only `execute()` is retried on a fresh connection now; a lost connection in any other method is reported as the `\PDOException` it is.
 
 ## 6.2.3 (2026-09-22)
 

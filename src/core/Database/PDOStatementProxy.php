@@ -48,7 +48,11 @@ class PDOStatementProxy extends ObjectProxy
         try {
             $ret = $this->__object->{$name}(...$arguments);
         } catch (\PDOException $e) {
-            if (!$this->parent->inTransaction() && DetectsLostConnections::causedByLostConnection($e)) {
+            // Only execute() is retried on a fresh connection, since it runs the statement from the start. The
+            // other methods (fetch*(), rowCount(), ...) read the result of an execute() that went down with the
+            // connection; re-preparing the statement and calling one of them on it without executing it first
+            // returns no rows and no error, so a lost connection there surfaces as the exception it is.
+            if (strcasecmp($name, 'execute') === 0 && !$this->parent->inTransaction() && DetectsLostConnections::causedByLostConnection($e)) {
                 if ($this->parent->getRound() === $this->parentRound) {
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
