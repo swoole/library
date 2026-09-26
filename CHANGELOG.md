@@ -1,4 +1,4 @@
-## Unreleased
+## 6.2.4 (unreleased)
 
 Added:
 
@@ -6,7 +6,6 @@ Added:
 * MR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication, in addition to a password string (by @catchem88).
 * MR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler. On PHP versions without native support, use the namespaced `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK`, and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` constants (by @lazerg).
 * MR swoole/library#191: Support the `http2_max_headers` server option, adding the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS` and registering the option in `\Swoole\Server\Helper` (by @NathanFreeman).
-
 
 Removed:
 
@@ -16,6 +15,8 @@ Fixed:
 
 * MR swoole/library#192: Report fatal `\Swoole\Coroutine\Server` accept failures through `start()` and `errCode` (by @binaryfire).
 * MR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client`, present since 6.2.0. Every client was kept alive for the lifetime of the process, so each hooked `dns_get_record()`, `checkdnsrr()`, `getmxrr()`, `mail()` and `gethostbyaddr()` call, and each `\Swoole\MongoDB\Client`, leaked a client, its HTTP client and an open unix socket. Clients are now released as soon as nothing uses them, so `\Swoole\RemoteObject\Client::getInstance()` returns `null` for a client that is gone; a client can no longer be cloned. Fix issue swoole/swoole-src#6191.
+* Fixed a startup race in the default remote object server: a coroutine that asked for the default remote object client while another one was still starting the server saw the server as initiated and failed to connect with "No such file or directory" ([commit](https://github.com/swoole/library/commit/b0ba7b46d995feff9427b83ceedfcc87e8ca96e8)).
+* Hardened three error paths ([commit](https://github.com/swoole/library/commit/63f1fe387f78627ff1904de3e49ee6894adfd240)): the database statement proxies check a reconnect-time `prepare()`/`stmt_init()` failure before reassigning the wrapped statement, so a failed reconnect no longer leaves the proxy wrapping `false`; `\Swoole\RemoteObject\Client` throws a `\Swoole\RemoteObject\Exception` on a malformed response from the remote object server instead of a `TypeError`; an empty-body FastCGI response is reported as `502 Invalid FastCGI Response`, so the `\Swoole\FastCGI\HttpResponse` accessors are always safe to call.
 
 ## 6.2.3 (2026-09-22)
 
