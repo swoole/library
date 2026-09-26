@@ -126,7 +126,7 @@ class Server
                     $fn        = $this->fn;
                     $arguments = [new Connection($conn)];
                 }
-                if (Coroutine::create($fn, ...$arguments) < 0) {
+                if (Coroutine::create($fn, ...$arguments) === false) {
                     goto _wait;
                 }
             } else {
