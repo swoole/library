@@ -54,8 +54,11 @@ class PDOStatementProxy extends ObjectProxy
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent    = $this->parent->__getObject();
-                $statement = $parent->prepare($this->__object->queryString);
+                // Record the parent's round, or the next lost connection on this statement looks like one the parent
+                // has already recovered from, and the statement is prepared again on the dead connection instead.
+                $this->parentRound = $this->parent->getRound();
+                $parent            = $this->parent->__getObject();
+                $statement         = $parent->prepare($this->__object->queryString);
                 if ($statement === false) {
                     throw $e;
                 }
