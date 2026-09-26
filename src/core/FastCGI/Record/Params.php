@@ -121,26 +121,15 @@ class Params extends Record
             if ($valueData === null) { // @phpstan-ignore identical.alwaysFalse
                 continue;
             }
+            $valueData   = (string) $valueData;
             $nameLength  = strlen($nameData);
-            $valueLength = strlen((string) $valueData);
-            $isLongName  = $nameLength > 127;
-            $isLongValue = $valueLength > 127;
-            $formatParts = [
-                $isLongName ? 'N' : 'C',
-                $isLongValue ? 'N' : 'C',
-                "a{$nameLength}",
-                "a{$valueLength}",
-            ];
-
-            $format = join('', $formatParts);
-
-            $payload .= pack(
-                $format,
-                $isLongName ? ($nameLength | 0x80000000) : $nameLength,
-                $isLongValue ? ($valueLength | 0x80000000) : $valueLength,
-                $nameData,
-                $valueData
-            );
+            $valueLength = strlen($valueData);
+            // Each length is one byte up to 127, and four bytes with the top bit set above that. The name and the
+            // value follow as they are, so they are appended directly rather than copied through pack("a{n}").
+            $payload .= ($nameLength > 127 ? pack('N', $nameLength | 0x80000000) : chr($nameLength))
+                . ($valueLength > 127 ? pack('N', $valueLength | 0x80000000) : chr($valueLength))
+                . $nameData
+                . $valueData;
         }
 
         return $payload;
