@@ -140,7 +140,8 @@ class Client
             if (!$rs) {
                 throw new Exception($this->client->errMsg);
             }
-            $result = unserialize($this->client->body);
+            // A body that does not unserialize is reported below, as an exception; the warning would only come first.
+            $result = @unserialize($this->client->body);
         } finally {
             $this->lockOwner = -1;
             $this->lock->pop();
