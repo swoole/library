@@ -53,8 +53,12 @@ class PDOStatementProxy extends ObjectProxy
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent         = $this->parent->__getObject();
-                $this->__object = $parent->prepare($this->__object->queryString);
+                $parent    = $this->parent->__getObject();
+                $statement = $parent->prepare($this->__object->queryString);
+                if ($statement === false) {
+                    throw $e;
+                }
+                $this->__object = $statement;
 
                 foreach ($this->setAttributeContext as $attribute => $value) {
                     $this->__object->setAttribute($attribute, $value);

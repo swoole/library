@@ -55,11 +55,12 @@ class MysqliStatementProxy extends ObjectProxy
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent         = $this->parent->__getObject();
-                $this->__object = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
-                if ($this->__object === false) {
+                $parent    = $this->parent->__getObject();
+                $statement = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
+                if ($statement === false) {
                     throw new MysqliException($parent->error, $parent->errno);
                 }
+                $this->__object = $statement;
                 if (!empty($this->bindParamContext)) {
                     $this->__object->bind_param($this->bindParamContext[0], ...$this->bindParamContext[1]);
                 }

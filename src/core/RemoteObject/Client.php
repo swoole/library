@@ -78,6 +78,9 @@ class Client
             throw new Exception($this->client->errMsg);
         }
         $result = unserialize($this->client->body);
+        if (!is_array($result) || !array_key_exists('code', $result)) {
+            throw new Exception('Malformed response from the remote object server');
+        }
         if ($result['code'] != 0) {
             $ex = $result['exception'];
             throw new Exception('Server Error: ' . $ex['message'], $ex['code']);
