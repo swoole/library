@@ -102,9 +102,6 @@ final class Handler implements \Stringable
     /** @var callable|null */
     private $readFunction;
 
-    /** @var callable|null */
-    private $writeFunction;
-
     private $noProgress = true;
 
     /** @var callable */
@@ -630,13 +627,7 @@ final class Handler implements \Stringable
                 $this->readFunction = $value;
                 break;
             case CURLOPT_WRITEFUNCTION:
-                if (SWOOLE_VERSION_ID >= 50100) {
-                    $this->clientOptions[Constant::OPTION_WRITE_FUNC] = function ($client, $data) use ($value) {
-                        return $value($this, $data);
-                    };
-                } else {
-                    $this->writeFunction = $value;
-                }
+                $this->clientOptions[Constant::OPTION_WRITE_FUNC] = fn ($client, $data) => $value($this, $data);
                 break;
             case CURLOPT_NOPROGRESS:
                 $this->noProgress = $value;
@@ -926,16 +917,6 @@ final class Handler implements \Stringable
                 }
                 file_put_contents($this->cookieJar, $cookies);
             }
-        }
-
-        if ($this->writeFunction) {
-            if (!is_callable($this->writeFunction)) { // @phpstan-ignore booleanNot.alwaysFalse
-                trigger_error('curl_exec(): Could not call the CURLOPT_WRITEFUNCTION', E_USER_WARNING);
-                $this->setError(CURLE_WRITE_ERROR, 'Failure writing output to destination');
-                return false;
-            }
-            call_user_func($this->writeFunction, $this, $transfer);
-            return true;
         }
 
         if ($this->returnTransfer) {
