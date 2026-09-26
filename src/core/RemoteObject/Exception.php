@@ -25,15 +25,15 @@ class Exception extends \RuntimeException
      * code is not always an integer (a PDOException carries its SQLSTATE, e.g. "42S02"), and a PHP exception code
      * has to be one, so it is kept as it is in getRemoteCode() and used as getCode() only when it is an integer.
      */
-    public static function fromResponse(array $response): static
+    public static function fromResponse(array $response): self
     {
         $ex = $response['exception'] ?? null;
         if (!is_array($ex)) {
-            return new static('Server Error: ' . ($response['msg'] ?? 'unknown error'), (int) ($response['code'] ?? 0));
+            return new self('Server Error: ' . ($response['msg'] ?? 'unknown error'), (int) ($response['code'] ?? 0));
         }
 
         $code            = $ex['code'] ?? 0;
-        $e               = new static('Server Error: ' . ($ex['message'] ?? ''), is_int($code) ? $code : 0);
+        $e               = new self('Server Error: ' . ($ex['message'] ?? ''), is_int($code) ? $code : 0);
         $e->remoteClass  = isset($ex['class']) ? (string) $ex['class'] : null;
         $e->remoteCode   = is_int($code) || is_string($code) ? $code : null;
         return $e;
