@@ -112,6 +112,103 @@ class MysqliPoolTest extends DatabaseTestCase
             $pool->close();
         });
     }
+
+    /**
+     * A lost connection inside a transaction is reported, not hidden behind a reconnect: reconnecting would drop
+     * what already ran in the transaction and run this call, and the commit(), on a fresh connection outside of
+     * any transaction. Outside the transaction the very next call reconnects as usual.
+     */
+    public function testDoesNotReconnectInsideATransaction(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+            self::assertFalse($mysqli->inTransaction());
+            $mysqli->begin_transaction();
+            self::assertTrue($mysqli->inTransaction());
+
+            self::killMysqliConnection($mysqli);
+
+            try {
+                $mysqli->query('SELECT 1');
+                self::fail('The lost connection is reported.');
+            } catch (\mysqli_sql_exception $e) {
+                self::assertContains($e->getCode(), MysqliProxy::IO_ERRORS, 'The caller sees the connection error itself.');
+            }
+            self::assertSame(0, $mysqli->getRound(), 'No reconnect inside the transaction.');
+            self::assertFalse($mysqli->inTransaction(), 'The transaction died with the connection.');
+
+            self::assertEquals(1, $mysqli->query('SELECT 1')->fetch_row()[0], 'The next call, outside the transaction, reconnects.');
+            self::assertSame(1, $mysqli->getRound());
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+
+    /**
+     * autocommit(false) runs every statement inside an implicit transaction until autocommit is turned back on;
+     * commit() and rollback() only end the current one. The connection counts as in a transaction the whole time.
+     */
+    public function testAutocommitOffCountsAsATransaction(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+
+            $mysqli->autocommit(false);
+            self::assertTrue($mysqli->inTransaction());
+            $mysqli->commit();
+            self::assertTrue($mysqli->inTransaction(), 'The next statement starts another implicit transaction.');
+            $mysqli->autocommit(true);
+            self::assertFalse($mysqli->inTransaction());
+
+            $mysqli->autocommit(false);
+            self::killMysqliConnection($mysqli);
+            try {
+                $mysqli->query('SELECT 1');
+                self::fail('The lost connection is reported.');
+            } catch (\mysqli_sql_exception $e) {
+                self::assertContains($e->getCode(), MysqliProxy::IO_ERRORS);
+            }
+            self::assertSame(0, $mysqli->getRound());
+            self::assertFalse($mysqli->inTransaction());
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+
+    /**
+     * A statement executed inside the transaction does not reconnect its parent either, and afterwards, outside
+     * the transaction, it reconnects the parent and is prepared again as usual.
+     */
+    public function testStatementDoesNotReconnectInsideATransaction(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+            $mysqli->begin_transaction();
+            $statement = $mysqli->prepare('SELECT 1');
+
+            self::killMysqliConnection($mysqli);
+
+            try {
+                $statement->execute();
+                self::fail('The lost connection is reported.');
+            } catch (\mysqli_sql_exception $e) {
+                self::assertContains($e->getCode(), MysqliProxy::IO_ERRORS);
+            }
+            self::assertSame(0, $mysqli->getRound(), 'No reconnect inside the transaction.');
+            self::assertFalse($mysqli->inTransaction(), 'The transaction died with the connection.');
+
+            self::assertTrue($statement->execute(), 'Outside the transaction the statement reconnects its parent and is prepared again.');
+            self::assertSame(1, $mysqli->getRound());
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
 }
 
 /**

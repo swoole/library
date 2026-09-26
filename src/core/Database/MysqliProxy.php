@@ -38,6 +38,18 @@ class MysqliProxy extends ObjectProxy
 
     protected int $round = 0;
 
+    /**
+     * Whether a transaction was started with begin_transaction() and not yet ended with commit() or rollback().
+     */
+    protected bool $inTransaction = false;
+
+    /**
+     * Whether autocommit was turned off with autocommit(false): every statement then runs inside an implicit
+     * transaction, and commit() or rollback() only ends the current one, so the connection counts as in a
+     * transaction until autocommit(true).
+     */
+    protected bool $autocommitDisabled = false;
+
     public function __construct(callable $constructor)
     {
         parent::__construct($constructor());
@@ -78,6 +90,17 @@ class MysqliProxy extends ObjectProxy
                     }
                     throw new MysqliException($this->__object->error, $errno);
                 }
+                if ($this->inTransaction()) {
+                    // The transaction died with the connection. Reconnecting and re-running this one call would
+                    // silently drop what ran before it in the transaction, and run this call, and the commit(), on
+                    // a fresh connection outside of any transaction. The caller has to see the lost connection and
+                    // redo the whole unit of work; the next call, outside the transaction, reconnects as usual.
+                    $this->reset();
+                    if ($exception) {
+                        throw $exception;
+                    }
+                    throw new MysqliException($this->__object->error, $errno);
+                }
                 $this->reconnect();
                 continue;
             }
@@ -85,6 +108,12 @@ class MysqliProxy extends ObjectProxy
                 $ret = new MysqliStatementProxy($ret, $arguments[0], $this);
             } elseif (strcasecmp($name, 'stmt_init') === 0) {
                 $ret = new MysqliStatementProxy($ret, null, $this);
+            } elseif (strcasecmp($name, 'begin_transaction') === 0) {
+                $this->inTransaction = true;
+            } elseif (strcasecmp($name, 'commit') === 0 || strcasecmp($name, 'rollback') === 0) {
+                $this->inTransaction = false;
+            } elseif (strcasecmp($name, 'autocommit') === 0) {
+                $this->autocommitDisabled = !$arguments[0];
             }
             break;
         }
@@ -101,6 +130,7 @@ class MysqliProxy extends ObjectProxy
     {
         parent::__construct(($this->constructor)());
         $this->round++;
+        $this->reset();
         /* restore context */
         if (!empty($this->charsetContext)) {
             $this->__object->set_charset($this->charsetContext);
@@ -111,6 +141,27 @@ class MysqliProxy extends ObjectProxy
         if (!empty($this->changeUserContext)) {
             $this->__object->change_user(...$this->changeUserContext);
         }
+    }
+
+    /**
+     * Whether the connection is inside a transaction: one started with begin_transaction(), or the implicit one
+     * that runs while autocommit is turned off with autocommit(false). A transaction started by hand, with
+     * query('START TRANSACTION') or query('SET autocommit=0'), is not seen here, the same limitation PDO's
+     * inTransaction() has. A lost connection inside a transaction is reported instead of reconnected.
+     */
+    public function inTransaction(): bool
+    {
+        return $this->inTransaction || $this->autocommitDisabled;
+    }
+
+    /**
+     * Forgets the transaction state tracked by inTransaction(): after a reconnect, when the transaction died with
+     * the connection, and when the pool hands the connection out.
+     */
+    public function reset(): void
+    {
+        $this->inTransaction      = false;
+        $this->autocommitDisabled = false;
     }
 
     public function options(int $option, mixed $value): bool
