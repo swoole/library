@@ -92,4 +92,93 @@ class PDOStatementProxyTest extends DatabaseTestCase
             self::assertIsArray($stmt->fetchAll());
         });
     }
+
+    /**
+     * A connection lost while the rows are being read cannot be recovered by the proxy: the rows went down with
+     * it. The proxy used to reconnect, prepare the statement again and fetch from it without executing it, which
+     * yields no rows and no error, so the application saw an empty result for a query that has rows.
+     *
+     * The lost connection is simulated by a PDOStatement subclass (see the end of this file) that throws the way
+     * a lost MySQL connection does, so the test runs against SQLite, deterministically, with no server to kill.
+     */
+    public function testLostConnectionWhileFetchingIsReported(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $statement = $pdo->prepare('SELECT 42 AS answer');
+            $statement->execute();
+
+            $failures->fetchAll = true;
+            try {
+                $statement->fetchAll(\PDO::FETCH_ASSOC);
+                self::fail('The lost connection is reported instead of being turned into an empty result.');
+            } catch (\PDOException $e) {
+                self::assertStringContainsString('server has gone away', $e->getMessage());
+            }
+            self::assertSame(0, $pdo->getRound(), 'There is nothing to retry, so there is no reconnect either.');
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * execute() runs the statement from the start, so it is still retried on a fresh connection.
+     */
+    public function testLostConnectionOnExecuteIsRetried(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $statement = $pdo->prepare('SELECT 42 AS answer');
+
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $pdo->getRound(), 'The proxy reconnected exactly once.');
+            self::assertEquals(42, $statement->fetchAll(\PDO::FETCH_ASSOC)[0]['answer'], 'The retried execute() ran for real.');
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+}
+
+/**
+ * A statement that fails its next execute() or fetchAll() the way a lost MySQL connection does, once per flag set
+ * on the object it is constructed with (PDO passes the constructor arguments of PDO::ATTR_STATEMENT_CLASS along,
+ * on every prepare(), including the ones the proxies do after a reconnect).
+ */
+class LostConnectionStatement extends \PDOStatement
+{
+    // PDO refuses a statement class with a public constructor.
+    protected function __construct(private \stdClass $failures)
+    {
+    }
+
+    public function execute(?array $params = null): bool
+    {
+        $this->loseConnectionIfAsked('execute');
+        return parent::execute($params);
+    }
+
+    public function fetchAll(int $mode = \PDO::FETCH_DEFAULT, mixed ...$args): array
+    {
+        $this->loseConnectionIfAsked('fetchAll');
+        return parent::fetchAll($mode, ...$args);
+    }
+
+    private function loseConnectionIfAsked(string $method): void
+    {
+        if (!empty($this->failures->{$method})) {
+            $this->failures->{$method} = false;
+            throw new \PDOException('SQLSTATE[HY000]: General error: 2006 MySQL server has gone away');
+        }
+    }
 }
