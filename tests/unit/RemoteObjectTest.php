@@ -34,6 +34,38 @@ class RemoteObjectTest extends TestCase
         });
     }
 
+    /**
+     * One client is routinely shared, by a service object handling concurrent requests and by the remote objects
+     * it created. Its single HTTP connection can only serve one coroutine at a time, so the calls have to queue
+     * up instead of ending the process with "Socket has already been bound to another coroutine".
+     */
+    public function testConcurrentCallsOverOneClient(): void
+    {
+        self::coRun(function () {
+            $client    = swoole_get_default_remote_object_client();
+            $waitGroup = new Coroutine\WaitGroup();
+            $results   = [];
+            for ($i = 0; $i < 8; $i++) {
+                $waitGroup->add();
+                Coroutine::create(function () use ($client, $i, &$results, $waitGroup) {
+                    try {
+                        $results[$i] = $client->call('str_repeat', 'x', $i + 1);
+                    } finally {
+                        $waitGroup->done();
+                    }
+                });
+            }
+            $waitGroup->wait();
+
+            ksort($results);
+            $this->assertSame(
+                array_map(static fn (int $i): string => str_repeat('x', $i + 1), range(0, 7)),
+                array_values($results),
+                'Every coroutine got the answer to its own call.'
+            );
+        });
+    }
+
     public function testInvoke()
     {
         self::coRun(function () {
