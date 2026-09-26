@@ -105,6 +105,64 @@ class RemoteObjectTest extends TestCase
     }
 
     /**
+     * An exception the server catches is relayed with its message, code and class. The code is not always an
+     * integer (a PDOException carries its SQLSTATE), and the client used to hand it straight to the exception
+     * constructor, which turned the relay into a TypeError with the message lost.
+     */
+    public function testServerExceptionWithStringCode(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $pdo    = $client->create(\PDO::class, 'sqlite::memory:');
+            try {
+                $pdo->query('SELECT * FROM missing');
+                $this->fail('The server-side PDOException is relayed.');
+            } catch (RemoteObject\Exception $e) {
+                $this->assertStringContainsString('no such table: missing', $e->getMessage());
+                $this->assertSame(\PDOException::class, $e->getRemoteClass());
+                $this->assertSame('HY000', $e->getRemoteCode());
+                $this->assertSame(0, $e->getCode(), 'A code that is not an integer cannot be the exception code.');
+            }
+        });
+    }
+
+    public function testServerExceptionWithIntegerCode(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            try {
+                $client->call('json_decode', '{', false, 512, JSON_THROW_ON_ERROR);
+                $this->fail('The server-side JsonException is relayed.');
+            } catch (RemoteObject\Exception $e) {
+                $this->assertStringContainsString('Syntax error', $e->getMessage());
+                $this->assertSame(\JsonException::class, $e->getRemoteClass());
+                $this->assertSame(JSON_ERROR_SYNTAX, $e->getRemoteCode());
+                $this->assertSame(JSON_ERROR_SYNTAX, $e->getCode());
+            }
+        });
+    }
+
+    /**
+     * The server's own errors (-1 invalid request, -3 invalid API key) come with a message and no exception; the
+     * client used to read the exception anyway, which was a warning and then a TypeError.
+     */
+    public function testInvalidRequestIsAnException(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            try {
+                $client->execute('/no_such_handler', []);
+                $this->fail('An unknown request path is reported by the server.');
+            } catch (RemoteObject\Exception $e) {
+                $this->assertSame('Server Error: invalid request', $e->getMessage());
+                $this->assertSame(-1, $e->getCode());
+                $this->assertNull($e->getRemoteClass());
+                $this->assertNull($e->getRemoteCode());
+            }
+        });
+    }
+
+    /**
      * An object or a resource that call() brings back arrives as a RemoteObject bound to the client that fetched
      * it; unbound, it could neither be used nor release its server-side counterpart. testResource() cannot tell,
      * because a RemoteObject passed back as an argument is resolved server-side by object id alone.

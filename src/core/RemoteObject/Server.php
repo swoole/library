@@ -84,7 +84,7 @@ class Server
     public function onRequest(Request $request, Response $response): void
     {
         $ctx = new Context($request, $response);
-        if ($this->apiKey && $this->apiKey !== $request->header['x-api-key']) {
+        if ($this->apiKey && $this->apiKey !== ($request->header['x-api-key'] ?? '')) {
             $response->status(403);
             $ctx->end(['code' => -3, 'msg' => 'invalid api key']);
             return;
