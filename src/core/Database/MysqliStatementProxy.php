@@ -13,7 +13,7 @@ namespace Swoole\Database;
 
 class MysqliStatementProxy extends ObjectProxy
 {
-    public const IO_METHOD_REGEX = '/^close|execute|fetch|prepare$/i';
+    public const IO_METHOD_REGEX = '/^(close|execute|fetch|prepare)$/i';
 
     /** @var \mysqli_stmt */
     protected $__object;
@@ -35,22 +35,37 @@ class MysqliStatementProxy extends ObjectProxy
     public function __call(string $name, array $arguments)
     {
         for ($n = 3; $n--;) {
-            $ret = @$this->__object->{$name}(...$arguments);
+            // Under the default report mode (MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT since PHP 8.1) a failure
+            // throws a mysqli_sql_exception instead of returning false; both forms are handled the same way below.
+            $exception = null;
+            try {
+                $ret = @$this->__object->{$name}(...$arguments);
+            } catch (\mysqli_sql_exception $exception) {
+                $ret = false;
+            }
             if ($ret === false) {
+                $errno = $exception ? $exception->getCode() : $this->__object->errno;
                 /* non-IO method */
                 if (!preg_match(static::IO_METHOD_REGEX, $name)) {
+                    if ($exception) {
+                        throw $exception;
+                    }
                     break;
                 }
-                /* no more chances or non-IO failures or in transaction */
-                if (!in_array($this->__object->errno, $this->parent::IO_ERRORS, true) || ($n === 0)) {
-                    throw new MysqliException($this->__object->error, $this->__object->errno);
+                /* no more chances or non-IO failures */
+                if (!in_array($errno, $this->parent::IO_ERRORS, true) || ($n === 0)) {
+                    if ($exception) {
+                        throw $exception;
+                    }
+                    throw new MysqliException($this->__object->error, $errno);
                 }
                 if ($this->parent->getRound() === $this->parentRound) {
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
                 }
-                $parent    = $this->parent->__getObject();
-                $statement = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
+                $this->parentRound = $this->parent->getRound();
+                $parent            = $this->parent->__getObject();
+                $statement         = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
                 if ($statement === false) {
                     throw new MysqliException($parent->error, $parent->errno);
                 }
@@ -59,7 +74,7 @@ class MysqliStatementProxy extends ObjectProxy
                     $this->__object->bind_param($this->bindParamContext[0], ...$this->bindParamContext[1]);
                 }
                 if (!empty($this->bindResultContext)) {
-                    $this->__object->bind_result($this->bindResultContext);
+                    $this->__object->bind_result(...$this->bindResultContext);
                 }
                 foreach ($this->attrSetContext as $attr => $value) {
                     $this->__object->attr_set($attr, $value);
