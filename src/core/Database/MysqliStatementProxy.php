@@ -75,6 +75,14 @@ class MysqliStatementProxy extends ObjectProxy
                     }
                     throw new MysqliException($this->__object->error, $errno);
                 }
+                if ($this->parent->inTransaction()) {
+                    // The transaction died with the connection; see MysqliProxy::__call() for why this is not retried.
+                    $this->parent->reset();
+                    if ($exception) {
+                        throw $exception;
+                    }
+                    throw new MysqliException($this->__object->error, $errno);
+                }
                 if ($this->parent->getRound() === $this->parentRound) {
                     /* if not equal, parent has reconnected */
                     $this->parent->reconnect();
