@@ -130,6 +130,20 @@ class ArrayObjectTest extends TestCase
         );
     }
 
+    /**
+     * remove() takes out the first match, or every match with $loop, keeping the keys of what stays; a strict
+     * removal leaves values that are merely equal alone.
+     */
+    public function testRemoveWithLoop(): void
+    {
+        $data = new ArrayObject(['a' => 1, 'b' => '1', 'c' => 2, 'd' => 1, 'e' => 1]);
+
+        $this->assertSame(['b' => '1', 'c' => 2, 'd' => 1, 'e' => 1], (clone $data)->remove(1)->toArray());
+        $this->assertSame(['b' => '1', 'c' => 2], (clone $data)->remove(1, true, true)->toArray());
+        $this->assertSame(['c' => 2], (clone $data)->remove(1, false, true)->toArray());
+        $this->assertSame($data->toArray(), (clone $data)->remove(3, true, true)->toArray(), 'Nothing to remove.');
+    }
+
     public function testFilter(): void
     {
         $data = $this->data->filter(fn ($v) => $v > 20);
@@ -535,6 +549,13 @@ class ArrayObjectTest extends TestCase
     public function testLastIndexOf(): void
     {
         $this->assertEquals($this->data->lastIndexOf(23), 9);
+
+        $data = new ArrayObject(['a' => 1, 'b' => '1', 'c' => 2, 'd' => 1, 'e' => '1']);
+        $this->assertSame('d', $data->lastIndexOf(1), 'The last strictly matching key.');
+        $this->assertSame('e', $data->lastIndexOf(1, false), 'The last loosely matching key.');
+        $this->assertSame('e', $data->lastIndexOf('1'));
+        $this->assertNull($data->lastIndexOf(3), 'null, unlike indexOf(), when the value is not found.');
+        $this->assertNull((new ArrayObject([]))->lastIndexOf(1));
     }
 
     public function testExists(): void
