@@ -73,6 +73,30 @@ class Params extends Record
     }
 
     /**
+     * {@inheritdoc}
+     */
+    protected function packPayload(): string
+    {
+        $payload = '';
+        foreach ($this->values as $nameData => $valueData) {
+            if ($valueData === null) { // @phpstan-ignore identical.alwaysFalse
+                continue;
+            }
+            $valueData   = (string) $valueData;
+            $nameLength  = strlen($nameData);
+            $valueLength = strlen($valueData);
+            // Each length is one byte up to 127, and four bytes with the top bit set above that. The name and the
+            // value follow as they are, so they are appended directly rather than copied through pack("a{n}").
+            $payload .= ($nameLength > 127 ? pack('N', $nameLength | 0x80000000) : chr($nameLength))
+                . ($valueLength > 127 ? pack('N', $valueLength | 0x80000000) : chr($valueLength))
+                . $nameData
+                . $valueData;
+        }
+
+        return $payload;
+    }
+
+    /**
      * Reads the length at $offset, one byte up to 127 or four bytes with the top bit set above that, and moves
      * $offset past it.
      */
@@ -96,29 +120,5 @@ class Params extends Record
         }
         $offset += 4;
         return $payload[1] & 0x7FFFFFFF;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function packPayload(): string
-    {
-        $payload = '';
-        foreach ($this->values as $nameData => $valueData) {
-            if ($valueData === null) { // @phpstan-ignore identical.alwaysFalse
-                continue;
-            }
-            $valueData   = (string) $valueData;
-            $nameLength  = strlen($nameData);
-            $valueLength = strlen($valueData);
-            // Each length is one byte up to 127, and four bytes with the top bit set above that. The name and the
-            // value follow as they are, so they are appended directly rather than copied through pack("a{n}").
-            $payload .= ($nameLength > 127 ? pack('N', $nameLength | 0x80000000) : chr($nameLength))
-                . ($valueLength > 127 ? pack('N', $valueLength | 0x80000000) : chr($valueLength))
-                . $nameData
-                . $valueData;
-        }
-
-        return $payload;
     }
 }

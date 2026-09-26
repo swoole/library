@@ -76,18 +76,13 @@ class ParamsTest extends TestCase
         self::assertSame($params, Params::unpack((string) $record)->getValues(), 'The record decodes back to the same parameters.');
     }
 
-    private static function encodeLength(int $length): string
-    {
-        return $length > 127 ? pack('N', $length | 0x80000000) : pack('C', $length);
-    }
-
     /**
      * A pair whose declared lengths run past the record's content is malformed and is reported, not decoded
      * from whatever bytes follow.
      */
     public function testUnpackingAPairRunningPastTheContentFails(): void
     {
-        $content = pack('CC', 1, 100) . 'a' . 'v'; // A one-byte name and a value declared as 100 bytes, of which there is one.
+        $content = pack('CC', 1, 100) . 'av'; // A one-byte name and a value declared as 100 bytes, of which there is one.
         $record  = pack('CCnnCC', FastCGI::VERSION_1, FastCGI::PARAMS, 1, strlen($content), 4, 0) . $content . "\0\0\0\0";
 
         $this->expectException(\RuntimeException::class);
@@ -106,5 +101,10 @@ class ParamsTest extends TestCase
 
         $this->assertEquals(FastCGI::PARAMS, $request->getType());
         $this->assertEquals(self::$params, $request->getValues());
+    }
+
+    private static function encodeLength(int $length): string
+    {
+        return $length > 127 ? pack('N', $length | 0x80000000) : pack('C', $length);
     }
 }
