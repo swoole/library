@@ -190,13 +190,17 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function remove(mixed $value, bool $strict = true, bool $loop = false): self
     {
-        do {
+        if (!$loop) {
             $key = $this->search($value, $strict);
-            if ($key === false) {
-                break;
+            if ($key !== false) {
+                unset($this->array[$key]);
             }
+            return $this;
+        }
+        // All the matching keys in one pass, instead of an array_search() from the start for every removal.
+        foreach (array_keys($this->array, $value, $strict) as $key) {
             unset($this->array[$key]);
-        } while ($loop);
+        }
 
         return $this;
     }
@@ -265,17 +269,10 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function lastIndexOf(mixed $value, bool $strict = true)
     {
-        $array = $this->array;
-        for (end($array); ($currentKey = key($array)) !== null; prev($array)) {
-            $currentValue = current($array);
-            if ($currentValue == $value) {
-                if ($strict && $currentValue !== $value) {
-                    continue;
-                }
-                break;
-            }
-        }
-        return $currentKey;
+        // array_keys() compares the way array_search() does (== or ===), without the copy of the array that
+        // walking it backwards with end()/prev() forced.
+        $keys = array_keys($this->array, $value, $strict);
+        return $keys ? $keys[array_key_last($keys)] : null;
     }
 
     /**

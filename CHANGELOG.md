@@ -20,6 +20,7 @@ Changed:
 
 * The option arrays and option lookups in `\Swoole\Server\Helper` now use the `\Swoole\Constant::OPTION_*` constants instead of string literals.
 * The FastCGI `Params` record encodes its parameters with plain string concatenation instead of a per-parameter `pack()` format, which is about 2.5 times faster on a typical request, and decodes them by offset instead of re-cutting the buffer for every parameter, which is about 8 times faster; the bytes produced and the parameters read are the same.
+* `\Swoole\ArrayObject::lastIndexOf()` no longer copies the array and walks it backwards in PHP, and `remove()` with `$loop` no longer restarts its search from the beginning after every removal; both find their keys in one `array_keys()` call, with the same results.
 
 Removed:
 
