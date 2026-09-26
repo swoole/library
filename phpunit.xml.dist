@@ -16,6 +16,7 @@
       <exclude>tests/unit/Thread</exclude>
       <exclude>tests/unit/Coroutine/FunctionTest.php</exclude>
       <exclude>tests/unit/Coroutine/HttpFunctionTest.php</exclude>
+      <exclude>tests/unit/Database/MysqliReportModeTest.php</exclude>
       <exclude>tests/unit/Database/PDOPoolTest.php</exclude>
       <exclude>tests/unit/Database/RedisPoolTest.php</exclude>
       <exclude>tests/unit/Process/ProcessManagerTest.php</exclude>
@@ -32,6 +33,9 @@
       - Coroutine/HttpFunctionTest sets the process-wide http_client_driver option, which
         Coroutine\Http\request() reads on every call. Concurrent tests overwrite each other's choice after
         the first yield, so the driver-specific tests silently stop testing the driver they selected.
+      - Database/MysqliReportModeTest switches the process-wide mysqli report mode off for the length of a
+        test, because what it checks is only observable when mysqli returns false instead of throwing. Every
+        other mysqli test running meanwhile would stop getting the mysqli_sql_exception it relies on.
       - Database/PDOPoolTest::testOracle blocks the scheduler: PDO_OCI is not coroutine-hooked, so its round
         trips are blocking syscalls and no timer fires meanwhile. Measured at roughly 0.9s of timer lateness
         for every other test in the run, which invalidates any wall-clock assertion in the concurrent suite.
@@ -45,6 +49,7 @@
     <testsuite name="serial">
       <file>tests/unit/Coroutine/FunctionTest.php</file>
       <file>tests/unit/Coroutine/HttpFunctionTest.php</file>
+      <file>tests/unit/Database/MysqliReportModeTest.php</file>
       <file>tests/unit/Database/PDOPoolTest.php</file>
       <file>tests/unit/Database/RedisPoolTest.php</file>
       <file>tests/unit/Process/ProcessManagerTest.php</file>

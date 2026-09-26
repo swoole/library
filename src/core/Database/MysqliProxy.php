@@ -62,6 +62,13 @@ class MysqliProxy extends ObjectProxy
                     if ($exception) {
                         throw $exception;
                     }
+                    if (in_array($errno, static::IO_ERRORS, true)) {
+                        // A method outside the retry list, e.g. store_result(), next_result() or stat(), can return
+                        // false with no error at all, but false with a lost-connection errno is the connection going
+                        // away, which is reported rather than passed through as if there were nothing to return.
+                        // Only the retry is limited to methods that run the statement from the start.
+                        throw new MysqliException($this->__object->error, $errno);
+                    }
                     break;
                 }
                 /* no more chances or non-IO failures */

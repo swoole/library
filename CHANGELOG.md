@@ -38,6 +38,7 @@ Fixed:
 * `\Swoole\Coroutine\Server` did not back off when a coroutine could not be created for an accepted connection: `\Swoole\Coroutine::create()` returns `false` on failure, which the check for a negative return value never matched.
 * A FastCGI request body of `"0"` is now sent; it used to be dropped as empty.
 * `\Swoole\Database\PDOStatementProxy` turned a connection lost while the rows of a statement were being read into an empty result: it reconnected, prepared the statement again and fetched from it without executing it. Only `execute()` is retried on a fresh connection now; a lost connection in any other method is reported as the `\PDOException` it is.
+* The mysqli proxies let a lost connection go unnoticed in the methods they do not retry, such as `store_result()`, `next_result()` and `stat()`: under a report mode that does not throw, those returned `false` as if there were nothing to return. A `false` carrying a lost-connection error is now reported as a `\Swoole\Database\MysqliException`. `\Swoole\Database\MysqliStatementProxy` also no longer retries `fetch()` after a lost connection, which prepared the statement again and fetched from it without executing it, failing with "Commands out of sync" in place of the real error.
 
 ## 6.2.3 (2026-09-22)
 
