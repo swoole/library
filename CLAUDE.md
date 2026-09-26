@@ -72,7 +72,7 @@ Notes:
 
 ### Build manifest: `src/__init__.php`
 
-This file is the manifest used by swoole-src's `tools/build-library.php` to pack the library into `php_swoole_library.h`. Its `files` list is **sorted by dependency order** — a file must appear after everything it depends on. **Any new source file must be registered here**, in the correct position, or it will not be shipped inside the extension. Keep it consistent with the `autoload` section of `composer.json`.
+This file is the manifest used by swoole-src's `tools/build-library.php` to pack the library into `php_swoole_library.h`. Its `files` list is **sorted by dependency order** — a file must appear after everything it depends on. **Any new source file must be registered here**, in the correct position, or it will not be shipped inside the extension. Keep it consistent with `src/vendor_init.php`, which loads the files outside the PSR-4 root for a Composer install, and with the `autoload` section of `composer.json`.
 
 Because the packed files end up as C string literals compiled with `-std=c++14`, code under `src/` must never contain a C trigraph sequence — `??=`, `??!`, `??/`, `??(`, `??)`, `??'`, `??<`, `??>` or `??-` (most easily hit through PHP's `??=` operator; write `$x = $x ?? $default;` instead). The compiler silently rewrites the sequence inside the string (`??=` becomes `#`), the packed file no longer parses, and the extension segfaults on startup. `tests.yml` never catches this — the tests load the library through Composer — only the `build-swoole.yml` workflow does.
 
@@ -90,7 +90,7 @@ Because the packed files end up as C string literals compiled with `-std=c++14`,
 - `src/std/exec.php` — coroutine-aware replacements for `exec()`/`shell_exec()`.
 - `src/alias.php` / `src/alias_ns.php` — class aliases (e.g. the `Co\` shorthand namespace). New user-facing classes may need aliases here.
 - `src/constants.php`, `src/functions.php` — global constants and helper functions loaded unconditionally.
-- `src/vendor_init.php` — Composer-only entry point (sets `swoole.enable_library=On` and loads the `src/ext/*` patches); not packed into the extension.
+- `src/vendor_init.php` — Composer-only entry point, and the only entry of `autoload.files` in `composer.json`: it sets `swoole.enable_library=On` and loads every library file outside the PSR-4 root (constants, functions, `src/std`, `src/ext/*`, aliases) in the order of `src/__init__.php`; not packed into the extension.
 
 ### Tests
 

@@ -32,8 +32,6 @@ class ProxyGreeter
     }
 }
 
-require dirname(__DIR__, 2) . '/src/ext/standard.php';
-
 Co\run(function () {
     $o = new ProxyGreeter('hello swoole');
     echo $o('rango'), PHP_EOL;

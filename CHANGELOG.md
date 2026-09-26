@@ -8,6 +8,7 @@ Added:
 
 Changed:
 
+* Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself. The symbols available are unchanged.
 * Modernized the codebase for PHP 8.2+ (constructor property promotion, readonly properties, first-class callable syntax, `str_contains()` and similar), dropping the remaining version-compatibility code paths. Public constructor parameter names and non-final classes are unchanged, so subclasses and named arguments keep working.
 
 ## 6.2.4 (unreleased)

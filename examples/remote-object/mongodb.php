@@ -10,7 +10,6 @@
 declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
-require dirname(__DIR__, 2) . '/src/ext/mongodb.php';
 
 Co\run(function () {
     $client = new Swoole\MongoDB\Client('mongodb://127.0.0.1:27017');
