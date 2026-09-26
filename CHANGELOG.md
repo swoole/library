@@ -4,12 +4,12 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
 Added:
 
-* `\Swoole\MongoDB\Client` is now available when the library is installed through Composer, not only in the copy embedded in the extension.
+* `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
 
 Changed:
 
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself. The symbols available are unchanged.
-* Modernized the codebase for PHP 8.2+ (constructor property promotion, readonly properties, first-class callable syntax, `str_contains()` and similar), dropping the remaining version-compatibility code paths. Public constructor parameter names and non-final classes are unchanged, so subclasses and named arguments keep working.
+* Modernized the codebase for PHP 8.2+. Public APIs are unchanged.
 
 ## 6.2.4 (unreleased)
 
