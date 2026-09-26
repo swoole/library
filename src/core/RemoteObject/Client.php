@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole\RemoteObject;
 
 use Swoole\Coroutine;
+use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Http\Client as HttpClient;
 use Swoole\RemoteObject;
 
@@ -31,6 +32,21 @@ class Client
 
     private HttpClient $client;
 
+    /**
+     * Serializes the remote calls made through this client.
+     *
+     * The HTTP connection underneath can only be driven by one coroutine at a time: a second coroutine using
+     * it while a request is in flight is a fatal "Socket has already been bound to another coroutine". A client
+     * is routinely shared, though: by a service object handling concurrent requests, and by every remote object
+     * it created, whose destructor sends a /destroy from whichever coroutine drops the last reference.
+     */
+    private Channel $lock;
+
+    /**
+     * The coroutine currently holding the lock, if any.
+     */
+    private int $lockOwner = -1;
+
     // Has a default value: __destruct() also runs on an instance built without the constructor.
     private string $id = '';
 
@@ -40,6 +56,7 @@ class Client
     {
         $this->id               = $this->genUuid();
         $this->client           = new HttpClient($host, $port);
+        $this->lock             = new Channel(1);
         $this->ownerCoroutineId = Coroutine::getCid();
 
         $headers = [
@@ -105,11 +122,29 @@ class Client
 
     public function execute(string $path, array $array)
     {
-        $rs = $this->client->post($path, $array);
-        if (!$rs) {
-            throw new Exception($this->client->errMsg);
+        $cid = Coroutine::getCid();
+        // Outside a coroutine both sides are -1; let the HTTP client report that a coroutine is required.
+        if ($cid !== -1 && $this->lockOwner === $cid) {
+            // Only reachable from a destructor the garbage collector runs in the middle of a call of this same
+            // coroutine. Waiting would be waiting for itself.
+            throw new Exception('The remote object client is already in use by the current coroutine');
         }
-        $result = unserialize($this->client->body);
+        if (!$this->lock->push(true)) {
+            // The wait was cancelled (Coroutine::cancel()) or the channel closed; the lock was never acquired, so
+            // this coroutine must not run its call alongside the holder, nor release the holder's lock in finally.
+            throw new Exception('Cancelled while waiting for the remote object client', $this->lock->errCode);
+        }
+        $this->lockOwner = $cid;
+        try {
+            $rs = $this->client->post($path, $array);
+            if (!$rs) {
+                throw new Exception($this->client->errMsg);
+            }
+            $result = unserialize($this->client->body);
+        } finally {
+            $this->lockOwner = -1;
+            $this->lock->pop();
+        }
         if (!is_array($result) || !array_key_exists('code', $result)) {
             throw new Exception('Malformed response from the remote object server');
         }
