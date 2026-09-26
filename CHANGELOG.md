@@ -2,6 +2,10 @@
 
 This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
+Added:
+
+* `\Swoole\MongoDB\Client` is now available when the library is installed through Composer, not only in the copy embedded in the extension.
+
 Changed:
 
 * Modernized the codebase for PHP 8.2+ (constructor property promotion, readonly properties, first-class callable syntax, `str_contains()` and similar), dropping the remaining version-compatibility code paths. Public constructor parameter names and non-final classes are unchanged, so subclasses and named arguments keep working.
@@ -14,7 +18,6 @@ Added:
 * MR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication (by @catchem88).
 * MR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler; on PHP versions without the native constants, use `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK` and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` (by @lazerg).
 * MR swoole/library#191: Support the `http2_max_headers` server option, with the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS`; it takes effect on Swoole 6.3.0 and later (by @NathanFreeman).
-* `\Swoole\MongoDB\Client` is now available when the library is installed through Composer, not only in the copy embedded in the extension.
 
 Changed:
 
