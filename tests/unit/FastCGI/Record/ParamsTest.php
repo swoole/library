@@ -81,6 +81,20 @@ class ParamsTest extends TestCase
         return $length > 127 ? pack('N', $length | 0x80000000) : pack('C', $length);
     }
 
+    /**
+     * A pair whose declared lengths run past the record's content is malformed and is reported, not decoded
+     * from whatever bytes follow.
+     */
+    public function testUnpackingAPairRunningPastTheContentFails(): void
+    {
+        $content = pack('CC', 1, 100) . 'a' . 'v'; // A one-byte name and a value declared as 100 bytes, of which there is one.
+        $record  = pack('CCnnCC', FastCGI::VERSION_1, FastCGI::PARAMS, 1, strlen($content), 4, 0) . $content . "\0\0\0\0";
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Can not unpack data from the binary buffer');
+        Params::unpack($record);
+    }
+
     public function testUnpacking(): void
     {
         $oneLineData = preg_replace('/\s+/', '', self::$rawMessage) ?? '';
