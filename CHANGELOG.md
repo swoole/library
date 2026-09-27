@@ -39,6 +39,7 @@ Fixed:
 * `\Swoole\ConnectionPool::close()` failed with an `Error` when called twice, and `fill()` on a closed pool made connections only to drop them.
 * `\Swoole\Database\PDOProxy`: `query()` and `prepare()` failed with a `TypeError` outside the exception error mode.
 * `\Swoole\ArrayObject` and `swoole_array_default_value()` raised a deprecation on PHP 8.5 when given a `null` key, which still stands for the empty string.
+* The mysqli proxies raised a warning on `prepare(query: ...)`, with the query passed by name, and could not prepare that statement again after a reconnect.
 
 ## 6.2.3 (2026-09-22)
 

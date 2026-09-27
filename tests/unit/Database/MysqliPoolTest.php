@@ -147,6 +147,59 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
+     * The proxies keep the query of a statement, to prepare it again after a reconnect. They find it when it is
+     * passed by name, too.
+     */
+    public function testPrepareWithANamedArgument(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+
+            $statement = $mysqli->prepare(query: 'SELECT 40 + 2');
+            self::killMysqliConnection($mysqli);
+            self::assertTrue($statement->execute());
+            self::assertSame(42, $statement->get_result()->fetch_row()[0]);
+            self::assertSame(1, $mysqli->getRound());
+
+            $statement = $mysqli->stmt_init();
+            self::assertTrue($statement->prepare(query: 'SELECT 40 + 3'));
+            self::killMysqliConnection($mysqli);
+            self::assertTrue($statement->execute());
+            self::assertSame(43, $statement->get_result()->fetch_row()[0]);
+            self::assertSame(2, $mysqli->getRound());
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+
+    /**
+     * The argument of autocommit() is found when it is passed by name, too.
+     */
+    public function testAutocommitWithANamedArgument(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+
+            $mysqli->autocommit(enable: true);
+            self::assertFalse($mysqli->inTransaction());
+            $mysqli->autocommit(enable: false);
+            self::assertTrue($mysqli->inTransaction());
+            $mysqli->autocommit(enable: true);
+            self::assertFalse($mysqli->inTransaction());
+
+            self::killMysqliConnection($mysqli);
+            self::assertSame('1', $mysqli->query('SELECT 1')->fetch_row()[0]);
+            self::assertSame(1, $mysqli->getRound(), 'With autocommit on, a lost connection is replaced.');
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+
+    /**
      * autocommit(false) runs every statement inside an implicit transaction until autocommit is turned back on;
      * commit() and rollback() only end the current one. The connection counts as in a transaction the whole time.
      */

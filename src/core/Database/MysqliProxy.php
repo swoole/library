@@ -105,7 +105,8 @@ class MysqliProxy extends ObjectProxy
                 continue;
             }
             if (strcasecmp($name, 'prepare') === 0) {
-                $ret = new MysqliStatementProxy($ret, $arguments[0], $this);
+                // By position or by name: mysqli::prepare(string $query).
+                $ret = new MysqliStatementProxy($ret, $arguments[0] ?? $arguments['query'] ?? null, $this);
             } elseif (strcasecmp($name, 'stmt_init') === 0) {
                 $ret = new MysqliStatementProxy($ret, null, $this);
             } elseif (strcasecmp($name, 'begin_transaction') === 0) {
@@ -113,7 +114,8 @@ class MysqliProxy extends ObjectProxy
             } elseif (strcasecmp($name, 'commit') === 0 || strcasecmp($name, 'rollback') === 0) {
                 $this->inTransaction = false;
             } elseif (strcasecmp($name, 'autocommit') === 0) {
-                $this->autocommitDisabled = !$arguments[0];
+                // By position or by name: mysqli::autocommit(bool $enable).
+                $this->autocommitDisabled = !($arguments[0] ?? $arguments['enable'] ?? true);
             }
             break;
         }
