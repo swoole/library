@@ -6,6 +6,8 @@ Added:
 * PR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication (by @catchem88). A class extending `RedisConfig` that overrides `withAuth()` or redeclares `$auth` has to widen its `string` type to `string|array`.
 * PR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler; on PHP versions without the native constants, use `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK` and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` (by @lazerg).
 * PR swoole/library#191: Support the `http2_max_headers` server option, with the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS`; it takes effect on Swoole 6.3.0 and later (by @NathanFreeman).
+* `\Swoole\Database\MysqliProxy::inTransaction()` and `reset()`, which report and forget the transaction state the proxy tracks. `\Swoole\Database\MysqliPool::get()` hands out a connection with that state reset.
+* `\Swoole\RemoteObject\Exception::getRemoteClass()` and `getRemoteCode()`, which give the class and the code of an exception thrown on the server.
 
 Changed:
 
@@ -21,19 +23,23 @@ Removed:
 Fixed:
 
 * PR swoole/library#192: Report fatal `\Swoole\Coroutine\Server` accept failures through `start()` and `errCode` (by @binaryfire).
-* PR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client`, present since 6.2.0: every client, including the ones behind the hooked `dns_get_record()`, `mail()` and `gethostbyaddr()` calls and behind `\Swoole\MongoDB\Client`, was kept alive for the lifetime of the process. Clients are now released as soon as nothing uses them, so `\Swoole\RemoteObject\Client::getInstance()` returns `null` for a client that is gone, and a client can no longer be cloned. Fix issue swoole/swoole-src#6191.
+* PR swoole/library#193: Fixed a memory leak in `\Swoole\RemoteObject\Client`, present since 6.2.0, where every client was kept alive for the lifetime of the process (issue swoole/swoole-src#6191). `\Swoole\RemoteObject\Client::getInstance()` now returns `null` for a client that is gone, and a client can no longer be cloned.
 * Fixed a startup race in the default remote object server that let a coroutine see the server as ready while another one was still starting it ([commit](https://github.com/swoole/library/commit/b0ba7b46d995feff9427b83ceedfcc87e8ca96e8)).
-* Hardened three error paths ([commit](https://github.com/swoole/library/commit/63f1fe387f78627ff1904de3e49ee6894adfd240)): a failed reconnect no longer leaves a database statement proxy wrapping `false`; `\Swoole\RemoteObject\Client` throws a `\Swoole\RemoteObject\Exception` on a response that does not unserialize; an empty FastCGI response is reported as `502 Invalid FastCGI Response`.
+* A failed reconnect left a database statement proxy wrapping `false` ([commit](https://github.com/swoole/library/commit/63f1fe387f78627ff1904de3e49ee6894adfd240)).
+* `\Swoole\RemoteObject\Client` now throws a `\Swoole\RemoteObject\Exception` on a response that does not unserialize.
+* An empty FastCGI response is now reported as `502 Invalid FastCGI Response`.
 * A `\Swoole\RemoteObject\Client` used from several coroutines at once ended the process with a fatal "Socket has already been bound to another coroutine"; calls through one client are now serialized.
 * `swoole_container_cpu_num()` ignored the CPU quota of cgroup v2 containers.
-* The mysqli proxies now reconnect after a lost connection under the default mysqli report mode of PHP 8.1+, where failures are thrown as `\mysqli_sql_exception`; they never reconnect inside a transaction, which the new `\Swoole\Database\MysqliProxy::inTransaction()` reports, and a lost connection in a method they do not retry, such as `store_result()`, is reported instead of returned as `false`. The list of retried methods is matched exactly, with `mysqli::execute_query()` on it explicitly.
+* The mysqli proxies did not reconnect after a lost connection under the default mysqli report mode of PHP 8.1+, where failures are thrown as `\mysqli_sql_exception`.
+* The mysqli proxies no longer reconnect inside a transaction, and report a lost connection in a method they do not retry, such as `store_result()`, where they returned `false`.
 * `\Swoole\Database\MysqliStatementProxy` did not re-bind the `bind_result()` variables correctly after a reconnect, and retried `fetch()` on a statement that was prepared again but never executed.
-* `\Swoole\Database\PDOStatementProxy` turned a connection lost while reading rows into an empty result, and did not recover from a second lost connection on the same statement; it now retries `execute()` only, and reports a lost connection in any other method as the `\PDOException` it is.
+* `\Swoole\Database\MysqliStatementProxy` did not recover from a second lost connection on the same statement.
+* `\Swoole\Database\PDOStatementProxy` turned a connection lost while reading rows into an empty result, and did not recover from a second lost connection on the same statement. It now retries `execute()` only, and reports a lost connection in any other method.
 * The database proxies recognise more lost-connection errors: SSL failures during a query, PostgreSQL's `canceling statement due to conflict with recovery`, and the PlanetScale PostgreSQL / pg_bouncer messages, in line with Laravel's list.
 * `\Swoole\Database\RedisPool` passed the `connect()` arguments in the wrong positions when only some of the connect timeout, retry interval and read timeout were configured.
 * `\Swoole\Coroutine\Server` never backed off when a coroutine could not be created for an accepted connection.
 * A FastCGI request body of `"0"` was dropped as empty.
-* An exception the remote object server caught became a TypeError on the client when its code was not an integer, as with a `\PDOException` carrying its SQLSTATE, and so did the server's own errors such as an invalid API key. Both now arrive as a `\Swoole\RemoteObject\Exception`, whose new `getRemoteClass()` and `getRemoteCode()` give the original class and code.
+* An exception the remote object server caught became a `TypeError` on the client when its code was not an integer, as with a `\PDOException`, and so did the server's own errors such as an invalid API key. Both now arrive as a `\Swoole\RemoteObject\Exception`.
 * `\Swoole\NameResolver\Nacos::getCluster()` threw a `TypeError`, because Nacos reports the weight of a node as a float.
 * Several scripts under `examples/` did not run: the remote object, Nacos, Consul, PDO and short name examples.
 * `\Swoole\ConnectionPool::close()` failed with an `Error` when called twice, and `fill()` on a closed pool made connections only to drop them.
