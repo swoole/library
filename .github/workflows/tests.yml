@@ -2,6 +2,15 @@ name: Tests
 
 on: [ push, pull_request, workflow_dispatch ]
 
+# This branch is the development branch of the library, which becomes the 6.3 series, so it is tested against
+# the development branch of Swoole: the app image is built on the nightly phpswoole/swoole images (no tag prefix)
+# and on the images of Swoole 6.3 (tag prefix "6.3-"), and the Swoole the Dockerfile compiles on top of either
+# comes from branch master of swoole-src, which has no branch for 6.3 yet. Branch 6.2.x uses the images of Swoole
+# 6.2 (tag prefix "6.2-") and branch 6.2 of swoole-src instead. The branch is `SWOOLE_BRANCH` below, the tag
+# prefixes are the `image-tag-prefix` matrix.
+env:
+  SWOOLE_BRANCH: "master"
+
 jobs:
   # Every image in the matrix gets built and booted, which is what proves the extension still compiles against
   # each PHP version. The checks on top of that each run on a subset of the matrix, as noted on the step.
@@ -10,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image-tag-prefix: ["", "6.2-"]
+        image-tag-prefix: ["", "6.3-"]
         php: ["8.2", "8.3", "8.4", "8.5"]
 
     name: Image phpswoole/swoole:${{ matrix.image-tag-prefix }}php${{ matrix.php }}
@@ -26,6 +35,8 @@ jobs:
 
       - name: Prepare Test Environment
         env:
+          # Build arguments of the app image, together with SWOOLE_BRANCH from the top of this file:
+          # docker-compose.yml hands the three variables on to the Dockerfile.
           IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
           PHP_VERSION: ${{ matrix.php }}
         run: |

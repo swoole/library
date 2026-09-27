@@ -5,6 +5,7 @@ services:
       args:
         - IMAGE_TAG_PREFIX
         - PHP_VERSION
+        - SWOOLE_BRANCH
     platform: linux/amd64
     links:
       - consul
