@@ -8,6 +8,9 @@
  */
 
 declare(strict_types=1);
+
+require dirname(__DIR__) . '/bootstrap.php';
+
 use function Swoole\Coroutine\defer;
 use function Swoole\Coroutine\go;
 use function Swoole\Coroutine\run;
