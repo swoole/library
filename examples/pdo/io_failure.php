@@ -25,7 +25,7 @@ Coroutine\run(function () {
     $constructor = fn () => new PDO(
         'mysql:' .
         'host=' . MYSQL_SERVER_HOST . ';' .
-        'port=' . MYSQL_SERVER_PWD . ';' .
+        'port=' . MYSQL_SERVER_PORT . ';' .
         'dbname=' . MYSQL_SERVER_DB . ';' .
         'charset=utf8mb4',
         MYSQL_SERVER_USER,
@@ -67,7 +67,8 @@ Coroutine\run(function () {
                     throw new RuntimeException('Execute failed');
                 }
                 $ret = $statement->fetchAll();
-                if ($ret[0][0] !== '2') {
+                // An integer since PHP 8.1, a string before that.
+                if ((int) $ret[0][0] !== 2) {
                     throw new RuntimeException('Fetch failed');
                 }
                 $success++;
