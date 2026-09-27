@@ -145,5 +145,6 @@ register_shutdown_function(static function () use ($remote_object_dir, $remote_o
 // because setting the flags here also settles the hook_flags option Swoole\Coroutine\run() would otherwise
 // fill in with SWOOLE_HOOK_ALL. The cost is that Coroutine\Http's curl driver is exercised through
 // Swoole\Curl\Handler rather than through native curl; the native path belongs to the extension, not here.
+// On Swoole 6.2 the swap only works because tests/curl_hook.php has run before the scheduler started; see there.
 $hook_flags = Swoole\Runtime::getHookFlags() ?: SWOOLE_HOOK_ALL;
 Swoole\Runtime::setHookFlags(($hook_flags & ~SWOOLE_HOOK_NATIVE_CURL) | SWOOLE_HOOK_CURL);

@@ -18,6 +18,9 @@
             "tests/TestCase.php",
             "tests/DatabaseTestCase.php",
             "tests/HookFlagsTrait.php"
+        ],
+        "files": [
+            "tests/curl_hook.php"
         ]
     }
 }
