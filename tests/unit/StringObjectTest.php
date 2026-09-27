@@ -174,6 +174,13 @@ class StringObjectTest extends TestCase
     public function testEndsWith(): void
     {
         $this->assertTrue(swoole_string('hello swoole and hello world')->endsWith('world'));
+        $this->assertFalse(swoole_string('hello swoole and hello world')->endsWith('hello'), 'Found, but not at the end.');
+        $this->assertFalse(swoole_string('hello swoole and hello world')->endsWith('swoole!'), 'Not found.');
+        $this->assertTrue(swoole_string('hello')->endsWith('hello'), 'The whole string.');
+        $this->assertFalse(swoole_string('hello')->endsWith('oh hello'), 'Longer than the string.');
+        $this->assertTrue(swoole_string('hello')->endsWith(''), 'Every string ends with the empty string.');
+        $this->assertTrue(swoole_string('')->endsWith(''));
+        $this->assertFalse(swoole_string('')->endsWith('hello'));
     }
 
     public function testEquals(): void
