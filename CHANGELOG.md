@@ -25,6 +25,7 @@ Changed:
 * `\Swoole\Server\Helper` uses the `\Swoole\Constant::OPTION_*` constants instead of string literals in its option tables and lookups.
 * The FastCGI `Params` record encodes and decodes its parameters in linear time, about 2.5 and 8 times faster than before; the bytes produced and the parameters read are the same.
 * `\Swoole\ArrayObject::lastIndexOf()` and `remove()` with `$loop` find their keys in one `array_keys()` call instead of walking the array in PHP, with the same results.
+* `\Swoole\StringObject::endsWith()` uses `str_ends_with()` and no longer scans the whole string, with the same results.
 
 Removed:
 
