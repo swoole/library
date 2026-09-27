@@ -29,8 +29,9 @@ class PDOProxy extends ObjectProxy
     /**
      * The number of transactions started through beginTransaction() and not ended through commit() or rollBack().
      *
-     * Kept up to date for the classes extending this one. inTransaction() does not rely on it: it misses a
-     * transaction started or ended by a statement, and one ended by a commit() or a rollBack() that threw.
+     * It is what inTransaction() reports, and what decides whether a statement may reconnect. The state PDO
+     * reports cannot: a connection that was lost is inside a transaction for PDO, always with pdo_pgsql, and with
+     * pdo_mysql when it was lost inside one, so that it would never be replaced.
      */
     protected int $inTransaction = 0;
 
@@ -94,7 +95,7 @@ class PDOProxy extends ObjectProxy
 
     public function inTransaction(): bool
     {
-        return $this->__object->inTransaction();
+        return $this->inTransaction > 0;
     }
 
     public function reset(): void

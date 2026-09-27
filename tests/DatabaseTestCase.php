@@ -17,6 +17,7 @@ use Swoole\Database\MysqliPool;
 use Swoole\Database\MysqliProxy;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
+use Swoole\Database\PDOProxy;
 use Swoole\Database\RedisConfig;
 use Swoole\Database\RedisPool;
 
@@ -55,6 +56,25 @@ class DatabaseTestCase extends TestCase
         } finally {
             $admin->close();
         }
+    }
+
+    /**
+     * Ends the server-side session of a pooled PDO connection, MySQL or PostgreSQL, from a second connection, so
+     * that the proxy's next call runs into a lost connection.
+     */
+    protected static function killPdoConnection(PDOProxy $connection): void
+    {
+        if ($connection->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql') {
+            $id    = $connection->__getObject()->query('SELECT pg_backend_pid()')->fetchColumn();
+            $admin = new \PDO('pgsql:host=' . PGSQL_SERVER_HOST . ';port=' . PGSQL_SERVER_PORT . ';dbname=' . PGSQL_SERVER_DB, PGSQL_SERVER_USER, PGSQL_SERVER_PWD);
+            $admin->query("SELECT pg_terminate_backend({$id})")->fetchAll();
+        } else {
+            $id    = $connection->__getObject()->query('SELECT CONNECTION_ID()')->fetchColumn();
+            $admin = new \PDO('mysql:host=' . MYSQL_SERVER_HOST . ';port=' . MYSQL_SERVER_PORT . ';dbname=' . MYSQL_SERVER_DB, MYSQL_SERVER_USER, MYSQL_SERVER_PWD);
+            $admin->exec("KILL {$id}");
+        }
+        // The server ends the session on its own time.
+        usleep(100_000);
     }
 
     protected static function getPdoMysqlPool(int $size = ConnectionPool::DEFAULT_SIZE): PDOPool

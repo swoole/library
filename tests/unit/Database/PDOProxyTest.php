@@ -38,41 +38,31 @@ class PDOProxyTest extends DatabaseTestCase
     }
 
     /**
-     * A transaction does not have to be started and ended through the methods of PDO.
+     * inTransaction() follows beginTransaction(), commit() and rollBack(), and a connection handed out by the pool
+     * starts anew.
      */
-    public function testInTransactionFollowsTheConnection(): void
-    {
-        self::coRun(function () {
-            $pdo = self::getPdoSqlitePool(1)->get();
-            self::assertFalse($pdo->inTransaction());
-
-            $pdo->exec('BEGIN');
-            self::assertTrue($pdo->inTransaction(), 'A transaction started by a statement is a transaction.');
-            $pdo->exec('ROLLBACK');
-            self::assertFalse($pdo->inTransaction());
-
-            $pdo->beginTransaction();
-            self::assertTrue($pdo->inTransaction());
-            $pdo->exec('COMMIT');
-            self::assertFalse($pdo->inTransaction(), 'A transaction ended by a statement has ended.');
-        });
-    }
-
-    /**
-     * A connection put back with a transaction open is still inside that transaction when it is handed out again.
-     */
-    public function testInTransactionAfterGettingTheConnectionAgain(): void
+    public function testInTransaction(): void
     {
         self::coRun(function () {
             $pool = self::getPdoSqlitePool(1);
             $pdo  = $pool->get();
-            $pdo->beginTransaction();
-            $pool->put($pdo);
+            self::assertFalse($pdo->inTransaction());
 
-            $pdo = $pool->get();
+            $pdo->beginTransaction();
+            self::assertTrue($pdo->inTransaction());
+            $pdo->commit();
+            self::assertFalse($pdo->inTransaction());
+
+            $pdo->beginTransaction();
             self::assertTrue($pdo->inTransaction());
             $pdo->rollBack();
             self::assertFalse($pdo->inTransaction());
+
+            $pdo->beginTransaction();
+            $pool->put($pdo);
+            $pdo = $pool->get();
+            self::assertFalse($pdo->inTransaction());
+            $pdo->__getObject()->rollBack();
         });
     }
 }
