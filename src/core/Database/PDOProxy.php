@@ -26,6 +26,12 @@ class PDOProxy extends ObjectProxy
 
     protected int $round = 0;
 
+    /**
+     * The number of transactions started through beginTransaction() and not ended through commit() or rollBack().
+     *
+     * Kept up to date for the classes extending this one. inTransaction() does not rely on it: it misses a
+     * transaction started or ended by a statement, and one ended by a commit() or a rollBack() that threw.
+     */
     protected int $inTransaction = 0;
 
     public function __construct(callable $constructor)
@@ -56,7 +62,8 @@ class PDOProxy extends ObjectProxy
             $this->inTransaction--;
         }
 
-        if ((strcasecmp($name, 'prepare') === 0) || (strcasecmp($name, 'query') === 0)) {
+        // Not a statement but false when the call failed and the error mode is not the exception one.
+        if ($ret instanceof \PDOStatement && (strcasecmp($name, 'prepare') === 0 || strcasecmp($name, 'query') === 0)) {
             $ret = new PDOStatementProxy($ret, $this);
         }
 
@@ -87,7 +94,7 @@ class PDOProxy extends ObjectProxy
 
     public function inTransaction(): bool
     {
-        return $this->inTransaction > 0;
+        return $this->__object->inTransaction();
     }
 
     public function reset(): void
