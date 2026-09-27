@@ -176,6 +176,79 @@ class PDOStatementProxyTest extends DatabaseTestCase
             $pool->close();
         });
     }
+
+    /**
+     * The same against the servers, MySQL and PostgreSQL, with the connection ended for real. PostgreSQL matters
+     * here: PDO reports a connection it has lost as being inside a transaction, which is no reason not to
+     * reconnect.
+     *
+     * @dataProvider dataPools
+     */
+    public function testLostConnectionOnExecuteIsRetriedOnTheServer(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            $statement = $pdo->prepare('SELECT 42');
+            self::killPdoConnection($pdo);
+            self::assertTrue($statement->execute(), 'A statement prepared before the connection was lost.');
+            self::assertEquals(42, $statement->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+
+            self::killPdoConnection($pdo);
+            $statement = $pdo->prepare('SELECT 43');
+            self::assertTrue($statement->execute(), 'A statement prepared after the connection was lost.');
+            self::assertEquals(43, $statement->fetchColumn());
+            self::assertSame(2, $pdo->getRound());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * A connection lost inside a transaction is reported, as the transaction is lost with it. The connection must
+     * not stay lost for whoever gets it from the pool next, though.
+     *
+     * @dataProvider dataPools
+     */
+    public function testConnectionLostInsideATransactionRecoversForTheNextBorrower(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+            $pdo->beginTransaction();
+            self::killPdoConnection($pdo);
+
+            $statement = $pdo->prepare('SELECT 42');
+            try {
+                $statement->execute();
+                self::fail('Inside a transaction the lost connection is reported.');
+            } catch (\PDOException) {
+                self::assertSame(0, $pdo->getRound());
+            }
+            $pool->put($pdo);
+            unset($pdo, $statement);
+
+            $pdo       = $pool->get();
+            $statement = $pdo->prepare('SELECT 43');
+            self::assertTrue($statement->execute());
+            self::assertEquals(43, $statement->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    public static function dataPools(): array
+    {
+        return [
+            'MySQL'      => ['getPdoMysqlPool'],
+            'PostgreSQL' => ['getPdoPgsqlPool'],
+        ];
+    }
 }
 
 /**
