@@ -3,7 +3,7 @@
 Added:
 
 * PR swoole/library#185: Added `\Swoole\Coroutine\Http2\MultiplexClient`, an HTTP/2 client that multiplexes requests from many coroutines over one shared connection, reconnects on demand, and closes an idle connection after a configurable period (options `heartbeat_check_interval` and `heartbeat_idle_time`) (by @tw2066).
-* PR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication (by @catchem88).
+* PR swoole/library#187: `\Swoole\Database\RedisConfig::withAuth()` now also accepts a `[username, password]` array for Redis ACL authentication (by @catchem88). A class extending `RedisConfig` that overrides `withAuth()` or redeclares `$auth` has to widen its `string` type to `string|array`.
 * PR swoole/library#190: Support the `CURLOPT_PREREQFUNCTION` option in the coroutine curl handler; on PHP versions without the native constants, use `\Swoole\Curl\CURLOPT_PREREQFUNCTION`, `\Swoole\Curl\CURL_PREREQFUNC_OK` and `\Swoole\Curl\CURL_PREREQFUNC_ABORT` (by @lazerg).
 * PR swoole/library#191: Support the `http2_max_headers` server option, with the constant `\Swoole\Constant::OPTION_HTTP2_MAX_HEADERS`; it takes effect on Swoole 6.3.0 and later (by @NathanFreeman).
 
