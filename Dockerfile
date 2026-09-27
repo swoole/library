@@ -1,4 +1,6 @@
-ARG IMAGE_TAG_PREFIX=""
+# The defaults follow the branch of the library: Swoole 6.2 here, i.e. the phpswoole/swoole images of Swoole 6.2
+# and branch 6.2 of swoole-src. On branch master they are the nightly images (no tag prefix) and branch master.
+ARG IMAGE_TAG_PREFIX="6.2-"
 ARG PHP_VERSION=8.4
 
 FROM phpswoole/swoole:${IMAGE_TAG_PREFIX}php${PHP_VERSION}
@@ -49,7 +51,9 @@ RUN export ORACLE_HOME=instantclient,/usr/local/instantclient \
 RUN pecl install mongodb-stable \
     && docker-php-ext-enable mongodb
 
-RUN git clone https://github.com/swoole/swoole-src.git \
+ARG SWOOLE_BRANCH=6.2
+
+RUN git clone --depth 1 --branch "${SWOOLE_BRANCH}" https://github.com/swoole/swoole-src.git \
     && cd ./swoole-src \
     && phpize \
     && ./configure --enable-openssl \

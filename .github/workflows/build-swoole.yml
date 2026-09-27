@@ -2,6 +2,11 @@ name: Build Swoole
 
 on: [ push, pull_request, workflow_dispatch ]
 
+# The branch of swoole-src the library is compiled into. This branch is the 6.2 series of the library, which
+# ships in Swoole 6.2.x; branch master of the library goes with branch master of swoole-src.
+env:
+  SWOOLE_BRANCH: "6.2"
+
 jobs:
   build-swoole:
     runs-on: ubuntu-24.04
@@ -28,7 +33,7 @@ jobs:
         run: |
           set -ex
           mkdir swoole
-          curl -sfL https://github.com/swoole/swoole-src/archive/master.tar.gz -o swoole.tar.gz
+          curl -sfL "https://github.com/swoole/swoole-src/archive/refs/heads/${SWOOLE_BRANCH}.tar.gz" -o swoole.tar.gz
           tar xfz swoole.tar.gz --strip-components=1 -C swoole
 
       - name: Checkout Source Code of Swoole Library
