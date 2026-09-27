@@ -100,7 +100,8 @@ class MysqliStatementProxy extends ObjectProxy
                 continue;
             }
             if (strcasecmp($name, 'prepare') === 0) {
-                $this->queryString = $arguments[0];
+                // By position or by name: mysqli_stmt::prepare(string $query).
+                $this->queryString = $arguments[0] ?? $arguments['query'] ?? null;
             }
             break;
         }
