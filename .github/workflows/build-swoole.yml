@@ -80,9 +80,9 @@ jobs:
         run: |
           set -ex
 
-          echo '127.0.0.1 consul local.httpbin.org mongodb mysql oracle pgsql php-fpm redis' | sudo tee -a /etc/hosts
+          echo '127.0.0.1 consul local.httpbin.org mongodb mysql nacos oracle pgsql php-fpm redis' | sudo tee -a /etc/hosts
 
-          docker compose -f docker-compose.yml -f docker-compose.host.yml up -d consul httpbin mongodb mysql oracle pgsql php-fpm redis
+          docker compose -f docker-compose.yml -f docker-compose.host.yml up -d consul httpbin mongodb mysql nacos oracle pgsql php-fpm redis
 
           COMPOSER=composer-embedded.json composer update -n -q --no-progress
 
