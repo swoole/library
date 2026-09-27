@@ -34,6 +34,10 @@ class ConnectionPool
 
     public function fill(): void
     {
+        if ($this->pool === null) {
+            // A closed pool has nowhere to keep the connections: they would be made, counted and dropped.
+            return;
+        }
         while ($this->size > $this->num) {
             $this->make();
         }
@@ -72,6 +76,9 @@ class ConnectionPool
 
     public function close(): void
     {
+        if ($this->pool === null) {
+            return;
+        }
         $this->pool->close();
         $this->pool = null;
         $this->num  = 0;
