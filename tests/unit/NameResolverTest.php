@@ -55,9 +55,6 @@ class NameResolverTest extends TestCase
 
     public function testNacos(): void
     {
-        if (GITHUB_ACTIONS) {
-            $this->markTestSkipped('Nacos is not available.');
-        }
         swoole_library_set_option('http_client_driver', 'curl');
         $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
         $this->fun1($ns);
@@ -99,9 +96,6 @@ class NameResolverTest extends TestCase
 
     public function testNacosCo(): void
     {
-        if (GITHUB_ACTIONS) {
-            $this->markTestSkipped('Nacos is not available.');
-        }
         self::coRun(function () {
             $ns = new NameResolver\Nacos(NACOS_SERVER_URL);
             $this->fun1($ns);
@@ -112,7 +106,7 @@ class NameResolverTest extends TestCase
     {
         $service_name = uniqid() . '.service';
         $ip           = '127.0.0.1';
-        $port         = random_int(10000, 65536);
+        $port         = random_int(10000, 65535);
         $this->assertTrue($ns->join($service_name, $ip, $port));
 
         $rs = $ns->getCluster($service_name);

@@ -5,10 +5,10 @@
 # baked into tests/bootstrap.php keep working. Usage:
 #
 #     docker compose -f docker-compose.yml -f docker-compose.host.yml up -d \
-#         consul httpbin mongodb mysql oracle pgsql php-fpm redis
+#         consul httpbin mongodb mysql nacos oracle pgsql php-fpm redis
 #
 # The app container publishes port 80 itself, so it must not be started together with the httpbin port
-# mapping below. Nacos is left out on purpose: its tests are skipped on CI.
+# mapping below.
 services:
   consul:
     ports:
@@ -22,6 +22,10 @@ services:
   mysql:
     ports:
       - "3306:3306"
+
+  nacos:
+    ports:
+      - "8848:8848"
 
   oracle:
     ports:
