@@ -48,6 +48,12 @@ if (!class_exists(Client::class, false)) {
  *   peer closes it
  * Both are read when the heartbeat checker starts; changing them on a client whose checker is
  * already running takes effect only after the next close().
+ *
+ * Call close() once the client is no longer needed. The recv loop and the heartbeat checker are
+ * coroutines of their own, and Swoole\Coroutine\run() returns only after every coroutine has ended:
+ * a client left open holds it back until the connection is closed for being idle, which takes up to
+ * heartbeat_idle_time plus heartbeat_check_interval seconds, and for as long as the peer keeps the
+ * connection open when idle closing is disabled.
  */
 class MultiplexClient extends Client
 {

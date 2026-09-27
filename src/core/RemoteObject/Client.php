@@ -123,7 +123,8 @@ class Client
     public function execute(string $path, array $array)
     {
         $cid = Coroutine::getCid();
-        // Outside a coroutine both sides are -1; let the HTTP client report that a coroutine is required.
+        // Outside a coroutine both sides are -1. The call goes on to the lock below, where Channel::push() ends it
+        // with the fatal error "API must be called in the coroutine".
         if ($cid !== -1 && $this->lockOwner === $cid) {
             // Only reachable from a destructor the garbage collector runs in the middle of a call of this same
             // coroutine. Waiting would be waiting for itself.
