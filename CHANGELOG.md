@@ -38,6 +38,7 @@ Fixed:
 * Several scripts under `examples/` did not run: the remote object, Nacos, Consul, PDO and short name examples.
 * `\Swoole\ConnectionPool::close()` failed with an `Error` when called twice, and `fill()` on a closed pool made connections only to drop them.
 * `\Swoole\Database\PDOProxy`: `query()` and `prepare()` failed with a `TypeError` outside the exception error mode, and `inTransaction()` missed the transactions started or ended by a statement.
+* `\Swoole\ArrayObject` and `swoole_array_default_value()` raised a deprecation on PHP 8.5 when given a `null` key, which still stands for the empty string.
 
 ## 6.2.3 (2026-09-22)
 

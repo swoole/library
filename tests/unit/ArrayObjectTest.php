@@ -407,6 +407,45 @@ class ArrayObjectTest extends TestCase
         $this->assertEquals($data1, $data2->uasort($cmp)->toArray());
     }
 
+    /**
+     * PHP treats a null key as the empty string, and deprecates it as of PHP 8.5. Code passing null to the library
+     * keeps working as it did, without a deprecation raised from inside the library.
+     */
+    public function testNullKey(): void
+    {
+        $messages = [];
+        set_error_handler(static function (int $code, string $message) use (&$messages): bool {
+            $messages[] = $message;
+            return true;
+        });
+        try {
+            $array = swoole_array(['' => 'empty', 'a' => 1]);
+            $this->assertTrue($array->exists(null));
+            $this->assertTrue(isset($array[null]));
+            $this->assertSame('empty', $array[null]);
+            $this->assertSame('empty', (string) $array->get(null));
+            $this->assertSame('empty', (string) $array->getOr(null, 'default'));
+
+            $array[null] = 'offsetSet';
+            $this->assertSame('offsetSet', $array['']);
+            $array->set(null, 'set');
+            $this->assertSame('set', $array['']);
+
+            unset($array[null]);
+            $this->assertFalse($array->exists(''));
+            $this->assertNull($array[null]);
+            $this->assertSame('default', $array->getOr(null, 'default'));
+            $array->set(null, 'again')->delete(null);
+            $this->assertSame(['a' => 1], $array->toArray());
+
+            $this->assertSame(1, swoole_array_default_value(['' => 1], null));
+            $this->assertSame(2, swoole_array_default_value(['a' => 1], null, 2));
+        } finally {
+            restore_error_handler();
+        }
+        $this->assertSame([], $messages);
+    }
+
     public function testNatsort(): void
     {
         $data1 = ['img12.png', 'img10.png', 'img2.png', 'img1.png'];

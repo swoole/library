@@ -130,6 +130,9 @@ function swoole_array_list(...$arrray): Swoole\ArrayObject
 
 function swoole_array_default_value(array $array, $key, $default_value = null)
 {
+    // A null key is the empty string for PHP, which deprecates passing it as null as of PHP 8.5.
+    $key = $key ?? '';
+
     return array_key_exists($key, $array) ? $array[$key] : $default_value;
 }
 
