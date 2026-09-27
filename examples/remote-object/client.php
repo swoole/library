@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/bootstrap.php';
 
 use Swoole\RemoteObject;
 use Swoole\RemoteObject\ProxyTrait;
@@ -22,7 +22,8 @@ class ProxyGreeter
 
     public function __construct(string $greeting = 'Hello')
     {
-        $client       = new RemoteObject\Client();
+        // The Greeter class lives in the remote object server: see bootstrap.php in this directory.
+        $client       = swoole_get_default_remote_object_client();
         $this->object = $client->create(Greeter::class, $greeting);
     }
 
@@ -32,13 +33,11 @@ class ProxyGreeter
     }
 }
 
-require dirname(__DIR__, 2) . '/src/ext/standard.php';
-
 Co\run(function () {
     $o = new ProxyGreeter('hello swoole');
     echo $o('rango'), PHP_EOL;
 
-    $client = new RemoteObject\Client();
+    $client = new RemoteObject\Client(SwooleLibrary::$remote_object_server_socket_file);
     var_dump($client->call('gd_info'));
 
     $client = swoole_get_default_remote_object_client();

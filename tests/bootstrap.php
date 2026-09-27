@@ -77,9 +77,63 @@ define('HTTPBIN_SERVER_URL', 'http://' . HTTPBIN_SERVER_HOST);
 // This points to folder ./tests/www under root directory of the project.
 const DOCUMENT_ROOT = '/var/www/tests/www';
 
+/**
+ * Stops the default remote object server that keeps its files in $dir, if there is one, and removes the files.
+ *
+ * swoole_init_default_remote_object_server() writes five files into its directory (remote-object-server.php,
+ * .sock, .pid, .log and .lock) and starts a daemon that nothing stops: it outlives the process that started it,
+ * and keeps running the library code it loaded at that time. The files outlive the daemon in turn, e.g. when the
+ * container is restarted, and a socket file left like that can neither be read nor replaced on a Docker Desktop
+ * bind mount, so the next server cannot start and its client waits forever.
+ */
+function swoole_tests_stop_remote_object_server(string $dir): void
+{
+    $prefix   = $dir . '/remote-object-server.';
+    $pid      = is_file($prefix . 'pid') ? (int) file_get_contents($prefix . 'pid') : 0;
+    $is_alive = static function () use ($pid, $prefix): bool {
+        if ($pid <= 0 || !posix_kill($pid, 0)) {
+            return false;
+        }
+        // The process id may belong to something else by now, or to a zombie, which has no command line.
+        if (is_readable("/proc/{$pid}/cmdline")) {
+            $command = (string) file_get_contents("/proc/{$pid}/cmdline");
+        } else {
+            $command = (string) shell_exec("ps -p {$pid} -o command= 2>/dev/null");
+        }
+        return str_contains($command, basename($prefix) . 'php');
+    };
+
+    if ($is_alive()) {
+        posix_kill($pid, SIGTERM);
+        for ($i = 0; $i < 100 && $is_alive(); $i++) {
+            usleep(50_000);
+        }
+        if ($is_alive()) {
+            posix_kill($pid, SIGKILL);
+            usleep(50_000);
+        }
+    }
+
+    foreach (['php', 'sock', 'pid', 'log', 'lock'] as $extension) {
+        // Not guarded by file_exists(): that is false for a socket file left by a dead server on a bind mount.
+        @unlink($prefix . $extension);
+    }
+}
+
 $remote_object_dir = dirname(__DIR__) . '/examples/remote-object';
 swoole_library_set_option('default_remote_object_server_worker_num', 8);
 swoole_library_set_option('default_remote_object_server_dir', $remote_object_dir);
+
+// Start from a clean directory, whatever an earlier run left behind, and leave a clean one: the server is stopped
+// again by the process that loaded this file, provided it used the server. Processes forked from it inherit the
+// shutdown function and have to leave the server alone, hence the check on the process id.
+swoole_tests_stop_remote_object_server($remote_object_dir);
+$remote_object_owner = getmypid();
+register_shutdown_function(static function () use ($remote_object_dir, $remote_object_owner): void {
+    if (getmypid() === $remote_object_owner && SwooleLibrary::$remote_object_server_initiated) {
+        swoole_tests_stop_remote_object_server($remote_object_dir);
+    }
+});
 
 // Swoole\Curl\Handler -- the library's own curl implementation, and what Curl\HandlerTest exercises -- is
 // installed by SWOOLE_HOOK_CURL, which SWOOLE_HOOK_ALL leaves out: it is mutually exclusive with
