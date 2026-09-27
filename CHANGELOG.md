@@ -46,6 +46,7 @@ Fixed:
 * `\Swoole\Coroutine\Server` never backed off when a coroutine could not be created for an accepted connection.
 * A FastCGI request body of `"0"` was dropped as empty.
 * An exception the remote object server caught became a TypeError on the client when its code was not an integer, as with a `\PDOException` carrying its SQLSTATE, and so did the server's own errors such as an invalid API key. Both now arrive as a `\Swoole\RemoteObject\Exception`, whose new `getRemoteClass()` and `getRemoteCode()` give the original class and code.
+* `\Swoole\NameResolver\Nacos::getCluster()` threw a `TypeError`, because Nacos reports the weight of a node as a float.
 
 ## 6.2.3 (2026-09-22)
 
