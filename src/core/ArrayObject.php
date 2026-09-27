@@ -109,6 +109,8 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function get(mixed $key)
     {
+        // A null key is the empty string for PHP, which deprecates passing it as null as of PHP 8.5.
+        $key = $key ?? '';
         if (!$this->exists($key)) {
             throw new ArrayKeyNotExists($key);
         }
@@ -121,6 +123,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function getOr(mixed $key, mixed $default = null)
     {
+        $key = $key ?? '';
         if (!$this->exists($key)) {
             return $default;
         }
@@ -172,6 +175,8 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function set(mixed $key, mixed $value): self
     {
+        $key = $key ?? '';
+
         $this->array[$key] = $value;
         return $this;
     }
@@ -220,6 +225,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     #[\ReturnTypeWillChange]
     public function offsetGet(mixed $key)
     {
+        $key = $key ?? '';
         if (!array_key_exists($key, $this->array)) {
             return null;
         }
@@ -228,6 +234,8 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 
     public function offsetSet(mixed $key, mixed $value): void
     {
+        $key = $key ?? '';
+
         $this->array[$key] = $value;
     }
 
@@ -242,11 +250,13 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     #[\ReturnTypeWillChange]
     public function offsetExists(mixed $key)
     {
+        $key = $key ?? '';
         return isset($this->array[$key]);
     }
 
     public function exists(mixed $key): bool
     {
+        $key = $key ?? '';
         return array_key_exists($key, $this->array);
     }
 
