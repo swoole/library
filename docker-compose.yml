@@ -106,12 +106,18 @@ services:
     ports:
         - "27017:27017"
 
+  # Pinned to the last 2.x release: the client (src/core/NameResolver/Nacos.php) uses the v1 Open API without
+  # authentication. Nacos 3.0 refuses to start without NACOS_AUTH_TOKEN, NACOS_AUTH_IDENTITY_KEY and
+  # NACOS_AUTH_IDENTITY_VALUE, and later 3.x releases no longer serve the v1 API at all (HTTP 501).
   nacos:
-    image: nacos/nacos-server
-    platform: linux/amd64
+    image: nacos/nacos-server:v2.5.4
     environment:
       MODE: standalone
       PREFER_HOST_MODE: hostname
+      # The default heap is 1 GB, far more than a few test instances need.
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      JVM_XMN: 128m
 
   consul:
     image: consul:1.15

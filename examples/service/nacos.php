@@ -16,7 +16,7 @@ use function Swoole\Coroutine\run;
 const SERVICE_NAME = 'test_service';
 
 run(function () {
-    $c = new Swoole\NameResolver\Nacos('http://127.0.0.1:8848');
+    $c = new Swoole\NameResolver\Nacos(NACOS_SERVER_URL);
     var_dump($c->join(SERVICE_NAME, '127.0.0.1', 9502));
     var_dump($c->join(SERVICE_NAME, '127.0.0.1', 9501));
 
@@ -26,5 +26,5 @@ run(function () {
             var_dump($c->join(SERVICE_NAME, '127.0.0.1', 9501));
         }
     });
-    var_dump($c->resolve(SERVICE_NAME));
+    var_dump($c->getCluster(SERVICE_NAME));
 });
