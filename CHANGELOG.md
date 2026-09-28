@@ -10,6 +10,9 @@ Changed:
 
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself. The symbols available are unchanged.
 * Modernized the codebase for PHP 8.2+. Public APIs are unchanged.
+* `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle, as `curl_multi_getcontent()` does.
+* `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing when the socket cannot be created, and `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure, as the native functions do.
+* `swoole_exec()` returns `''` instead of `false` for a command without output, and `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run, as the native functions do.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and the mysqli pool turns autocommit back on. A connection that cannot be rolled back is replaced.
 * `\Swoole\Coroutine\Server` keeps accepting after an accept error that concerns one incoming connection only, such as `ECONNABORTED`, instead of stopping.
 * `\Swoole\FastCGI\Request` encodes its body in linear instead of quadratic time, with the same bytes produced.
