@@ -233,6 +233,79 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
+     * A connection put back with a transaction still open is rolled back before it is reused.
+     */
+    public function testPutRollsBackAnOpenTransaction(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+            $mysqli->query('CREATE TEMPORARY TABLE swoole_library_test_rollback (id INT)');
+
+            $mysqli->begin_transaction();
+            $mysqli->query('INSERT INTO swoole_library_test_rollback VALUES (1)');
+            self::assertTrue($mysqli->inTransaction());
+            $pool->put($mysqli);
+
+            $again = $pool->get();
+            self::assertSame($mysqli, $again, 'The connection was reused, not replaced.');
+            self::assertFalse($again->inTransaction());
+            self::assertSame(0, $again->getRound());
+            self::assertEquals(0, $again->query('SELECT COUNT(*) FROM swoole_library_test_rollback')->fetch_row()[0]);
+
+            $pool->put($again);
+            $pool->close();
+        });
+    }
+
+    /**
+     * With autocommit off, putting the connection back rolls back and turns autocommit on again.
+     */
+    public function testPutRestoresAutocommit(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+            $mysqli->query('CREATE TEMPORARY TABLE swoole_library_test_autocommit (id INT)');
+
+            $mysqli->autocommit(false);
+            $mysqli->query('INSERT INTO swoole_library_test_autocommit VALUES (1)');
+            $pool->put($mysqli);
+
+            $again = $pool->get();
+            self::assertSame($mysqli, $again, 'The connection was reused, not replaced.');
+            self::assertFalse($again->inTransaction());
+            self::assertEquals(1, $again->query('SELECT @@autocommit')->fetch_row()[0]);
+            self::assertEquals(0, $again->query('SELECT COUNT(*) FROM swoole_library_test_autocommit')->fetch_row()[0]);
+
+            $pool->put($again);
+            $pool->close();
+        });
+    }
+
+    /**
+     * A connection lost inside a transaction cannot be rolled back, and is replaced when it is put back.
+     */
+    public function testPutReplacesAConnectionThatCannotBeRolledBack(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+            $mysqli->begin_transaction();
+            self::killMysqliConnection($mysqli);
+            $pool->put($mysqli);
+
+            $again = $pool->get();
+            self::assertNotSame($mysqli, $again);
+            self::assertEquals(1, $again->query('SELECT 1')->fetch_row()[0]);
+            self::assertSame(0, $again->getRound());
+
+            $pool->put($again);
+            $pool->close();
+        });
+    }
+
+    /**
      * A statement executed inside the transaction does not reconnect its parent either, and afterwards, outside
      * the transaction, it reconnects the parent and is prepared again as usual.
      */

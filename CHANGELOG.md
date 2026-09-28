@@ -10,6 +10,7 @@ Changed:
 
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself. The symbols available are unchanged.
 * Modernized the codebase for PHP 8.2+. Public APIs are unchanged.
+* `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and the mysqli pool turns autocommit back on. A connection that cannot be rolled back is replaced.
 
 ## 6.2.4 (unreleased)
 

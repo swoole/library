@@ -62,7 +62,7 @@ class PDOProxyTest extends DatabaseTestCase
             $pool->put($pdo);
             $pdo = $pool->get();
             self::assertFalse($pdo->inTransaction());
-            $pdo->__getObject()->rollBack();
+            self::assertFalse($pdo->__getObject()->inTransaction(), 'The pool rolled the transaction back.');
         });
     }
 }

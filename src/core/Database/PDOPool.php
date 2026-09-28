@@ -11,12 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\Database;
 
-use PDO;
 use Swoole\ConnectionPool;
 
-/**
- * @method void put(PDO|PDOProxy $connection)
- */
 class PDOPool extends ConnectionPool
 {
     public function __construct(protected PDOConfig $config, int $size = self::DEFAULT_SIZE)
@@ -49,6 +45,36 @@ class PDOPool extends ConnectionPool
         $pdo->reset();
 
         return $pdo;
+    }
+
+    /**
+     * Return a connection to the pool.
+     *
+     * A transaction left open on the connection is rolled back first, so that the next borrower does not work
+     * inside a transaction it never began. A connection that cannot be rolled back is replaced.
+     *
+     * @param PDOProxy|null $connection the connection to return, or null to have a broken connection replaced
+     */
+    public function put(mixed $connection): void
+    {
+        if ($connection instanceof PDOProxy) {
+            $pdo = $connection->__getObject();
+            // The state PDO reports sees a transaction started by hand, e.g. with exec('BEGIN'), too.
+            if ($connection->inTransaction() || $pdo->inTransaction()) {
+                try {
+                    $clean = $pdo->rollBack();
+                } catch (\PDOException) {
+                    $clean = false;
+                }
+                if ($clean) {
+                    $connection->reset();
+                } else {
+                    $connection = null;
+                }
+            }
+        }
+
+        parent::put($connection);
     }
 
     /**

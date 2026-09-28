@@ -167,6 +167,44 @@ class PDOPoolTest extends DatabaseTestCase
         });
     }
 
+    /**
+     * A connection put back with a transaction still open is rolled back before it is reused.
+     */
+    public function testPutRollsBackAnOpenTransaction(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $pool = self::getPdoSqlitePool(1);
+            $pdo  = $pool->get();
+            $pdo->exec('CREATE TABLE IF NOT EXISTS test_rollback(id INT)');
+
+            $pdo->beginTransaction();
+            $pdo->exec('INSERT INTO test_rollback VALUES(1)');
+            self::assertTrue($pdo->inTransaction());
+            $pool->put($pdo);
+
+            $again = $pool->get();
+            self::assertSame($pdo, $again, 'The connection was reused, not replaced.');
+            self::assertFalse($again->inTransaction());
+            self::assertFalse($again->__getObject()->inTransaction());
+            self::assertSame(0, (int) $again->query('SELECT COUNT(*) FROM test_rollback')->fetchColumn());
+
+            // A transaction started by hand is not tracked by the proxy, but PDO reports it.
+            $again->exec('BEGIN');
+            $again->exec('INSERT INTO test_rollback VALUES(2)');
+            $pool->put($again);
+
+            $again = $pool->get();
+            self::assertFalse($again->__getObject()->inTransaction());
+            self::assertSame(0, (int) $again->query('SELECT COUNT(*) FROM test_rollback')->fetchColumn());
+
+            $pool->put($again);
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
     public function testTimeoutException(): void
     {
         self::saveHookFlags();

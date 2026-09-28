@@ -209,7 +209,7 @@ class PDOStatementProxyTest extends DatabaseTestCase
 
     /**
      * A connection lost inside a transaction is reported, as the transaction is lost with it. The connection must
-     * not stay lost for whoever gets it from the pool next, though.
+     * not stay lost for whoever gets it from the pool next, though: the pool cannot roll it back, and replaces it.
      *
      * @dataProvider dataPools
      */
@@ -229,13 +229,15 @@ class PDOStatementProxyTest extends DatabaseTestCase
                 self::assertSame(0, $pdo->getRound());
             }
             $pool->put($pdo);
-            unset($pdo, $statement);
+            $lost = $pdo;
+            unset($statement);
 
-            $pdo       = $pool->get();
+            $pdo = $pool->get();
+            self::assertNotSame($lost, $pdo, 'The connection was replaced, not reconnected.');
             $statement = $pdo->prepare('SELECT 43');
             self::assertTrue($statement->execute());
             self::assertEquals(43, $statement->fetchColumn());
-            self::assertSame(1, $pdo->getRound());
+            self::assertSame(0, $pdo->getRound());
 
             $pool->put($pdo);
             $pool->close();

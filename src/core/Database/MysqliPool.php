@@ -15,7 +15,6 @@ use Swoole\ConnectionPool;
 
 /**
  * @method \mysqli|MysqliProxy|false get(float $timeout = -1)
- * @method void put(\mysqli|MysqliProxy $connection)
  */
 class MysqliPool extends ConnectionPool
 {
@@ -61,5 +60,33 @@ class MysqliPool extends ConnectionPool
         $mysqli->reset();
 
         return $mysqli;
+    }
+
+    /**
+     * Return a connection to the pool.
+     *
+     * A transaction left open on the connection is rolled back first, and autocommit is turned back on, so that
+     * the next borrower does not work inside a transaction it never began. A connection that cannot be cleaned
+     * is replaced.
+     *
+     * @param MysqliProxy|null $connection the connection to return, or null to have a broken connection replaced
+     */
+    public function put(mixed $connection): void
+    {
+        if ($connection instanceof MysqliProxy && $connection->inTransaction()) {
+            $mysqli = $connection->__getObject();
+            try {
+                $clean = @$mysqli->rollback() && @$mysqli->autocommit(true);
+            } catch (\mysqli_sql_exception) {
+                $clean = false;
+            }
+            if ($clean) {
+                $connection->reset();
+            } else {
+                $connection = null;
+            }
+        }
+
+        parent::put($connection);
     }
 }
