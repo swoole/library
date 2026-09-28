@@ -12,6 +12,7 @@ Because the library also ships embedded in the extension, tests and scripts must
 
 | Swoole series | Supported PHP versions      |
 |---------------|-----------------------------|
+| 6.3           | 8.2, 8.3, 8.4, 8.5          |
 | 6.2           | 8.2, 8.3, 8.4, 8.5          |
 | 6.1           | 8.1, 8.2, 8.3, 8.4          |
 | 6.0           | 8.1, 8.2, 8.3, 8.4          |

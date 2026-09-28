@@ -450,7 +450,8 @@ final class Handler implements \Stringable
                 foreach ((array) $value as $resolve) {
                     $flag = substr((string) $resolve, 0, 1);
                     if ($flag === '+' || $flag === '-') {
-                        // TODO: [+]HOST:PORT:ADDRESS
+                        // In libcurl a "+" entry expires like a regular DNS cache entry. There is no DNS cache
+                        // here, so it is handled like a plain HOST:PORT:ADDRESS entry, on purpose.
                         $resolve = substr((string) $resolve, 1);
                     }
                     $tmpResolve = explode(':', (string) $resolve, 3);
@@ -460,7 +461,8 @@ final class Handler implements \Stringable
                     if ($flag === '-') {
                         unset($this->resolve[$host][$port]);
                     } else {
-                        // TODO: HOST:PORT:ADDRESS[,ADDRESS]...
+                        // Not supported: of several addresses, HOST:PORT:ADDRESS[,ADDRESS]..., only the first
+                        // one is used.
                         $this->resolve[$host][$port] = explode(',', $ip)[0];
                     }
                 }

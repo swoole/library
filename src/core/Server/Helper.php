@@ -216,7 +216,8 @@ class Helper
 
         foreach ($input_options as $k => $v) {
             if (!array_key_exists(strtolower((string) $k), $const_options)) {
-                // TODO throw exception
+                // A warning on purpose, not an exception: the option tables lag behind the extension, and an
+                // option they do not know yet must not stop the server from starting.
                 trigger_error("unsupported option [{$k}]", E_USER_WARNING);
                 debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
             }
