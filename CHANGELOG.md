@@ -19,6 +19,10 @@ Deprecated:
 
 * `\Swoole\Constant::OPTION_SOCKET_DONTWAIT`, whose option Swoole removed in 6.1.0 and ignores since. The constant will be removed in Swoole 6.4 or later.
 
+Removed:
+
+* The fallback definition of `CURLOPT_RESOLVE`. PHP defines the constant on every supported version.
+
 ## 6.2.4 (unreleased)
 
 Added:
