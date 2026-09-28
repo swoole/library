@@ -5,7 +5,7 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 Added:
 
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
-* The admin server reports the memory and CPU usage of the server processes on macOS, where it reported zero. Linux is unchanged, and other systems still report zero.
+* The admin server reports memory and CPU usage on macOS.
 
 Changed:
 
@@ -15,6 +15,7 @@ Changed:
 * `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing. `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
 * `swoole_exec()` returns `''` instead of `false` for a command without output, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
+* `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.
 * `\Swoole\Coroutine\Server` no longer stops on an accept error that concerns one incoming connection only, such as `ECONNABORTED`.
 * FastCGI: a request body is encoded in linear instead of quadratic time, and stream records are no longer decoded twice.
 

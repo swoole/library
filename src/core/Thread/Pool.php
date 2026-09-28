@@ -150,8 +150,16 @@ class Pool
         $this->running->set(0);
     }
 
+    /**
+     * Whether the file has nothing but declarations at its top, so that every thread can load it without running
+     * anything. It takes the package nikic/php-parser to tell.
+     */
     protected function isValidPhpFile(string $filePath): bool
     {
+        if (!class_exists(ParserFactory::class)) {
+            throw new \Exception('The file of the class to run cannot be checked without the package nikic/php-parser. Install it, or set the file with withClassDefinitionFile().');
+        }
+
         $allowedNodeTypes = [
             \PhpParser\Node\Stmt\Class_::class,
             \PhpParser\Node\Stmt\Const_::class,

@@ -11,6 +11,7 @@
         "ext-redis": "*",
         "ext-sockets": "*",
         "mongodb/mongodb": "^2.1",
+        "nikic/php-parser": "^5.2",
         "deminy/counit": "~0.3"
     },
     "autoload": {

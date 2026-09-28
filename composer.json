@@ -18,8 +18,7 @@
     "require": {
         "php": ">=8.2",
         "ext-swoole": ">=6.2",
-        "ext-posix": "*",
-        "nikic/php-parser": "^5.2"
+        "ext-posix": "*"
     },
     "require-dev": {
         "ext-sockets": "*",
@@ -28,6 +27,7 @@
         "ext-curl": "*",
         "deminy/counit": "~0.3",
         "mongodb/mongodb": "^2.1",
+        "nikic/php-parser": "^5.2",
         "swoole/ide-helper": "dev-master",
         "phpstan/phpstan": "^2.1",
         "friendsofphp/php-cs-fixer": "^3.0"
@@ -37,7 +37,8 @@
         "ext-pdo": "Required to use pdo database",
         "ext-redis": "Required to use redis database, and the required version is greater than or equal to 3.1.3",
         "ext-curl": "Required to use http client",
-        "ext-mongodb": "Required to use mongodb database"
+        "ext-mongodb": "Required to use mongodb database",
+        "nikic/php-parser": "Required by Swoole\\Thread\\Pool to check the file of the class to run, unless the file is set with withClassDefinitionFile()"
     },
     "autoload": {
         "files": [
