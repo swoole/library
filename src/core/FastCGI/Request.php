@@ -22,25 +22,18 @@ class Request extends Message implements \Stringable
 
     public function __toString(): string
     {
-        $body              = $this->getBody();
-        $beginRequestFrame = new BeginRequest(FastCGI::RESPONDER, $this->keepConn ? FastCGI::KEEP_CONN : 0);
-        $paramsFrame       = new Params($this->getParams());
-        $paramsEofFrame    = new Params([]);
-        if ($body === '') {
-            $message = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}";
-        } else {
-            $stdinList = [];
-            while (true) {
-                $stdinList[] = $stdin = new Stdin($body);
-                $stdinLength = $stdin->getContentLength();
-                if ($stdinLength === strlen($body)) {
-                    break;
-                }
-                $body = substr($body, $stdinLength);
+        $body    = $this->getBody();
+        $message = (new BeginRequest(FastCGI::RESPONDER, $this->keepConn ? FastCGI::KEEP_CONN : 0))
+            . (new Params($this->getParams()))
+            . (new Params([]));
+        if ($body !== '') {
+            // The records are cut out of the body by offset. Cutting each one off the front of what remains
+            // copied the remainder once per record, which made the encoding quadratic in the body size.
+            $bodyLength = strlen($body);
+            for ($offset = 0; $offset < $bodyLength; $offset += FastCGI::MAX_CONTENT_LENGTH) {
+                $message .= new Stdin(substr($body, $offset, FastCGI::MAX_CONTENT_LENGTH));
             }
-            $stdinList[] = new Stdin('');
-            $stdin       = implode('', $stdinList);
-            $message     = "{$beginRequestFrame}{$paramsFrame}{$paramsEofFrame}{$stdin}";
+            $message .= new Stdin('');
         }
         return $message;
     }

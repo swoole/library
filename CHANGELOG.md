@@ -12,6 +12,7 @@ Changed:
 * Modernized the codebase for PHP 8.2+. Public APIs are unchanged.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and the mysqli pool turns autocommit back on. A connection that cannot be rolled back is replaced.
 * `\Swoole\Coroutine\Server` keeps accepting after an accept error that concerns one incoming connection only, such as `ECONNABORTED`, instead of stopping.
+* `\Swoole\FastCGI\Request` encodes its body in linear instead of quadratic time, with the same bytes produced.
 
 ## 6.2.4 (unreleased)
 
