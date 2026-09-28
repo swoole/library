@@ -33,12 +33,30 @@ jobs:
         if: matrix['image-tag-prefix'] == ''
         run: docker run -q --rm -v "$(pwd):/project" -w /project -i jakzal/phpqa:php${{ matrix.php }}-alpine phplint
 
+      # The build of the app image is kept in the GitHub Actions cache (see docker-compose.ci.yml). Exporting a
+      # build cache takes a builder of its own, as the one built into Docker cannot do it.
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # The address and the token of the cache are only known to actions, not to the commands of a "run" step.
+      # They are handed to the one step that builds the image, and to no other.
+      - name: Get Access To The Build Cache
+        id: cache
+        uses: actions/github-script@v9
+        with:
+          script: |
+            core.setOutput('url', process.env.ACTIONS_RESULTS_URL || '');
+            core.setOutput('token', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Prepare Test Environment
         env:
           # Build arguments of the app image, together with SWOOLE_BRANCH from the top of this file:
           # docker-compose.yml hands the three variables on to the Dockerfile.
           IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
           PHP_VERSION: ${{ matrix.php }}
+          COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
+          ACTIONS_RESULTS_URL: ${{ steps.cache.outputs.url }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.cache.outputs.token }}
         run: |
           docker compose pull
           docker compose build
