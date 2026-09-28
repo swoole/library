@@ -18,6 +18,22 @@ use Swoole\Exception;
 
 class Server
 {
+    /**
+     * Accept errors that concern one incoming connection rather than the listening socket: a connection the peer
+     * aborted during the handshake, and the network errors pending on a connection, which Linux reports through
+     * accept(2). The server keeps accepting after them. SOCKET_ENONET is left out, as only Linux has it.
+     */
+    protected const TRANSIENT_ACCEPT_ERRORS = [
+        SOCKET_ECONNABORTED,
+        SOCKET_ENETDOWN,
+        SOCKET_EPROTO,
+        SOCKET_ENOPROTOOPT,
+        SOCKET_EHOSTDOWN,
+        SOCKET_EHOSTUNREACH,
+        SOCKET_EOPNOTSUPP,
+        SOCKET_ENETUNREACH,
+    ];
+
     /** @var string */
     public $host = '';
 
@@ -133,7 +149,7 @@ class Server
                     Coroutine::sleep(1);
                     continue;
                 }
-                if ($socket->errCode == SOCKET_ETIMEDOUT) {
+                if ($socket->errCode == SOCKET_ETIMEDOUT || in_array($socket->errCode, static::TRANSIENT_ACCEPT_ERRORS, true)) {
                     continue;
                 }
                 if ($socket->errCode == SOCKET_ECANCELED) {
