@@ -103,7 +103,7 @@ class Record implements \Stringable
 
         $payload = substr($binaryData, FastCGI::HEADER_LEN);
         self::unpackPayload($self, $payload);
-        if (static::class !== self::class && $self->contentLength > 0) {
+        if ($self->contentLength > 0 && self::overridesUnpackPayload()) {
             static::unpackPayload($self, $payload);
         }
 
@@ -214,6 +214,24 @@ class Record implements \Stringable
      */
     protected function packPayload(): string
     {
-        return pack("a{$this->contentLength}", $this->contentData);
+        // The content length is always the length of the content data, so there is nothing to pack.
+        return $this->contentData;
+    }
+
+    /**
+     * Whether the record class has an unpackPayload() of its own. When it has none, static::unpackPayload() is
+     * the default implementation, which unpack() has run already.
+     */
+    private static function overridesUnpackPayload(): bool
+    {
+        static $overrides = [];
+
+        $class = static::class;
+        if (!isset($overrides[$class])) {
+            $overrides[$class] = $class !== self::class
+                && (new \ReflectionMethod($class, 'unpackPayload'))->getDeclaringClass()->getName() !== self::class;
+        }
+
+        return $overrides[$class];
     }
 }
