@@ -21,18 +21,26 @@ class Server
     /**
      * Accept errors that concern one incoming connection rather than the listening socket: a connection the peer
      * aborted during the handshake, and the network errors pending on a connection, which Linux reports through
-     * accept(2). The server keeps accepting after them. SOCKET_ENONET is left out, as only Linux has it.
+     * accept(2). The server keeps accepting after them. They are given by name, as not every platform has all
+     * of them.
      */
-    protected const TRANSIENT_ACCEPT_ERRORS = [
-        SOCKET_ECONNABORTED,
-        SOCKET_ENETDOWN,
-        SOCKET_EPROTO,
-        SOCKET_ENOPROTOOPT,
-        SOCKET_EHOSTDOWN,
-        SOCKET_EHOSTUNREACH,
-        SOCKET_EOPNOTSUPP,
-        SOCKET_ENETUNREACH,
+    private const TRANSIENT_ACCEPT_ERRORS = [
+        'SOCKET_ECONNABORTED',
+        'SOCKET_ENETDOWN',
+        'SOCKET_EPROTO',
+        'SOCKET_ENOPROTOOPT',
+        'SOCKET_EHOSTDOWN',
+        'SOCKET_ENONET',
+        'SOCKET_EHOSTUNREACH',
+        'SOCKET_EOPNOTSUPP',
+        'SOCKET_ENETUNREACH',
     ];
+
+    /**
+     * The number of accept errors in a row the server skips at once. From then on it waits a moment before it
+     * accepts again, so that an error that does not go away cannot keep the other coroutines from running.
+     */
+    private const TRANSIENT_ACCEPT_ERRORS_IN_A_ROW = 16;
 
     /** @var string */
     public $host = '';
@@ -123,9 +131,11 @@ class Server
             return false;
         }
 
+        $skipped = 0;
         while ($this->running) {
             $conn = $socket->accept();
             if ($conn) {
+                $skipped = 0;
                 $conn->setProtocol($this->setting);
                 if (!empty($this->setting[Constant::OPTION_OPEN_SSL])) {
                     $fn = static function ($fn, $connection) {
@@ -149,7 +159,13 @@ class Server
                     Coroutine::sleep(1);
                     continue;
                 }
-                if ($socket->errCode == SOCKET_ETIMEDOUT || in_array($socket->errCode, static::TRANSIENT_ACCEPT_ERRORS, true)) {
+                if ($socket->errCode == SOCKET_ETIMEDOUT) {
+                    continue;
+                }
+                if (self::isTransientAcceptError($socket->errCode)) {
+                    if (++$skipped > self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW) {
+                        Coroutine::sleep(0.001);
+                    }
                     continue;
                 }
                 if ($socket->errCode == SOCKET_ECANCELED) {
@@ -162,5 +178,21 @@ class Server
         }
 
         return true;
+    }
+
+    private static function isTransientAcceptError(int $errCode): bool
+    {
+        static $errors = null;
+
+        if ($errors === null) {
+            $errors = [];
+            foreach (self::TRANSIENT_ACCEPT_ERRORS as $name) {
+                if (defined($name)) {
+                    $errors[constant($name)] = true;
+                }
+            }
+        }
+
+        return isset($errors[$errCode]);
     }
 }

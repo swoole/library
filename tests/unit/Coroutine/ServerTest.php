@@ -76,7 +76,14 @@ class ServerTest extends TestCase
             public int $accepts = 0;
 
             /** @var int[] The error each accept() call fails with, in order; the last one stops the server. */
-            public array $errCodes = [SOCKET_ECONNABORTED, SOCKET_ECONNABORTED, SOCKET_ECANCELED];
+            public array $errCodes = [];
+
+            public function __construct()
+            {
+                // More of them in a row than the server skips without waiting.
+                $this->errCodes   = array_fill(0, 20, SOCKET_ECONNABORTED);
+                $this->errCodes[] = SOCKET_ECANCELED;
+            }
 
             public function setProtocol(array $setting): bool
             {
@@ -112,7 +119,7 @@ class ServerTest extends TestCase
         }
 
         $this->assertTrue($result, 'The server ran until it was stopped, not until the first aborted connection.');
-        $this->assertSame(3, $socket->accepts, 'The server kept accepting past the two aborted connections.');
+        $this->assertSame(21, $socket->accepts, 'The server kept accepting past the aborted connections.');
         $this->assertSame(0, $server->errCode);
         $this->assertNull($warning);
     }
