@@ -8,23 +8,22 @@ Added:
 
 Changed:
 
-* Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself. The symbols available are unchanged.
-* Modernized the codebase for PHP 8.2+. Public APIs are unchanged.
-* `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle, as `curl_multi_getcontent()` does.
-* `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing when the socket cannot be created, and `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure, as the native functions do.
-* `swoole_exec()` returns `''` instead of `false` for a command without output, and `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run, as the native functions do.
-* `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and the mysqli pool turns autocommit back on. A connection that cannot be rolled back is replaced. The mysqli pool does not see a transaction started with `query('START TRANSACTION')`.
-* `\Swoole\Coroutine\Server` keeps accepting after an accept error that concerns one incoming connection only, such as `ECONNABORTED`, instead of stopping.
-* `\Swoole\FastCGI\Request` encodes its body in linear instead of quadratic time, with the same bytes produced.
-* The FastCGI stream records (`Stdin`, `Stdout`, `Stderr`, `Data`) are no longer decoded twice when unpacked, and no record copies its content when packed.
+* Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
+* Modernized the codebase for PHP 8.2+. Signatures are unchanged; the return values listed below changed to match the native functions.
+* `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle. `\Swoole\Curl\Handler::reset()` returns `true` on success, and `swoole_curl_reset()` returns nothing.
+* `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing. `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
+* `swoole_exec()` returns `''` instead of `false` for a command without output, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
+* `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
+* `\Swoole\Coroutine\Server` no longer stops on an accept error that concerns one incoming connection only, such as `ECONNABORTED`.
+* FastCGI: a request body is encoded in linear instead of quadratic time, and stream records are no longer decoded twice.
 
 Deprecated:
 
-* `\Swoole\Constant::OPTION_SOCKET_DONTWAIT`, whose option Swoole removed in 6.1.0 and ignores since. The constant will be removed in Swoole 6.4 or later.
+* `\Swoole\Constant::OPTION_SOCKET_DONTWAIT`. Swoole removed the option in 6.1.0, and the constant will be removed in Swoole 6.4 or later.
 
 Removed:
 
-* The fallback definition of `CURLOPT_RESOLVE`. PHP defines the constant on every supported version.
+* The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
 
 ## 6.2.4 (unreleased)
 
