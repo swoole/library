@@ -306,6 +306,65 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
+     * A connection the borrower closed inside a transaction is replaced, too.
+     */
+    public function testPutReplacesAConnectionThatWasClosed(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+            $mysqli->begin_transaction();
+            $mysqli->__getObject()->close();
+            $pool->put($mysqli);
+
+            $again = $pool->get();
+            self::assertNotSame($mysqli, $again);
+            self::assertEquals(1, $again->query('SELECT 1')->fetch_row()[0]);
+
+            $pool->put($again);
+            $pool->close();
+        });
+    }
+
+    /**
+     * When the connection cannot be rolled back and no other one can be made, put() leaves the failure to the
+     * next get().
+     */
+    public function testPutDoesNotThrowWhenTheReplacementCannotBeMade(): void
+    {
+        self::coRun(function () {
+            $config = (new MysqliConfig())
+                ->withHost(MYSQL_SERVER_HOST)
+                ->withPort(MYSQL_SERVER_PORT)
+                ->withDbName(MYSQL_SERVER_DB)
+                ->withUsername(MYSQL_SERVER_USER)
+                ->withPassword(MYSQL_SERVER_PWD)
+            ;
+            $pool   = new MysqliPool($config, 1);
+            $mysqli = $pool->get();
+            $mysqli->begin_transaction();
+            self::killMysqliConnection($mysqli);
+
+            $config->withPort(1);
+            $pool->put($mysqli);
+            try {
+                $pool->get();
+                self::fail('There is no server to connect to.');
+            } catch (\mysqli_sql_exception|MysqliException) {
+                // The failure is reported to whoever asks for a connection.
+            }
+
+            $config->withPort(MYSQL_SERVER_PORT);
+            $again = $pool->get();
+            self::assertNotSame($mysqli, $again);
+            self::assertEquals(1, $again->query('SELECT 1')->fetch_row()[0]);
+
+            $pool->put($again);
+            $pool->close();
+        });
+    }
+
+    /**
      * A statement executed inside the transaction does not reconnect its parent either, and afterwards, outside
      * the transaction, it reconnects the parent and is prepared again as usual.
      */

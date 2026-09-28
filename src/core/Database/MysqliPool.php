@@ -67,26 +67,48 @@ class MysqliPool extends ConnectionPool
      *
      * A transaction left open on the connection is rolled back first, and autocommit is turned back on, so that
      * the next borrower does not work inside a transaction it never began. A connection that cannot be cleaned
-     * is replaced.
+     * is replaced; when the replacement cannot be made, it is left to the next get() to make it and to report
+     * the failure.
+     *
+     * The transaction is the one the proxy tracks, see MysqliProxy::inTransaction(): one started by hand, with
+     * query('START TRANSACTION') or query('SET autocommit=0'), is not seen and stays open.
      *
      * @param MysqliProxy|null $connection the connection to return, or null to have a broken connection replaced
      */
     public function put(mixed $connection): void
     {
-        if ($connection instanceof MysqliProxy && $connection->inTransaction()) {
-            $mysqli = $connection->__getObject();
+        if ($connection instanceof MysqliProxy && !$this->clean($connection)) {
             try {
-                $clean = @$mysqli->rollback() && @$mysqli->autocommit(true);
-            } catch (\mysqli_sql_exception) {
-                $clean = false;
+                parent::put(null);
+            } catch (\Throwable) {
+                // Putting a connection back is no place to report that a new one cannot be made.
             }
-            if ($clean) {
-                $connection->reset();
-            } else {
-                $connection = null;
-            }
+            return;
         }
 
         parent::put($connection);
+    }
+
+    /**
+     * Rolls back the transaction left open on the connection, if any, and turns autocommit back on.
+     *
+     * @return bool false when that fails, as when the connection was lost, or closed, inside the transaction
+     */
+    private function clean(MysqliProxy $connection): bool
+    {
+        if ($connection->inTransaction()) {
+            $mysqli = $connection->__getObject();
+            try {
+                if (!@$mysqli->rollback() || !@$mysqli->autocommit(true)) {
+                    return false;
+                }
+            } catch (\Throwable) {
+                // A mysqli_sql_exception, or the Error of a connection that was closed.
+                return false;
+            }
+            $connection->reset();
+        }
+
+        return true;
     }
 }

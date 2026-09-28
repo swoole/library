@@ -190,14 +190,104 @@ class PDOPoolTest extends DatabaseTestCase
             self::assertFalse($again->__getObject()->inTransaction());
             self::assertSame(0, (int) $again->query('SELECT COUNT(*) FROM test_rollback')->fetchColumn());
 
-            // A transaction started by hand is not tracked by the proxy, but PDO reports it.
-            $again->exec('BEGIN');
-            $again->exec('INSERT INTO test_rollback VALUES(2)');
             $pool->put($again);
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
+    /**
+     * A transaction started by hand is not tracked by the proxy, but the driver reports it.
+     */
+    public function testPutRollsBackATransactionStartedByHand(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $pool = self::getPdoMysqlPool(1);
+            $pdo  = $pool->get();
+            $pdo->exec('CREATE TEMPORARY TABLE swoole_library_test_by_hand (id INT)');
+
+            $pdo->exec('START TRANSACTION');
+            $pdo->exec('INSERT INTO swoole_library_test_by_hand VALUES (1)');
+            self::assertFalse($pdo->inTransaction());
+            self::assertTrue($pdo->__getObject()->inTransaction());
+            $pool->put($pdo);
 
             $again = $pool->get();
+            self::assertSame($pdo, $again, 'The connection was reused, not replaced.');
             self::assertFalse($again->__getObject()->inTransaction());
-            self::assertSame(0, (int) $again->query('SELECT COUNT(*) FROM test_rollback')->fetchColumn());
+            self::assertSame(0, (int) $again->query('SELECT COUNT(*) FROM swoole_library_test_by_hand')->fetchColumn());
+
+            $pool->put($again);
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
+    /**
+     * A transaction the proxy counts may have ended behind its back. There is nothing to roll back then, and the
+     * connection is as good as any.
+     */
+    public function testPutKeepsAConnectionWhoseTransactionEndedAlready(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $pool = self::getPdoMysqlPool(1);
+            $pdo  = $pool->get();
+
+            $pdo->beginTransaction();
+            $pdo->exec('COMMIT');
+            self::assertTrue($pdo->inTransaction());
+            self::assertFalse($pdo->__getObject()->inTransaction());
+            $pool->put($pdo);
+
+            $again = $pool->get();
+            self::assertSame($pdo, $again, 'The connection was reused, not replaced.');
+            self::assertFalse($again->inTransaction());
+            self::assertSame(0, $again->getRound());
+
+            $pool->put($again);
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
+    /**
+     * When the connection cannot be rolled back and no other one can be made, put() leaves the failure to the
+     * next get().
+     */
+    public function testPutDoesNotThrowWhenTheReplacementCannotBeMade(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $config = (new PDOConfig())
+                ->withHost(MYSQL_SERVER_HOST)
+                ->withPort(MYSQL_SERVER_PORT)
+                ->withDbName(MYSQL_SERVER_DB)
+                ->withUsername(MYSQL_SERVER_USER)
+                ->withPassword(MYSQL_SERVER_PWD)
+            ;
+            $pool = new PDOPool($config, 1);
+            $pdo  = $pool->get();
+            $pdo->beginTransaction();
+            self::killPdoConnection($pdo);
+
+            $config->withPort(1);
+            $pool->put($pdo);
+            try {
+                $pool->get();
+                self::fail('There is no server to connect to.');
+            } catch (\PDOException) {
+                // The failure is reported to whoever asks for a connection.
+            }
+
+            $config->withPort(MYSQL_SERVER_PORT);
+            $again = $pool->get();
+            self::assertNotSame($pdo, $again);
+            self::assertEquals(1, $again->query('SELECT 1')->fetchColumn());
 
             $pool->put($again);
             $pool->close();

@@ -51,30 +51,51 @@ class PDOPool extends ConnectionPool
      * Return a connection to the pool.
      *
      * A transaction left open on the connection is rolled back first, so that the next borrower does not work
-     * inside a transaction it never began. A connection that cannot be rolled back is replaced.
+     * inside a transaction it never began. A connection that cannot be rolled back is replaced; when the
+     * replacement cannot be made, it is left to the next get() to make it and to report the failure.
+     *
+     * The transaction is the one the driver reports. pdo_mysql and pdo_pgsql report a transaction started by
+     * hand, e.g. with exec('BEGIN'), too, and so does pdo_sqlite as of PHP 8.4 or with Swoole's coroutine SQLite.
+     * The other drivers only report one started with beginTransaction().
      *
      * @param PDOProxy|null $connection the connection to return, or null to have a broken connection replaced
      */
     public function put(mixed $connection): void
     {
-        if ($connection instanceof PDOProxy) {
-            $pdo = $connection->__getObject();
-            // The state PDO reports sees a transaction started by hand, e.g. with exec('BEGIN'), too.
-            if ($connection->inTransaction() || $pdo->inTransaction()) {
-                try {
-                    $clean = $pdo->rollBack();
-                } catch (\PDOException) {
-                    $clean = false;
-                }
-                if ($clean) {
-                    $connection->reset();
-                } else {
-                    $connection = null;
-                }
+        if ($connection instanceof PDOProxy && !$this->clean($connection)) {
+            try {
+                parent::put(null);
+            } catch (\Throwable) {
+                // Putting a connection back is no place to report that a new one cannot be made.
             }
+            return;
         }
 
         parent::put($connection);
+    }
+
+    /**
+     * Rolls back the transaction left open on the connection, if any.
+     *
+     * @return bool false when the transaction cannot be rolled back, as when the connection was lost inside it
+     */
+    private function clean(PDOProxy $connection): bool
+    {
+        $pdo = $connection->__getObject();
+        // Not the state the proxy tracks: a transaction it counts may have ended behind its back, by a statement
+        // that commits implicitly or by exec('COMMIT'), and there is nothing to roll back then.
+        if ($pdo->inTransaction()) {
+            try {
+                if (!$pdo->rollBack()) {
+                    return false;
+                }
+            } catch (\PDOException) {
+                return false;
+            }
+        }
+        $connection->reset();
+
+        return true;
     }
 
     /**
