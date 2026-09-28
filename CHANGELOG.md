@@ -15,6 +15,10 @@ Changed:
 * `\Swoole\FastCGI\Request` encodes its body in linear instead of quadratic time, with the same bytes produced.
 * The FastCGI stream records (`Stdin`, `Stdout`, `Stderr`, `Data`) are no longer decoded twice when unpacked, and no record copies its content when packed.
 
+Deprecated:
+
+* `\Swoole\Constant::OPTION_SOCKET_DONTWAIT`, whose option Swoole removed in 6.1.0 and ignores since. The constant will be removed in Swoole 6.4 or later.
+
 ## 6.2.4 (unreleased)
 
 Added:

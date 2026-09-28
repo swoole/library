@@ -208,7 +208,7 @@ class Constant
     public const OPTION_MAX_THREAD_NUM = 'max_thread_num';
 
     /**
-     * @removed 6.1.0
+     * @deprecated Swoole removed the option in 6.1.0 and ignores it since. The constant will be removed in Swoole 6.4 or later.
      */
     public const OPTION_SOCKET_DONTWAIT = 'socket_dontwait';
 
