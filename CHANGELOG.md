@@ -5,6 +5,7 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 Added:
 
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
+* The admin server reports the memory and CPU usage of the server processes on macOS, where it reported zero. Linux is unchanged, and other systems still report zero.
 
 Changed:
 

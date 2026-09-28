@@ -954,12 +954,7 @@ class Admin
 
         $result['total'] = $total;
 
-        $result['memory_size'] = 0;
-        // TODO: Support other OS
-        if (PHP_OS_FAMILY === 'Linux') {
-            preg_match('#MemTotal:\s+(\d+) kB#i', file_get_contents('/proc/meminfo'), $match);
-            $result['memory_size'] = intval($match[1]) * 1024;
-        }
+        $result['memory_size'] = self::getMemorySize();
 
         return self::json($result);
     }
@@ -1170,9 +1165,56 @@ class Admin
         return $list;
     }
 
+    /**
+     * The size of the memory of the machine in bytes, or 0 on a system this is not known for.
+     */
+    private static function getMemorySize(): int
+    {
+        if (PHP_OS_FAMILY === 'Linux') {
+            preg_match('#MemTotal:\s+(\d+) kB#i', (string) file_get_contents('/proc/meminfo'), $match);
+            return intval($match[1] ?? 0) * 1024;
+        }
+        if (PHP_OS_FAMILY === 'Darwin') {
+            return intval(shell_exec('sysctl -n hw.memsize 2>/dev/null'));
+        }
+        // Other systems are not supported.
+        return 0;
+    }
+
+    /**
+     * What ps reports of a process on macOS, which has no /proc.
+     *
+     * @return array{rss: int, time: int}|null the memory in use in bytes and the CPU time used in hundredths of
+     *                                         a second, or null when there is no such process
+     */
+    private static function getProcessInfoFromPs(string|int $pid): ?array
+    {
+        $pid    = $pid === 'self' ? getmypid() : intval($pid);
+        $output = $pid > 0 ? trim((string) shell_exec("ps -o rss=,time= -p {$pid} 2>/dev/null")) : '';
+        // The memory in kilobytes, and the time as [[days-]hours:]minutes:seconds.hundredths.
+        if (!preg_match('#^(\d+)\s+(?:(?:(\d+)-)?(\d+):)?(\d+):(\d+)[.,](\d+)$#', $output, $match)) {
+            return null;
+        }
+        $seconds = ((intval($match[2]) * 24 + intval($match[3])) * 60 + intval($match[4])) * 60 + intval($match[5]);
+        return [
+            'rss'  => intval($match[1]) * 1024,
+            'time' => $seconds * 100 + intval(str_pad(substr($match[6], 0, 2), 2, '0')),
+        ];
+    }
+
+    /**
+     * @return array{0: int, 1?: int} the CPU time of the machine and that of the process, both in hundredths of a
+     *                                second and both counted from some point in the past: what is of use is how
+     *                                much each of them grows from one call to the next
+     */
     private static function getProcessCpuUsage(string|int $pid): array
     {
-        // TODO: Support other OS
+        if (PHP_OS_FAMILY === 'Darwin') {
+            $info = self::getProcessInfoFromPs($pid);
+            // The time the processors of the machine had, busy or idle, is the time that passed on each of them.
+            return $info === null ? [0] : [intval(hrtime(true) / 1e7) * swoole_cpu_num(), $info['time']];
+        }
+        // Other systems are not supported.
         if (PHP_OS_FAMILY !== 'Linux' || !file_exists("/proc/{$pid}/stat")) {
             return [0];
         }
@@ -1205,7 +1247,12 @@ class Admin
     private static function getProcessStatus(string|int $pid = 'self'): array
     {
         $array = [];
-        // TODO: Support other OS
+        if (PHP_OS_FAMILY === 'Darwin') {
+            $info = self::getProcessInfoFromPs($pid);
+            // Of what /proc/<pid>/status has on Linux, the memory in use is all that ps knows.
+            return $info === null ? $array : ['VmRSS' => intdiv($info['rss'], 1024) . ' kB'];
+        }
+        // Other systems are not supported.
         if (PHP_OS_FAMILY !== 'Linux' || !file_exists("/proc/{$pid}/status")) {
             return $array;
         }
