@@ -9,17 +9,19 @@
 
 declare(strict_types=1);
 
+use Swoole\Tests\TestThread;
 use Swoole\Thread\Pool;
-use tests\TestThread;
 
-require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 $map = new Swoole\Thread\Map();
 
+// The threads run until one of them has counted far enough and shuts the pool down.
 (new Pool(TestThread::class, 4))
-    ->withAutoloader(dirname(__DIR__, 2) . '/vendor/autoload.php')
-    ->withClassDefinitionFile(__DIR__ . '/TestThread.php')
-    ->withArguments([uniqid(), $map])
+    ->withClassDefinitionFile(dirname(__DIR__, 2) . '/tests/TestThread.php')
+    ->withArguments(uniqid(), $map)
     ->start()
 ;
+
+echo "Threads started: {$map['thread']}\n";
+echo "Steps counted: {$map['sleep']}\n";

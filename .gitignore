@@ -16,6 +16,9 @@
 /.phplint-cache
 /.phplint.cache/*
 
+# Ignore the script Swoole\Thread\Pool writes next to the class it runs.
+thread_runner.php
+
 # Ignore project files.
 /Dockerfile.bak
 /html/*
