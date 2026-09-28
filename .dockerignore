@@ -1,0 +1,3 @@
+# The Dockerfile copies nothing from the repository, which is mounted into the container at run time. Should a COPY
+# be added, list here what it needs, so that vendor/, temp/ and .git/ do not end up in the image.
+*
