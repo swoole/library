@@ -350,6 +350,91 @@ class HandlerTest extends TestCase
         });
     }
 
+    /**
+     * The handler can authenticate the basic way only. With a value of CURLOPT_HTTPAUTH that excludes that way, a
+     * password is not sent, for it not to go out as it is against the wish of the caller.
+     */
+    public function testHttpAuth(): void
+    {
+        self::coRun(function () {
+            foreach ([CURLAUTH_BASIC, CURLAUTH_ANY, CURLAUTH_BASIC | CURLAUTH_DIGEST] as $value) {
+                $ch = curl_init(HTTPBIN_SERVER_URL . '/basic-auth/user/secret');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                self::assertTrue(curl_setopt($ch, CURLOPT_HTTPAUTH, $value));
+                curl_setopt($ch, CURLOPT_USERPWD, 'user:secret');
+                curl_exec($ch);
+                self::assertSame(200, curl_getinfo($ch, CURLINFO_HTTP_CODE));
+            }
+
+            // The order of the two options makes no difference.
+            foreach ([CURLAUTH_DIGEST, CURLAUTH_NTLM, CURLAUTH_ANYSAFE, CURLAUTH_BEARER] as $value) {
+                foreach ([[CURLOPT_HTTPAUTH, CURLOPT_USERPWD], [CURLOPT_USERPWD, CURLOPT_HTTPAUTH]] as $options) {
+                    $ch = curl_init(HTTPBIN_SERVER_URL . '/basic-auth/user/secret');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    foreach ($options as $option) {
+                        self::assertTrue(curl_setopt($ch, $option, $option === CURLOPT_USERPWD ? 'user:secret' : $value));
+                    }
+                    try {
+                        curl_exec($ch);
+                        self::fail('The password would be sent the basic way, which the option excludes.');
+                    } catch (Exception $e) {
+                        self::assertStringContainsString('CURLOPT_HTTPAUTH', $e->getMessage());
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Without a password there is nothing to keep back, whatever the options allow.
+     */
+    public function testAuthOptionsWithoutPassword(): void
+    {
+        self::coRun(function () {
+            foreach ([CURLAUTH_DIGEST, CURLAUTH_ANYSAFE, CURLAUTH_BEARER] as $value) {
+                $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                self::assertTrue(curl_setopt($ch, CURLOPT_HTTPAUTH, $value));
+                self::assertTrue(curl_setopt($ch, CURLOPT_PROXYAUTH, $value));
+                curl_exec($ch);
+                self::assertSame(200, curl_getinfo($ch, CURLINFO_HTTP_CODE), self::curlErrorMessage($ch));
+            }
+        });
+    }
+
+    /**
+     * The same for the password of an HTTP proxy. The proxy is never connected to.
+     */
+    public function testProxyAuth(): void
+    {
+        self::coRun(function () {
+            foreach ([CURLAUTH_DIGEST, CURLAUTH_NTLM, CURLAUTH_ANYSAFE] as $value) {
+                $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_PROXY, '127.0.0.1');
+                curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
+                curl_setopt($ch, CURLOPT_PROXYPORT, 1);
+                curl_setopt($ch, CURLOPT_PROXYUSERPWD, 'user:secret');
+                self::assertTrue(curl_setopt($ch, CURLOPT_PROXYAUTH, $value));
+                try {
+                    curl_exec($ch);
+                    self::fail('The password would be sent the basic way, which the option excludes.');
+                } catch (Exception $e) {
+                    self::assertStringContainsString('CURLOPT_PROXYAUTH', $e->getMessage());
+                }
+            }
+
+            $ch = curl_init(HTTPBIN_SERVER_URL . '/get');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_PROXY, '127.0.0.1');
+            curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
+            curl_setopt($ch, CURLOPT_PROXYPORT, 1);
+            curl_setopt($ch, CURLOPT_PROXYUSERPWD, 'user:secret');
+            curl_setopt($ch, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+            self::assertFalse(curl_exec($ch), 'Allowed, and failing only for there being no proxy.');
+        });
+    }
+
     public function testOptPrivate(): void
     {
         self::coRun(function () {

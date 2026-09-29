@@ -7,6 +7,7 @@ Backward-incompatible changes:
 * `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
 * `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle. `\Swoole\Curl\Handler::reset()` returns `true` on success, and `swoole_curl_reset()` returns nothing.
+* The coroutine curl handler throws a `\Swoole\Curl\Exception` instead of sending a password when `CURLOPT_HTTPAUTH` or `CURLOPT_PROXYAUTH` excludes `CURLAUTH_BASIC`, the only way it can authenticate. It sent the password the basic way regardless.
 * `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing. `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
 * `swoole_exec()` returns `''` instead of `false` for a command without output, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
 * `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.

@@ -83,6 +83,16 @@ final class Handler implements \Stringable
 
     private ?string $proxyPassword = null;
 
+    /**
+     * The ways to authenticate that CURLOPT_HTTPAUTH and CURLOPT_PROXYAUTH allow. The handler knows the basic way
+     * only, which is the default of both options.
+     */
+    private int $httpAuth = CURLAUTH_BASIC;
+
+    private int $proxyAuth = CURLAUTH_BASIC;
+
+    private bool $hasUserPassword = false;
+
     private array $clientOptions = [];
 
     private bool $followLocation = false;
@@ -432,7 +442,8 @@ final class Handler implements \Stringable
                 $this->proxyPassword = urldecode((string) ($usernamePassword[1] ?? null));
                 break;
             case CURLOPT_PROXYAUTH:
-                /* ignored temporarily */
+                // Checked in execute(), where it is known whether there is a password to send.
+                $this->proxyAuth = (int) $value;
                 break;
             case CURLOPT_UNIX_SOCKET_PATH:
                 $realpath = realpath((string) $value);
@@ -645,12 +656,11 @@ final class Handler implements \Stringable
                 $this->prereqFunction = $value;
                 break;
             case CURLOPT_HTTPAUTH:
-                if (!($value & CURLAUTH_BASIC)) {
-                    trigger_error("swoole_curl_setopt(): CURLOPT_HTTPAUTH[{$value}] is not supported", E_USER_WARNING);
-                    return false;
-                }
+                // Checked in execute(), where it is known whether there is a password to send.
+                $this->httpAuth = (int) $value;
                 break;
             case CURLOPT_USERPWD:
+                $this->hasUserPassword = true;
                 $this->setHeader('Authorization', 'Basic ' . base64_encode($value));
                 break;
             case CURLOPT_FOLLOWLOCATION:
@@ -695,6 +705,11 @@ final class Handler implements \Stringable
             $this->setError(CURLE_URL_MALFORMAT, 'No URL set or URL using bad/illegal format');
             return false;
         }
+        // The user name and the password are sent the basic way, which is all the client can do. Whoever excludes
+        // that way, to keep the password from being sent as it is, must not get it sent anyway.
+        if ($this->hasUserPassword && !($this->httpAuth & CURLAUTH_BASIC)) {
+            throw new CurlException('swoole_curl_exec(): CURLOPT_USERPWD can only be sent with a CURLOPT_HTTPAUTH value that includes CURLAUTH_BASIC');
+        }
         if (!isset($this->client)) {
             $this->create();
         }
@@ -716,6 +731,9 @@ final class Handler implements \Stringable
                     } else {
                         $proxyType = CURLPROXY_HTTP;
                     }
+                }
+                if ($proxyType === CURLPROXY_HTTP && (string) $proxyPassword !== '' && !($this->proxyAuth & CURLAUTH_BASIC)) {
+                    throw new CurlException('swoole_curl_exec(): the password of the proxy can only be sent with a CURLOPT_PROXYAUTH value that includes CURLAUTH_BASIC');
                 }
 
                 if (!filter_var($proxy, FILTER_VALIDATE_IP)) {
