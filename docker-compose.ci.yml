@@ -1,5 +1,5 @@
-# Used by .github/workflows/tests.yml on top of docker-compose.yml: keeps the build of the app image in the GitHub
-# Actions cache, one scope for each entry of the matrix. "mode=max" stores the build stages too, so that a push
+# Used by .github/workflows/tests.yml on top of docker-compose.yml, for every image but the nightly ones: keeps the
+# build of the app image in the GitHub Actions cache, one scope for each entry of the matrix. "mode=max" stores the build stages too, so that a push
 # after which only swoole-src has moved compiles Swoole alone. A cache that cannot be written, as in a pull request
 # from a fork, does not fail the build.
 services:
