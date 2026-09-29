@@ -2,6 +2,14 @@
 
 This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
+Backward-incompatible changes:
+
+* `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
+* `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle. `\Swoole\Curl\Handler::reset()` returns `true` on success, and `swoole_curl_reset()` returns nothing.
+* `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing. `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
+* `swoole_exec()` returns `''` instead of `false` for a command without output, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
+* `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.
+
 Added:
 
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
@@ -10,12 +18,7 @@ Added:
 Changed:
 
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
-* Modernized the codebase for PHP 8.2+. Signatures are unchanged; the return values listed below changed to match the native functions.
-* `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle. `\Swoole\Curl\Handler::reset()` returns `true` on success, and `swoole_curl_reset()` returns nothing.
-* `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing. `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
-* `swoole_exec()` returns `''` instead of `false` for a command without output, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
-* `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
-* `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.
+* Modernized the codebase for PHP 8.2+. Signatures are unchanged; the return values listed above changed to match the native functions.
 * `\Swoole\Coroutine\Server` no longer stops on an accept error that concerns one incoming connection only, such as `ECONNABORTED`.
 * FastCGI: a request body is encoded in linear instead of quadratic time, and stream records are no longer decoded twice.
 
