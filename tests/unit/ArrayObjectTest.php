@@ -426,8 +426,6 @@ class ArrayObjectTest extends TestCase
             $this->assertSame('empty', (string) $array->get(null));
             $this->assertSame('empty', (string) $array->getOr(null, 'default'));
 
-            $array[null] = 'offsetSet';
-            $this->assertSame('offsetSet', $array['']);
             $array->set(null, 'set');
             $this->assertSame('set', $array['']);
 
@@ -444,6 +442,49 @@ class ArrayObjectTest extends TestCase
             restore_error_handler();
         }
         $this->assertSame([], $messages);
+    }
+
+    /**
+     * @dataProvider dataAppendSyntax
+     */
+    public function testAppendSyntax(array $expected, array $array): void
+    {
+        $object   = swoole_array($array);
+        $object[] = 30;
+        $object[] = 40;
+        $this->assertSame($expected, $object->toArray());
+
+        $array[] = 30;
+        $array[] = 40;
+        $this->assertSame($array, $object->toArray(), 'The same as on an array.');
+    }
+
+    public static function dataAppendSyntax(): array
+    {
+        return [
+            'a list'                 => [[10, 20, 30, 40], [10, 20]],
+            'an empty array'         => [[30, 40], []],
+            'string keys'            => [['a' => 1, 'b' => 2, 30, 40], ['a' => 1, 'b' => 2]],
+            'the empty-string key'   => [['' => 'kept', 30, 40], ['' => 'kept']],
+            'integer keys with gaps' => [[5 => 'five', 6 => 30, 7 => 40], [5 => 'five']],
+        ];
+    }
+
+    /**
+     * PHP passes null to offsetSet() for `$array[] = $value` and for `$array[null] = $value` alike, so a null
+     * offset appends as well. The empty-string key is written with '' or with set().
+     */
+    public function testNullOffsetAppends(): void
+    {
+        $array = swoole_array(['' => 'empty']);
+        $key   = null;
+
+        $array[$key] = 'appended';
+        $this->assertSame(['' => 'empty', 0 => 'appended'], $array->toArray());
+
+        $array[''] = 'written';
+        $array->set(null, 'set');
+        $this->assertSame(['' => 'set', 0 => 'appended'], $array->toArray());
     }
 
     public function testNatsort(): void

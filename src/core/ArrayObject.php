@@ -232,9 +232,16 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return $this->array[$key];
     }
 
+    /**
+     * A null key appends the value: it is what PHP passes for `$array[] = $value`, which it does not tell from
+     * `$array[null] = $value`. To write to the empty-string key, pass '' or use set().
+     */
     public function offsetSet(mixed $key, mixed $value): void
     {
-        $key = $key ?? '';
+        if ($key === null) {
+            $this->array[] = $value;
+            return;
+        }
 
         $this->array[$key] = $value;
     }
