@@ -32,6 +32,11 @@ Removed:
 
 * The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
 
+Fixed:
+
+* `\Swoole\Database\PDOStatementProxy`: after a reconnect, a statement used the value a variable had when `bindParam()` was called, not its present one, and no longer filled the variables of `bindColumn()`.
+* `\Swoole\Database\PDOStatementProxy::bindColumn()` threw a `TypeError` when called without a type.
+
 ## 6.2.4 (unreleased)
 
 Added:
