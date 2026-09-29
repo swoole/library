@@ -46,6 +46,8 @@ Fixed:
 * `\Swoole\Database\PDOProxy`: `query()` and `prepare()` failed with a `TypeError` outside the exception error mode.
 * `\Swoole\ArrayObject` and `swoole_array_default_value()` raised a deprecation on PHP 8.5 when given a `null` key, which still stands for the empty string.
 * The mysqli proxies raised a warning on `prepare(query: ...)`, with the query passed by name, and could not prepare that statement again after a reconnect.
+* `\Swoole\Database\PDOStatementProxy`: after a reconnect, a statement used the value a variable had when `bindParam()` was called, not its present one, and no longer filled the variables of `bindColumn()`.
+* `\Swoole\Database\PDOStatementProxy::bindColumn()` threw a `TypeError` when called without a type.
 
 ## 6.2.3 (2026-09-22)
 

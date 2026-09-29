@@ -79,8 +79,8 @@ class PDOStatementProxy extends ObjectProxy
                 foreach ($this->bindColumnContext as $column => $item) {
                     $this->__object->bindColumn($column, ...$item);
                 }
-                foreach ($this->bindValueContext as $value => $item) {
-                    $this->__object->bindParam($value, ...$item);
+                foreach ($this->bindValueContext as $parameter => $item) {
+                    $this->__object->bindValue($parameter, ...$item);
                 }
                 $ret = $this->__object->{$name}(...$arguments);
             } else {
@@ -110,13 +110,15 @@ class PDOStatementProxy extends ObjectProxy
 
     public function bindParam($parameter, &$variable, $data_type = \PDO::PARAM_STR, $length = 0, $driver_options = null): bool
     {
-        $this->bindParamContext[$parameter] = [$variable, $data_type, $length, $driver_options];
+        // The variable is kept by reference: a statement prepared again after a reconnect is bound to the variable of
+        // the caller, as the first one was, and not to the value the variable had at the time of this call.
+        $this->bindParamContext[$parameter] = [&$variable, $data_type, $length, $driver_options];
         return $this->__object->bindParam($parameter, $variable, $data_type, $length, $driver_options);
     }
 
-    public function bindColumn($column, &$param, $type = null, $maxlen = null, $driverdata = null): bool
+    public function bindColumn($column, &$param, $type = \PDO::PARAM_STR, $maxlen = 0, $driverdata = null): bool
     {
-        $this->bindColumnContext[$column] = [$param, $type, $maxlen, $driverdata];
+        $this->bindColumnContext[$column] = [&$param, $type, $maxlen, $driverdata];
         return $this->__object->bindColumn($column, $param, $type, $maxlen, $driverdata);
     }
 

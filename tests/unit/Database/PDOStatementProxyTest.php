@@ -178,6 +178,88 @@ class PDOStatementProxyTest extends DatabaseTestCase
     }
 
     /**
+     * A statement prepared again after a reconnect has to be bound to the variable of the caller, as the first one
+     * was. It was bound to a copy made by bindParam(), so the retried execute() and every later one ran with the
+     * value the variable had at the time of that call, and wrote it without an error.
+     */
+    public function testBoundParameterFollowsTheVariableAfterAReconnect(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $answer    = 1;
+            $statement = $pdo->prepare('SELECT :answer AS answer');
+            $statement->bindParam(':answer', $answer, \PDO::PARAM_INT);
+
+            $answer            = 2;
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $pdo->getRound());
+            self::assertEquals(2, $statement->fetchColumn(), 'The retried execute() uses the present value.');
+
+            $answer = 3;
+            self::assertTrue($statement->execute());
+            self::assertEquals(3, $statement->fetchColumn(), 'So does every execute() after it.');
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * The same for a column bound to a variable, which has to be filled after a reconnect as before it.
+     */
+    public function testBoundColumnFillsTheVariableAfterAReconnect(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $answer    = null;
+            $statement = $pdo->prepare('SELECT 42 AS answer');
+            $statement->bindColumn('answer', $answer);
+
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $pdo->getRound());
+            self::assertTrue($statement->fetch(\PDO::FETCH_BOUND));
+            self::assertEquals(42, $answer);
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * A value bound with bindValue() is bound again as a value.
+     */
+    public function testBoundValueIsKeptAfterAReconnect(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $statement = $pdo->prepare('SELECT :answer AS answer');
+            $statement->bindValue(':answer', 42, \PDO::PARAM_INT);
+
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $pdo->getRound());
+            self::assertEquals(42, $statement->fetchColumn());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
      * The same against the servers, MySQL and PostgreSQL, with the connection ended for real. PostgreSQL matters
      * here: PDO reports a connection it has lost as being inside a transaction, which is no reason not to
      * reconnect.
