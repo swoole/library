@@ -264,6 +264,9 @@ class Server
         $ctx->end(['code' => 0, 'value' => (string) $obj]);
     }
 
+    // The four offset handlers go through the ArrayAccess implementation of the object. An object without one gets
+    // the property access these handlers used to do for every object, so that nothing relying on that breaks.
+
     private function _offset_get(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
@@ -272,7 +275,7 @@ class Server
             throw new Exception("object[#{$object_id}] not found");
         }
         $obj    = $this->objects[$object_id];
-        $result = $obj->{$offset};
+        $result = $obj instanceof \ArrayAccess ? $obj[$offset] : $obj->{$offset};
         $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
     }
 
@@ -284,8 +287,12 @@ class Server
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }
-        $obj            = $this->objects[$object_id];
-        $obj->{$offset} = $this->unmarshal($value);
+        $obj = $this->objects[$object_id];
+        if ($obj instanceof \ArrayAccess) {
+            $obj[$offset] = $this->unmarshal($value);
+        } else {
+            $obj->{$offset} = $this->unmarshal($value);
+        }
         $ctx->end(['code' => 0]);
     }
 
@@ -297,7 +304,11 @@ class Server
             throw new Exception("object[#{$object_id}] not found");
         }
         $obj = $this->objects[$object_id];
-        unset($obj->{$offset});
+        if ($obj instanceof \ArrayAccess) {
+            unset($obj[$offset]);
+        } else {
+            unset($obj->{$offset});
+        }
         $ctx->end(['code' => 0]);
     }
 
@@ -309,7 +320,7 @@ class Server
             throw new Exception("object[#{$object_id}] not found");
         }
         $obj    = $this->objects[$object_id];
-        $result = isset($obj->{$offset});
+        $result = $obj instanceof \ArrayAccess ? isset($obj[$offset]) : isset($obj->{$offset});
         $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
     }
 }

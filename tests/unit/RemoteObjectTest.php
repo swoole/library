@@ -106,14 +106,13 @@ class RemoteObjectTest extends TestCase
 
     /**
      * isset() and empty() on an offset of a remote object failed with a TypeError: the client read the answer from a
-     * key the server does not send. The server-side object exposes its entries as properties as well, since the
-     * server looks offsets up as properties.
+     * key the server does not send.
      */
     public function testOffsetExists(): void
     {
         self::coRun(function () {
             $client = swoole_get_default_remote_object_client();
-            $array  = $client->create(\ArrayObject::class, ['one' => 1, 'zero' => 0, 'null' => null], \ArrayObject::ARRAY_AS_PROPS);
+            $array  = $client->create(\ArrayObject::class, ['one' => 1, 'zero' => 0, 'null' => null]);
 
             $this->assertTrue(isset($array['one']));
             $this->assertTrue(isset($array['zero']));
@@ -123,6 +122,47 @@ class RemoteObjectTest extends TestCase
             $this->assertTrue(empty($array['zero']));
             $this->assertTrue(empty($array['missing']));
             $this->assertSame('default', $array['missing'] ?? 'default');
+        });
+    }
+
+    /**
+     * Offsets on a remote object go to the ArrayAccess implementation of the server-side object. They used to be
+     * property reads and writes, which only work on objects exposing their entries as properties, as the
+     * BSONDocument of testMongoDb does.
+     */
+    public function testArrayAccess(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $array  = $client->create(\ArrayObject::class, ['a' => 1]);
+
+            $this->assertSame(1, $array['a']);
+            $array['b'] = 2;
+            $this->assertSame(2, $array['b']);
+            $this->assertCount(2, $array);
+
+            unset($array['a']);
+            $this->assertFalse(isset($array['a']));
+            $this->assertSame(['b' => 2], $array->getArrayCopy());
+        });
+    }
+
+    /**
+     * An object without ArrayAccess keeps the property access that offsets always did on it.
+     */
+    public function testOffsetsOnObjectWithoutArrayAccessAreProperties(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $object = $client->create(\stdClass::class);
+
+            $this->assertFalse(isset($object['x']));
+            $object['x'] = 1;
+            $this->assertSame(1, $object->x);
+            $this->assertTrue(isset($object['x']));
+            $this->assertSame(1, $object['x']);
+            unset($object['x']);
+            $this->assertFalse(isset($object['x']));
         });
     }
 
