@@ -193,7 +193,7 @@ class Admin
         $server->addCommand(
             'getpid',
             $accepted_process_types,
-            fn (Server $server, string $msg) => self::json(['pid' => posix_getpid()])
+            fn (Server $server, string $msg) => self::json(['pid' => getmypid()])
         );
 
         $server->addCommand(

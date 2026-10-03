@@ -22,6 +22,7 @@ Added:
 Changed:
 
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
+* `ext-posix` is now suggested, not required, so that Composer installs the library on Windows. Only the default remote object server needs it.
 * Modernized the codebase for PHP 8.2+. Signatures are unchanged; the return values listed above changed to match the native functions.
 * `\Swoole\Coroutine\Server` no longer stops on an accept error that concerns one incoming connection only, such as `ECONNABORTED`, and raises a warning when such errors keep coming.
 * FastCGI: a request body is encoded in linear instead of quadratic time, and stream records are no longer decoded twice.
