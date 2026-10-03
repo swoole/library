@@ -83,6 +83,7 @@ Fixed:
 * The mysqli proxies raised a warning on `prepare(query: ...)`, with the query passed by name, and could not prepare that statement again after a reconnect.
 * `\Swoole\Database\PDOStatementProxy`: after a reconnect, a statement used the value a variable had when `bindParam()` was called, not its present one, and no longer filled the variables of `bindColumn()`.
 * `\Swoole\Database\PDOStatementProxy::bindColumn()` threw a `TypeError` when called without a type.
+* `isset()` and `empty()` on an offset of a `\Swoole\RemoteObject` always failed with a `TypeError`.
 
 ## 6.2.3 (2026-09-22)
 

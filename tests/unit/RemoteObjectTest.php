@@ -105,6 +105,28 @@ class RemoteObjectTest extends TestCase
     }
 
     /**
+     * isset() and empty() on an offset of a remote object failed with a TypeError: the client read the answer from a
+     * key the server does not send. The server-side object exposes its entries as properties as well, since the
+     * server looks offsets up as properties.
+     */
+    public function testOffsetExists(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $array  = $client->create(\ArrayObject::class, ['one' => 1, 'zero' => 0, 'null' => null], \ArrayObject::ARRAY_AS_PROPS);
+
+            $this->assertTrue(isset($array['one']));
+            $this->assertTrue(isset($array['zero']));
+            $this->assertFalse(isset($array['null']));
+            $this->assertFalse(isset($array['missing']));
+            $this->assertFalse(empty($array['one']));
+            $this->assertTrue(empty($array['zero']));
+            $this->assertTrue(empty($array['missing']));
+            $this->assertSame('default', $array['missing'] ?? 'default');
+        });
+    }
+
+    /**
      * An exception the server catches is relayed with its message, code and class. The code is not always an
      * integer (a PDOException carries its SQLSTATE), and the client used to hand it straight to the exception
      * constructor, which turned the relay into a TypeError with the message lost.
