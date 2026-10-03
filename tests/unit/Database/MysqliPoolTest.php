@@ -200,6 +200,32 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
+     * The proxies take the names of the arguments of mysqli and mysqli_stmt, so that a call that passes them by name
+     * works on a proxy as it does on mysqli.
+     */
+    public function testArgumentsTakeTheNamesOfMysqli(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+
+            self::assertTrue($mysqli->change_user(username: MYSQL_SERVER_USER, password: MYSQL_SERVER_PWD, database: MYSQL_SERVER_DB));
+            $statement = $mysqli->prepare('SELECT ?');
+            self::assertTrue($statement->attr_set(attribute: MYSQLI_STMT_ATTR_UPDATE_MAX_LENGTH, value: 1));
+            $value = 42;
+            self::assertTrue($statement->bind_param('i', $value));
+            self::assertTrue($statement->execute());
+            $result = null;
+            self::assertTrue($statement->bind_result($result));
+            self::assertTrue($statement->fetch());
+            self::assertEquals(42, $result);
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+
+    /**
      * autocommit(false) runs every statement inside an implicit transaction until autocommit is turned back on;
      * commit() and rollback() only end the current one. The connection counts as in a transaction the whole time.
      */

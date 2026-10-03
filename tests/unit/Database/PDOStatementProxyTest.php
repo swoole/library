@@ -94,6 +94,28 @@ class PDOStatementProxyTest extends DatabaseTestCase
     }
 
     /**
+     * The proxy takes the names of the arguments of PDOStatement, so that a call that passes them by name works on the
+     * proxy as it does on PDOStatement.
+     */
+    public function testArgumentsTakeTheNamesOfPdo(): void
+    {
+        self::coRun(function () {
+            $stmt = self::getPdoSqlitePool()->get()->prepare('SELECT ? AS a, ? AS b');
+            self::assertTrue($stmt->setFetchMode(mode: \PDO::FETCH_BOUND));
+            self::assertTrue($stmt->bindValue(param: 1, value: 'x', type: \PDO::PARAM_STR));
+            $b = 'y';
+            self::assertTrue($stmt->bindParam(param: 2, var: $b, type: \PDO::PARAM_STR, maxLength: 0, driverOptions: null));
+            self::assertTrue($stmt->execute());
+
+            $a = $c = null;
+            self::assertTrue($stmt->bindColumn(column: 'a', var: $a, type: \PDO::PARAM_STR, maxLength: 0, driverOptions: null));
+            self::assertTrue($stmt->bindColumn(column: 'b', var: $c));
+            self::assertTrue($stmt->fetch());
+            self::assertSame(['x', 'y'], [$a, $c]);
+        });
+    }
+
+    /**
      * A connection lost while the rows are being read cannot be recovered by the proxy: the rows went down with
      * it. The proxy used to reconnect, prepare the statement again and fetch from it without executing it, which
      * yields no rows and no error, so the application saw an empty result for a query that has rows.

@@ -99,29 +99,29 @@ class PDOStatementProxy extends ObjectProxy
      *
      * @see https://www.php.net/manual/en/pdostatement.setfetchmode.php
      */
-    public function setFetchMode(int $mode, mixed ...$params): bool
+    public function setFetchMode(int $mode, mixed ...$args): bool
     {
         $this->setFetchModeContext = func_get_args();
         return $this->__object->setFetchMode(...$this->setFetchModeContext);
     }
 
-    public function bindParam($parameter, &$variable, $data_type = \PDO::PARAM_STR, $length = 0, $driver_options = null): bool
+    public function bindParam($param, &$var, $type = \PDO::PARAM_STR, $maxLength = 0, $driverOptions = null): bool
     {
         // The variable is kept by reference: a statement prepared again after a reconnect is bound to the variable of
         // the caller, as the first one was, and not to the value the variable had at the time of this call.
-        $this->bindParamContext[$parameter] = [&$variable, $data_type, $length, $driver_options];
-        return $this->__object->bindParam($parameter, $variable, $data_type, $length, $driver_options);
+        $this->bindParamContext[$param] = [&$var, $type, $maxLength, $driverOptions];
+        return $this->__object->bindParam($param, $var, $type, $maxLength, $driverOptions);
     }
 
-    public function bindColumn($column, &$param, $type = \PDO::PARAM_STR, $maxlen = 0, $driverdata = null): bool
+    public function bindColumn($column, &$var, $type = \PDO::PARAM_STR, $maxLength = 0, $driverOptions = null): bool
     {
-        $this->bindColumnContext[$column] = [&$param, $type, $maxlen, $driverdata];
-        return $this->__object->bindColumn($column, $param, $type, $maxlen, $driverdata);
+        $this->bindColumnContext[$column] = [&$var, $type, $maxLength, $driverOptions];
+        return $this->__object->bindColumn($column, $var, $type, $maxLength, $driverOptions);
     }
 
-    public function bindValue($parameter, $value, $data_type = \PDO::PARAM_STR): bool
+    public function bindValue($param, $value, $type = \PDO::PARAM_STR): bool
     {
-        $this->bindValueContext[$parameter] = [$value, $data_type];
-        return $this->__object->bindValue($parameter, $value, $data_type);
+        $this->bindValueContext[$param] = [$value, $type];
+        return $this->__object->bindValue($param, $value, $type);
     }
 }

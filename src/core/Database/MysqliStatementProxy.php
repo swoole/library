@@ -109,21 +109,21 @@ class MysqliStatementProxy extends ObjectProxy
         return $ret;
     }
 
-    public function attr_set(int $attr, int $mode): bool
+    public function attr_set(int $attribute, int $value): bool
     {
-        $this->attrSetContext[$attr] = $mode;
-        return $this->__object->attr_set($attr, $mode);
+        $this->attrSetContext[$attribute] = $value;
+        return $this->__object->attr_set($attribute, $value);
     }
 
-    public function bind_param(string $types, mixed &...$arguments): bool
+    public function bind_param(string $types, mixed &...$vars): bool
     {
-        $this->bindParamContext = [$types, $arguments];
-        return $this->__object->bind_param($types, ...$arguments);
+        $this->bindParamContext = [$types, $vars];
+        return $this->__object->bind_param($types, ...$vars);
     }
 
-    public function bind_result(mixed &...$arguments): bool
+    public function bind_result(mixed &...$vars): bool
     {
-        $this->bindResultContext = $arguments;
-        return $this->__object->bind_result(...$arguments);
+        $this->bindResultContext = $vars;
+        return $this->__object->bind_result(...$vars);
     }
 }

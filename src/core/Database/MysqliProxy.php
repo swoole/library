@@ -183,9 +183,9 @@ class MysqliProxy extends ObjectProxy
         return $this->__object->set_charset($charset);
     }
 
-    public function change_user(string $user, string $password, ?string $database): bool
+    public function change_user(string $username, #[\SensitiveParameter] string $password, ?string $database): bool
     {
-        $this->changeUserContext = [$user, $password, $database];
-        return $this->__object->change_user($user, $password, $database);
+        $this->changeUserContext = [$username, $password, $database];
+        return $this->__object->change_user($username, $password, $database);
     }
 }
