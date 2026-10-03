@@ -49,6 +49,7 @@ Fixed:
 * `\Swoole\Database\PDOStatementProxy`: after a reconnect, a statement used the value a variable had when `bindParam()` was called, not its present one, and no longer filled the variables of `bindColumn()`.
 * `\Swoole\Database\PDOStatementProxy::bindColumn()` threw a `TypeError` when called without a type.
 * `isset()` and `empty()` on an offset of a `\Swoole\RemoteObject` always failed with a `TypeError`.
+* Array access on a `\Swoole\RemoteObject` used the properties of the object on the server instead of its `ArrayAccess` implementation.
 
 ## 6.2.3 (2026-09-22)
 
