@@ -62,7 +62,7 @@ return (new PhpCsFixer\Config())
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
-            ->exclude(['html', 'vendor'])
+            ->exclude(['html', 'temp', 'vendor'])
             ->in(__DIR__)
     )
     ->setUsingCache(false);
