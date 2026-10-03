@@ -38,7 +38,8 @@ class Server
 
     /**
      * The number of accept errors in a row the server skips at once. From then on it waits a moment before it
-     * accepts again, so that an error that does not go away cannot keep the other coroutines from running.
+     * accepts again, so that an error that does not go away cannot keep the other coroutines from running, and it
+     * raises a warning, once for each run of errors, so that the error does not go unnoticed.
      */
     private const TRANSIENT_ACCEPT_ERRORS_IN_A_ROW = 16;
 
@@ -164,6 +165,9 @@ class Server
                 }
                 if (self::isTransientAcceptError($socket->errCode)) {
                     if (++$skipped > self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW) {
+                        if ($skipped === self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW + 1) {
+                            trigger_error("accept keeps failing, Error: {$socket->errMsg}[{$socket->errCode}]; the server goes on accepting, a millisecond apart", E_USER_WARNING);
+                        }
                         Coroutine::sleep(0.001);
                     }
                     continue;

@@ -64,7 +64,8 @@ class ServerTest extends TestCase
 
     /**
      * An accept error that concerns one incoming connection only, such as the peer aborting the handshake, must
-     * not stop the server from accepting the next connection.
+     * not stop the server from accepting the next connection. A run of such errors long enough to slow the server
+     * down is reported, once.
      */
     public function testTransientAcceptFailureIsSkipped(): void
     {
@@ -80,8 +81,8 @@ class ServerTest extends TestCase
 
             public function __construct()
             {
-                // More of them in a row than the server skips without waiting.
-                $this->errCodes   = array_fill(0, 20, SOCKET_ECONNABORTED);
+                // Twice as many in a row as the server skips without waiting.
+                $this->errCodes   = array_fill(0, 32, SOCKET_ECONNABORTED);
                 $this->errCodes[] = SOCKET_ECANCELED;
             }
 
@@ -106,9 +107,9 @@ class ServerTest extends TestCase
         };
         $server->handle(static function (): void {});
 
-        $warning = null;
-        set_error_handler(static function (int $severity, string $message) use (&$warning): bool {
-            $warning = $message;
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
             return true;
         });
 
@@ -119,8 +120,9 @@ class ServerTest extends TestCase
         }
 
         $this->assertTrue($result, 'The server ran until it was stopped, not until the first aborted connection.');
-        $this->assertSame(21, $socket->accepts, 'The server kept accepting past the aborted connections.');
+        $this->assertSame(33, $socket->accepts, 'The server kept accepting past the aborted connections.');
         $this->assertSame(0, $server->errCode);
-        $this->assertNull($warning);
+        $error = 'accept error ' . SOCKET_ECONNABORTED . '[' . SOCKET_ECONNABORTED . ']';
+        $this->assertSame(["accept keeps failing, Error: {$error}; the server goes on accepting, a millisecond apart"], $warnings);
     }
 }
