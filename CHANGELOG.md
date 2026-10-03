@@ -17,7 +17,7 @@ Backward-incompatible changes:
 Added:
 
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
-* The admin server reports memory and CPU usage on macOS.
+* The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
 
 Changed:
 

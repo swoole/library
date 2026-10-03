@@ -1175,10 +1175,19 @@ class Admin
             return intval($match[1] ?? 0) * 1024;
         }
         if (PHP_OS_FAMILY === 'Darwin') {
-            return intval(shell_exec('sysctl -n hw.memsize 2>/dev/null'));
+            return intval(self::shellExec('sysctl -n hw.memsize 2>/dev/null'));
         }
         // Other systems are not supported.
         return 0;
+    }
+
+    /**
+     * The output of a command, or an empty string where shell_exec() is disabled, as it often is on shared hosts. The
+     * figures that need a command are then unknown, as they are on the systems this class does not support.
+     */
+    private static function shellExec(string $command): string
+    {
+        return function_exists('shell_exec') ? (string) shell_exec($command) : '';
     }
 
     /**
@@ -1190,7 +1199,7 @@ class Admin
     private static function getProcessInfoFromPs(string|int $pid): ?array
     {
         $pid    = $pid === 'self' ? getmypid() : intval($pid);
-        $output = $pid > 0 ? trim((string) shell_exec("ps -o rss=,time= -p {$pid} 2>/dev/null")) : '';
+        $output = $pid > 0 ? trim(self::shellExec("ps -o rss=,time= -p {$pid} 2>/dev/null")) : '';
         // The memory in kilobytes, and the time as [[days-]hours:]minutes:seconds.hundredths.
         if (!preg_match('#^(\d+)\s+(?:(?:(\d+)-)?(\d+):)?(\d+):(\d+)[.,](\d+)$#', $output, $match)) {
             return null;
