@@ -8,6 +8,7 @@ Backward-incompatible changes:
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
 * The coroutine curl handler throws a `\Swoole\Curl\Exception` instead of sending a password when `CURLOPT_HTTPAUTH` or `CURLOPT_PROXYAUTH` excludes `CURLAUTH_BASIC`, the only way it can authenticate. It sent the password the basic way regardless.
 * The database proxies use the parameter names of PHP's own methods, so a call that passes the old names by name fails: `bindParam()`, `bindColumn()` and `bindValue()` of `\Swoole\Database\PDOStatementProxy`, `attr_set()` of `\Swoole\Database\MysqliStatementProxy` and `change_user()` of `\Swoole\Database\MysqliProxy`.
+* Parameters that had no type now have one, so an argument of another type fails with a `TypeError`, e.g. in `\Swoole\NameResolver::__construct()`, `\Swoole\FastCGI\HttpRequest::withQuery()`, `\Swoole\ArrayObject::map()`, `\Swoole\Thread\Runnable::__construct()` and `swoole_curl_setopt_array()`.
 * `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.
 * Return values of functions that replace native ones when they are hooked now match the native functions:
   * `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle, and `\Swoole\Curl\Handler::reset()` returns `true` on success while `swoole_curl_reset()` returns nothing.
@@ -23,7 +24,7 @@ Changed:
 
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
 * `ext-posix` is now suggested, not required, so that Composer installs the library on Windows. Only the default remote object server needs it.
-* Modernized the codebase for PHP 8.2+. Signatures are unchanged; the return values listed above changed to match the native functions.
+* Modernized the codebase for PHP 8.2+.
 * `\Swoole\Coroutine\Server` no longer stops on an accept error that concerns one incoming connection only, such as `ECONNABORTED`, and raises a warning when such errors keep coming.
 * FastCGI: a request body is encoded in linear instead of quadratic time, and stream records are no longer decoded twice.
 
