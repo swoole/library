@@ -197,7 +197,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
             'object' => $this->objectId,
             'offset' => $offset,
         ]);
-        return $rs['exists'];
+        return (bool) $rs['value'];
     }
 
     public function current(): mixed
