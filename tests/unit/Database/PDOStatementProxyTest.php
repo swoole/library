@@ -260,6 +260,40 @@ class PDOStatementProxyTest extends DatabaseTestCase
     }
 
     /**
+     * A parameter bound twice, by bindValue() and by bindParam(), is bound by the later call after a reconnect, as it
+     * was before. The bindings used to be made again by kind, so a value bound first won over the variable bound
+     * after it.
+     */
+    public function testLastBindingOfAParameterWinsAfterAReconnect(): void
+    {
+        self::coRun(function () {
+            $failures = new \stdClass();
+            $pool     = self::getPdoSqlitePool(1);
+            $pdo      = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [LostConnectionStatement::class, [$failures]]);
+
+            $statement = $pdo->prepare('SELECT :answer AS answer');
+            $statement->bindValue(':answer', 1, \PDO::PARAM_INT);
+            $answer = 2;
+            $statement->bindParam('answer', $answer, \PDO::PARAM_INT);
+
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $pdo->getRound());
+            self::assertEquals(2, $statement->fetchColumn(), 'The variable bound last, without the colon.');
+
+            $statement->bindValue(':answer', 3, \PDO::PARAM_INT);
+            $failures->execute = true;
+            self::assertTrue($statement->execute());
+            self::assertSame(2, $pdo->getRound());
+            self::assertEquals(3, $statement->fetchColumn(), 'The value bound last.');
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
      * The same against the servers, MySQL and PostgreSQL, with the connection ended for real. PostgreSQL matters
      * here: PDO reports a connection it has lost as being inside a transaction, which is no reason not to
      * reconnect.

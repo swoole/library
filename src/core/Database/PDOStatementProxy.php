@@ -112,7 +112,9 @@ class PDOStatementProxy extends ObjectProxy
     {
         // The variable is kept by reference: a statement prepared again after a reconnect is bound to the variable of
         // the caller, as the first one was, and not to the value the variable had at the time of this call.
-        $this->bindParamContext[$parameter] = [&$variable, $data_type, $length, $driver_options];
+        $key = self::parameterKey($parameter);
+        unset($this->bindValueContext[$key]);
+        $this->bindParamContext[$key] = [&$variable, $data_type, $length, $driver_options];
         return $this->__object->bindParam($parameter, $variable, $data_type, $length, $driver_options);
     }
 
@@ -124,7 +126,19 @@ class PDOStatementProxy extends ObjectProxy
 
     public function bindValue($parameter, $value, $data_type = \PDO::PARAM_STR): bool
     {
-        $this->bindValueContext[$parameter] = [$value, $data_type];
+        $key = self::parameterKey($parameter);
+        unset($this->bindParamContext[$key]);
+        $this->bindValueContext[$key] = [$value, $data_type];
         return $this->__object->bindValue($parameter, $value, $data_type);
+    }
+
+    /**
+     * The key a parameter is recorded under. A parameter is bound by bindParam() or by bindValue(), whichever was
+     * called last, and is recorded once: the bindings are made again by kind after a reconnect, not in the order of
+     * the calls. PDO takes a name with or without its leading colon.
+     */
+    private static function parameterKey(int|string $param): int|string
+    {
+        return is_string($param) && !str_starts_with($param, ':') ? ':' . $param : $param;
     }
 }
