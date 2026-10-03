@@ -55,59 +55,59 @@ if (!class_exists(Client::class, false)) {
  * heartbeat_idle_time plus heartbeat_check_interval seconds, and for as long as the peer keeps the
  * connection open when idle closing is disabled.
  */
-class MultiplexClient extends Client
+final class MultiplexClient extends Client
 {
-    protected const DEFAULT_HEARTBEAT_CHECK_INTERVAL = 3;
+    private const DEFAULT_HEARTBEAT_CHECK_INTERVAL = 3;
 
-    protected const DEFAULT_HEARTBEAT_IDLE_TIME = 10;
+    private const DEFAULT_HEARTBEAT_IDLE_TIME = 10;
 
     /**
      * @var object|null identity token of the currently running recv loop; null when none is running.
      *                  A recv loop whose token no longer matches is stale and must exit without
      *                  closing the client: a newer loop may own the (reconnected) connection already.
      */
-    protected ?object $recvLoopToken = null;
+    private ?object $recvLoopToken = null;
 
     /**
      * @var Channel|null used by the heartbeat checker for an interruptible sleep; closed by close()
      *                   to wake the checker up immediately
      */
-    protected ?Channel $sleepChannel = null;
+    private ?Channel $sleepChannel = null;
 
     /**
      * @var Channel|null present while a coroutine health-checks the connection and starts the shared
      *                   recv loop; other coroutines block on it (until it is closed) before sending
      */
-    protected ?Channel $startupBarrier = null;
+    private ?Channel $startupBarrier = null;
 
     /**
      * @var array<int, Channel> per-stream channels carrying the responses of in-flight requests
      */
-    protected array $streamChannels = [];
+    private array $streamChannels = [];
 
     /**
      * @var array<int, true> IDs of streams whose requester timed out; the recv loop drops their late
      *                       responses instead of parking them
      */
-    protected array $abandonedStreams = [];
+    private array $abandonedStreams = [];
 
     /**
      * @var bool guards against spawning more than one heartbeat-checker coroutine
      */
-    protected bool $heartbeatCheckerRunning = false;
+    private bool $heartbeatCheckerRunning = false;
 
     /**
      * @var int number of request() calls currently in progress -- including connection setup and
      *          sending, where no stream channel exists yet; the heartbeat checker must not close
      *          the connection while one is pending
      */
-    protected int $pendingRequests = 0;
+    private int $pendingRequests = 0;
 
     /**
      * @var float Unix timestamp of the completion of the most recent request() call, successful or
      *            not; the heartbeat checker measures idleness against it
      */
-    protected float $lastActiveTime = 0;
+    private float $lastActiveTime = 0;
 
     /**
      * Sends a request over the shared connection and waits for its response.
@@ -279,7 +279,7 @@ class MultiplexClient extends Client
     /**
      * Registers the channel over which the response for the given stream will be delivered.
      */
-    protected function openStreamChannel(int $streamId): Channel
+    private function openStreamChannel(int $streamId): Channel
     {
         return $this->streamChannels[$streamId] = new Channel(1);
     }
@@ -287,7 +287,7 @@ class MultiplexClient extends Client
     /**
      * Unregisters a stream's channel, waking its requester (pop() returns false) if one still waits.
      */
-    protected function closeStreamChannel(int $streamId): void
+    private function closeStreamChannel(int $streamId): void
     {
         if ($channel = $this->streamChannels[$streamId] ?? null) {
             $channel->close();
@@ -299,7 +299,7 @@ class MultiplexClient extends Client
     /**
      * Aborts all in-flight requests by closing and unregistering their stream channels.
      */
-    protected function flushStreamChannels(): void
+    private function flushStreamChannels(): void
     {
         foreach (array_keys($this->streamChannels) as $streamId) {
             $this->closeStreamChannel($streamId);
@@ -309,7 +309,7 @@ class MultiplexClient extends Client
     /**
      * Re-establishes the connection, discarding the current one.
      */
-    protected function reconnect(): bool
+    private function reconnect(): bool
     {
         parent::close();
         return parent::connect();
@@ -323,7 +323,7 @@ class MultiplexClient extends Client
      * @return bool false when no recv loop is running: the connection could not be established
      *              (errCode/errMsg are connect()'s), or a concurrent close() aborted the startup
      */
-    protected function ensureRecvLoop(): bool
+    private function ensureRecvLoop(): bool
     {
         $this->ensureHeartbeatChecker();
 
@@ -386,7 +386,7 @@ class MultiplexClient extends Client
      * @param object $token the loop's identity: once it no longer matches $recvLoopToken, this loop
      *                      is stale and exits without closing the client
      */
-    protected function recvLoop(object $token): void
+    private function recvLoop(object $token): void
     {
         $reason = 'unknown';
         try {
@@ -436,7 +436,7 @@ class MultiplexClient extends Client
      * Makes sure the heartbeat checker is running, unless disabled: a coroutine that closes the
      * connection once no requests are in flight and none was sent for `heartbeat_idle_time` seconds.
      */
-    protected function ensureHeartbeatChecker(): void
+    private function ensureHeartbeatChecker(): void
     {
         if ($this->heartbeatCheckerRunning) {
             return;
@@ -478,7 +478,7 @@ class MultiplexClient extends Client
     /**
      * Records the failure of the current operation on the client's errCode/errMsg properties.
      */
-    protected function setError(int $errCode, string $errMsg): void
+    private function setError(int $errCode, string $errMsg): void
     {
         $this->errCode = $errCode;
         $this->errMsg  = $errMsg;
@@ -488,7 +488,7 @@ class MultiplexClient extends Client
      * Sleeps for the given number of seconds, or until close() wakes the sleeper up early by
      * closing the sleep channel.
      */
-    protected function interruptibleSleep(float $seconds): void
+    private function interruptibleSleep(float $seconds): void
     {
         // Deliberately not the null-coalescing assignment operator: written adjacently it contains
         // a C trigraph sequence that breaks this file when packed into the extension header.
