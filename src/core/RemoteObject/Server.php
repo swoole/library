@@ -131,7 +131,11 @@ class Server
     private function unmarshal($data): mixed
     {
         if (is_object($data) and $data instanceof RemoteObject) {
-            return $this->objects[$data->getObjectId()];
+            $object_id = $data->getObjectId();
+            if (!isset($this->objects[$object_id])) {
+                throw new Exception("object[#{$object_id}] not found");
+            }
+            return $this->objects[$object_id];
         }
         if (is_array($data)) {
             foreach ($data as $key => $value) {

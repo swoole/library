@@ -225,6 +225,29 @@ class RemoteObjectTest extends TestCase
     }
 
     /**
+     * A remote object passed as an argument that the server does not have is reported; it used to reach the
+     * function called as null, with an "Undefined array key" warning on the server.
+     */
+    public function testRemoteObjectArgumentNotFound(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $this->assertSame(3, $client->call('count', $client->create(\ArrayObject::class, [1, 2, 3])));
+
+            // Not bound to the client, so that it does not ask the server to destroy the object it stands for.
+            $id     = PHP_INT_MAX;
+            $object = RemoteObject::marshal($id, Coroutine::getCid(), $client->getId());
+            try {
+                $client->call('count', $object);
+                $this->fail('There is no such object on the server.');
+            } catch (RemoteObject\Exception $e) {
+                $this->assertSame("Server Error: object[#{$id}] not found", $e->getMessage());
+                $this->assertSame(RemoteObject\Exception::class, $e->getRemoteClass());
+            }
+        });
+    }
+
+    /**
      * An object or a resource that call() brings back arrives as a RemoteObject bound to the client that fetched
      * it; unbound, it could neither be used nor release its server-side counterpart. testResource() cannot tell,
      * because a RemoteObject passed back as an argument is resolved server-side by object id alone.
