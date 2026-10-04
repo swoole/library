@@ -53,6 +53,7 @@ Fixed:
 * Array access on a `\Swoole\RemoteObject` used the properties of the object on the server instead of its `ArrayAccess` implementation.
 * The remote object server passed `null` to a function called with a remote object it no longer has, where it now reports the object as not found.
 * The default remote object server did not start in a directory whose path has a space or a quote in it.
+* `isset()`, `empty()` and `??` on a property of a `\Swoole\RemoteObject` treated the property as unset without asking the server, and `unset()` did not reach the server.
 
 ## 6.2.3 (2026-09-22)
 

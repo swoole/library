@@ -225,6 +225,34 @@ class RemoteObjectTest extends TestCase
     }
 
     /**
+     * isset(), empty() and ?? on a property ask the server, and unset() reaches it. Without __isset() a property of
+     * a remote object always counted as unset, so ?? always gave the default.
+     */
+    public function testIssetAndUnsetOnProperties(): void
+    {
+        self::coRun(function () {
+            $client = swoole_get_default_remote_object_client();
+            $object = $client->create(\stdClass::class);
+
+            $this->assertFalse(isset($object->x));
+            $this->assertSame('default', $object->x ?? 'default');
+
+            $object->x = 1;
+            $this->assertTrue(isset($object->x));
+            $this->assertFalse(empty($object->x));
+            $this->assertSame(1, $object->x ?? 'default');
+
+            $object->y = 0;
+            $this->assertTrue(isset($object->y));
+            $this->assertTrue(empty($object->y));
+
+            unset($object->x);
+            $this->assertFalse(isset($object->x));
+            $this->assertTrue(isset($object->y), 'unset() removed the one property only.');
+        });
+    }
+
+    /**
      * A remote object passed as an argument that the server does not have is reported; it used to reach the
      * function called as null, with an "Undefined array key" warning on the server.
      */
