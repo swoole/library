@@ -4,6 +4,7 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
 Backward-incompatible changes:
 
+* Dropped support for Swoole below 6.3.
 * `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, restore autocommit, and replace a connection that cannot be cleaned. The mysqli pool does not see a transaction started with `query('START TRANSACTION')`.
 * `\Swoole\Database\PDOProxy::inTransaction()` reports the transaction the driver reports after the last call, so it sees one started by hand, e.g. with `exec('BEGIN')`, and no longer reports one ended with `exec('COMMIT')` or by an implicit commit. The protected property `$inTransaction` is removed.
@@ -21,9 +22,10 @@ Added:
 
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
 * The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
-* The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only.
+* The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only. A `CURLOPT_PREREQFUNCTION` callback runs once for each address tried.
 * `\Swoole\ConnectionPool::withConnection()` runs a callback with a connection from the pool and puts the connection back afterwards, also when the callback throws, so that no connection is lost to an exception.
-* `\Swoole\Coroutine\FastCGI\Proxy::withConnectionPool()` keeps connections to the FastCGI server open for reuse. Off by default.
+* `\Swoole\Coroutine\FastCGI\Proxy::withConnectionPool()` keeps connections to the FastCGI server open for reuse. Off by default. A request that finds its connection closed by the server is sent again only when its method is idempotent, e.g. GET but not POST.
+* `\Swoole\Coroutine\FastCGI\Client::isConnected()` tells whether the client holds a connection kept open by an earlier request.
 
 Changed:
 
@@ -71,6 +73,7 @@ Fixed:
 * A failed reconnect left a database statement proxy wrapping `false` ([commit](https://github.com/swoole/library/commit/63f1fe387f78627ff1904de3e49ee6894adfd240)).
 * `\Swoole\RemoteObject\Client` now throws a `\Swoole\RemoteObject\Exception` on a response that does not unserialize.
 * An empty FastCGI response is now reported as `502 Invalid FastCGI Response`.
+* `\Swoole\Coroutine\FastCGI\Client` kept a connection whose response could not be parsed, and the next request sent over it read the rest of that response as its own.
 * A `\Swoole\RemoteObject\Client` used from several coroutines at once ended the process with a fatal "Socket has already been bound to another coroutine"; calls through one client are now serialized.
 * `swoole_container_cpu_num()` ignored the CPU quota of cgroup v2 containers.
 * The mysqli proxies did not reconnect after a lost connection under the default mysqli report mode of PHP 8.1+, where failures are thrown as `\mysqli_sql_exception`.
