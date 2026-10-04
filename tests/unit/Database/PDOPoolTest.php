@@ -292,6 +292,35 @@ class PDOPoolTest extends DatabaseTestCase
     }
 
     /**
+     * On Oracle, work done with autocommit off and without beginTransaction() is not reported as a transaction. It is
+     * rolled back all the same, and not committed by the first statement of the next borrower.
+     */
+    public function testPutRollsBackWorkLeftWithAutocommitOffOnOracle(): void
+    {
+        self::coRun(function () {
+            $pool  = self::getPdoOraclePool(1);
+            $pdo   = $pool->get();
+            $table = 'SWOOLE_LIBRARY_TEST_AC_' . strtoupper(bin2hex(random_bytes(4)));
+            $pdo->exec("CREATE TABLE {$table} (id NUMBER)");
+            try {
+                $pdo->setAttribute(\PDO::ATTR_AUTOCOMMIT, false);
+                $pdo->exec("INSERT INTO {$table} VALUES (1)");
+                self::assertFalse($pdo->__getObject()->inTransaction(), 'pdo_oci does not report the work as a transaction.');
+                $pool->put($pdo);
+
+                self::assertSame($pdo, $pool->get(), 'The connection was reused, not replaced.');
+                self::assertTrue((bool) $pdo->getAttribute(\PDO::ATTR_AUTOCOMMIT));
+                self::assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM {$table}")->fetchColumn(), 'The insert was rolled back.');
+            } finally {
+                $pdo->exec("DROP TABLE {$table}");
+            }
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
      * A pool whose options turn autocommit off keeps it off: put() sets autocommit back to the value of the options.
      */
     public function testPutSetsAutocommitBackAsConfigured(): void

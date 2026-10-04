@@ -94,6 +94,17 @@ class PDOPool extends ConnectionPool
                 return false;
             }
         }
+        // pdo_oci reports a transaction only after beginTransaction(). Work done with autocommit off is not seen, and
+        // would be committed by the first statement of the next borrower, once autocommit is on again.
+        if ($this->config->getDriver() === 'oci') {
+            try {
+                if (!$pdo->getAttribute(\PDO::ATTR_AUTOCOMMIT) && $pdo->exec('ROLLBACK') === false) {
+                    return false;
+                }
+            } catch (\PDOException) {
+                return false;
+            }
+        }
         // Autocommit turned off on the connection, e.g. with setAttribute(PDO::ATTR_AUTOCOMMIT, false), would leave
         // the next borrower inside a transaction from its first statement on. Through the proxy, so that a reconnect
         // restores the same value.
