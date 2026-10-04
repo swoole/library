@@ -98,6 +98,14 @@ class Client
         exit(1); // @phpstan-ignore deadCode.unreachable
     }
 
+    /**
+     * Whether the client holds a connection, which it does after a request that asked to keep it.
+     */
+    public function isConnected(): bool
+    {
+        return $this->socket !== null;
+    }
+
     public static function parseUrl(string $url): array
     {
         $url  = parse_url($url);

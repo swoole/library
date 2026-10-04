@@ -22,6 +22,7 @@ Added:
 * The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
 * The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only.
 * `\Swoole\ConnectionPool::withConnection()` runs a callback with a connection from the pool and puts the connection back afterwards, also when the callback throws, so that no connection is lost to an exception.
+* `\Swoole\Coroutine\FastCGI\Proxy::withConnectionPool()` keeps connections to the FastCGI server open for reuse. Off by default.
 
 Changed:
 

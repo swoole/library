@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Swoole\Coroutine\FastCGI;
 
+use Swoole\ConnectionPool;
+use Swoole\Coroutine\FastCGI\Client\Exception;
 use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
 use Swoole\Http;
@@ -43,6 +45,11 @@ class Proxy
     /* @var null|callable */
     protected $staticFileFilter;
 
+    /**
+     * The connections kept open to the FastCGI server, when withConnectionPool() asked for them.
+     */
+    protected ?ConnectionPool $pool = null;
+
     public function __construct(string $url, string $documentRoot = '/')
     {
         [$this->host, $this->port] = Client::parseUrl($url);
@@ -53,6 +60,27 @@ class Proxy
     public function withTimeout(float $timeout): self
     {
         $this->timeout = $timeout;
+        return $this;
+    }
+
+    /**
+     * Keeps up to $size connections to the FastCGI server open and sends the requests over them, where every
+     * request opens a connection of its own and closes it.
+     *
+     * The FastCGI server has to have a process for each of these connections, as a process serves its connection
+     * and nothing else for as long as it is open: with PHP-FPM, keep $size below "pm.max_children", by what other
+     * clients of the server need. A request that finds all connections in use waits for one, for as long as the
+     * timeout of the proxy allows, and then fails with a \RuntimeException.
+     *
+     * @param int $size the number of connections, or 0 for a connection per request, which is the default
+     */
+    public function withConnectionPool(int $size): self
+    {
+        if ($size < 0) {
+            throw new \InvalidArgumentException('The number of connections cannot be negative.');
+        }
+        $this->pool?->close();
+        $this->pool = $size === 0 ? null : new ConnectionPool($this->createClient(...), $size);
         return $this;
     }
 
@@ -173,7 +201,7 @@ class Proxy
                 return;
             }
         }
-        $response = (new Client($this->host, $this->port))->execute($request, $this->timeout);
+        $response = $this->pool ? $this->executeOverPool($request) : $this->createClient()->execute($request, $this->timeout);
         $this->translateResponse($response, $userResponse);
     }
 
@@ -196,5 +224,40 @@ class Proxy
             return true;
         }
         return false;
+    }
+
+    protected function createClient(): Client
+    {
+        return new Client($this->host, $this->port);
+    }
+
+    /**
+     * Sends the request over a connection of the pool. withConnection() puts the client back in the pool whichever
+     * way the request ends: a client whose connection failed has closed it, and connects again with its next request.
+     *
+     * @throws \RuntimeException when no connection is free before the timeout of the proxy is reached, or the pool
+     *                           is closed, or the coroutine is canceled while waiting
+     */
+    protected function executeOverPool(HttpRequest $request): HttpResponse
+    {
+        return $this->pool->withConnection(function (Client $client) use ($request): HttpResponse {
+            $keepConn = $request->getKeepConn();
+            $request->withKeepConn(true);
+            try {
+                $connected = $client->isConnected();
+                try {
+                    return $client->execute($request, $this->timeout);
+                } catch (Exception $e) {
+                    // The server may close a connection that is kept open at any time. The request that finds it
+                    // closed did not reach the server, and is sent once more, over a new connection.
+                    if (!$connected || !in_array($e->getCode(), [SOCKET_ECONNRESET, SOCKET_EPIPE], true)) {
+                        throw $e;
+                    }
+                    return $client->execute($request, $this->timeout);
+                }
+            } finally {
+                $request->withKeepConn($keepConn);
+            }
+        }, $this->timeout);
     }
 }
