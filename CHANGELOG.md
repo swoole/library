@@ -28,6 +28,7 @@ Fixed:
 * A failed reconnect left a database statement proxy wrapping `false` ([commit](https://github.com/swoole/library/commit/63f1fe387f78627ff1904de3e49ee6894adfd240)).
 * `\Swoole\RemoteObject\Client` now throws a `\Swoole\RemoteObject\Exception` on a response that does not unserialize.
 * An empty FastCGI response is now reported as `502 Invalid FastCGI Response`.
+* `\Swoole\Coroutine\FastCGI\Client` kept a connection whose response could not be parsed, and the next request sent over it read the rest of that response as its own.
 * A `\Swoole\RemoteObject\Client` used from several coroutines at once ended the process with a fatal "Socket has already been bound to another coroutine"; calls through one client are now serialized.
 * `swoole_container_cpu_num()` ignored the CPU quota of cgroup v2 containers.
 * The mysqli proxies did not reconnect after a lost connection under the default mysqli report mode of PHP 8.1+, where failures are thrown as `\mysqli_sql_exception`.
