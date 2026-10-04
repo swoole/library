@@ -141,6 +141,18 @@ final class Handler implements \Stringable
 
     private array $resolve = [];
 
+    /**
+     * The addresses CURLOPT_RESOLVE gives for the host of the client, all of them, and those not tried yet.
+     *
+     * @var array<string>
+     */
+    private array $resolveAll = [];
+
+    /**
+     * @var array<string>
+     */
+    private array $resolveNext = [];
+
     private string $unix_socket_path = '';
 
     public function __construct(string $url = '')
@@ -231,13 +243,21 @@ final class Handler implements \Stringable
         if ($urlInfo === null) {
             $urlInfo = $this->urlInfo;
         }
-        $host = $urlInfo['host'];
-        $port = $urlInfo['port'];
+        $host              = $urlInfo['host'];
+        $port              = $urlInfo['port'];
+        $this->resolveAll  = [];
+        $this->resolveNext = [];
         if (isset($this->resolve[$host])) {
             if (!$this->hasHeader('Host')) {
                 $this->setHeader('Host', $host);
             }
-            $this->urlInfo['host'] = $host = $this->resolve[$host][$port] ?? null ?: $host;
+            $addresses = $this->resolve[$host][$port] ?? [];
+            if ($addresses) {
+                $this->resolveAll  = $addresses;
+                $host              = array_shift($addresses);
+                $this->resolveNext = $addresses;
+            }
+            $this->urlInfo['host'] = $host;
         }
         if ($this->unix_socket_path) {
             $host = $this->unix_socket_path;
@@ -247,6 +267,42 @@ final class Handler implements \Stringable
             }
         }
         $this->client = new Client($host, $port, $urlInfo['scheme'] === 'https');
+    }
+
+    /**
+     * Replaces the client by one for the next address of CURLOPT_RESOLVE, carrying over the request of the current
+     * client.
+     *
+     * @param float|null $connectTimeout the time to connect to the address, when it differs from the one set
+     */
+    private function useNextAddress(Client $client, ?float $connectTimeout = null): Client
+    {
+        $this->urlInfo['host'] = $address = (string) array_shift($this->resolveNext);
+
+        $next     = new Client($address, $client->port, $client->ssl);
+        $settings = $client->setting ?? [];
+        if ($connectTimeout !== null) {
+            $settings[Constant::OPTION_CONNECT_TIMEOUT] = $connectTimeout;
+        }
+        if ($settings) {
+            $next->set($settings);
+        }
+        if ($client->requestMethod) {
+            $next->setMethod($client->requestMethod);
+        }
+        $next->setHeaders($client->requestHeaders ?? []);
+        // The handler sends its cookies as a header. An empty list would be sent as an empty Cookie header.
+        if ($client->cookies) {
+            $next->setCookies($client->cookies);
+        }
+        if ($client->requestBody !== null) {
+            $next->setData($client->requestBody);
+        }
+        foreach ($client->uploadFiles ?? [] as $file) {
+            $next->addFile($file['path'], $file['name'], $file['type'], $file['filename'], $file['offset'], $file['size']);
+        }
+
+        return $this->client = $next;
     }
 
     private function getUrl(): string
@@ -472,9 +528,10 @@ final class Handler implements \Stringable
                     if ($flag === '-') {
                         unset($this->resolve[$host][$port]);
                     } else {
-                        // Not supported: of several addresses, HOST:PORT:ADDRESS[,ADDRESS]..., only the first
-                        // one is used.
-                        $this->resolve[$host][$port] = explode(',', $ip)[0];
+                        // HOST:PORT:ADDRESS[,ADDRESS]...: the addresses are tried in turn until one can be connected to.
+                        // An IPv6 address may come in brackets, as in [::1].
+                        $addresses                   = array_map(static fn (string $address): string => trim($address, " \t[]"), explode(',', $ip));
+                        $this->resolve[$host][$port] = array_values(array_filter($addresses, static fn (string $address): bool => $address !== ''));
                     }
                 }
                 break;
@@ -819,6 +876,14 @@ final class Handler implements \Stringable
             // As much as possible to ensure that Host is the first header.
             // See: http://tools.ietf.org/html/rfc7230#section-5.4
             $client->setHeaders($this->headers);
+            // With several addresses to try, CURLOPT_CONNECTTIMEOUT is the time to connect to any of them, as with
+            // libcurl: each address gets its share of the time that is left.
+            $failover       = count($this->resolveAll) > 1 && empty($proxyOptions) && !$this->unix_socket_path;
+            $connectTimeout = (float) ($this->clientOptions[Constant::OPTION_CONNECT_TIMEOUT] ?? 0);
+            $connectBegin   = microtime(true);
+            if ($failover && $this->resolveNext && $connectTimeout > 0) {
+                $client->set([Constant::OPTION_CONNECT_TIMEOUT => $connectTimeout / (1 + count($this->resolveNext))]);
+            }
             /*
              * Pre-request Callback
              */
@@ -830,6 +895,35 @@ final class Handler implements \Stringable
              * Execute.
              */
             $executeResult = $client->execute($this->getUrl());
+            // The next address of CURLOPT_RESOLVE, when this one cannot be connected to. Not with a proxy or a unix
+            // socket, where the connection is not made to the address. Not once the time of CURLOPT_CONNECTTIMEOUT
+            // or CURLOPT_TIMEOUT is up. Without either, each address gets the connect timeout of the client.
+            $timeout = (float) ($this->clientOptions[Constant::OPTION_TIMEOUT] ?? 0);
+            while (!$executeResult && $failover && $this->resolveNext
+                && $client->statusCode === SWOOLE_HTTP_CLIENT_ESTATUS_CONNECT_FAILED
+                && ($timeout <= 0 || microtime(true) - $timeBegin < $timeout)
+            ) {
+                $nextConnectTimeout = null;
+                if ($connectTimeout > 0) {
+                    $left = $connectBegin + $connectTimeout - microtime(true);
+                    if ($left <= 0) {
+                        break;
+                    }
+                    $nextConnectTimeout = $left / count($this->resolveNext);
+                }
+                $client = $this->useNextAddress($client, $nextConnectTimeout);
+                if ($this->prereqFunction && !$this->invokePrereqFunction(null, null)) {
+                    $this->info['total_time'] = microtime(true) - $timeBegin;
+                    return false;
+                }
+                $executeResult = $client->execute($this->getUrl());
+            }
+            if (!$executeResult && $failover && $client->statusCode === SWOOLE_HTTP_CLIENT_ESTATUS_CONNECT_FAILED) {
+                // No address could be connected to in time. The next call on the handle starts again from the first
+                // one, as with libcurl, and not from the address that failed last.
+                $this->resolveNext = $this->resolveAll;
+                $this->useNextAddress($client);
+            }
             if (!$executeResult) {
                 $errCode = $client->errCode;
                 if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED || $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
@@ -971,7 +1065,8 @@ final class Handler implements \Stringable
      * connects and sends within a single call, so on a fresh connection the callback fires before the
      * connection exists: the local address is reported as an empty string with port 0, and the primary
      * address is the resolved address the client is about to connect to. When an established connection
-     * is reused, the real socket addresses are reported.
+     * is reused, the real socket addresses are reported. With several addresses for the host
+     * (CURLOPT_RESOLVE), the callback is invoked for each address tried, where native cURL invokes it once.
      *
      * @return bool false when the transfer must be aborted; the error has been recorded already
      */

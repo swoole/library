@@ -351,6 +351,108 @@ class HandlerTest extends TestCase
     }
 
     /**
+     * Of several addresses given for a host, the next one is tried when one cannot be connected to.
+     */
+    public function testResolveWithSeveralAddresses(): void
+    {
+        self::coRun(function () {
+            $host = HTTPBIN_SERVER_HOST;
+            $port = HTTPBIN_SERVER_PORT;
+            $url  = HTTPBIN_SERVER_URL . '/post';
+            $ip   = Coroutine::gethostbyname($host);
+
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, 'foo=bar');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Test: several addresses']);
+            // TEST-NET-1 and TEST-NET-2, which nothing can be connected to, and then the server.
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:192.0.2.1, 198.51.100.1,{$ip}"]);
+
+            $body = self::curlExecJson($ch);
+
+            self::assertSame($host, $body['headers']['Host'][0]);
+            self::assertSame('several addresses', $body['headers']['X-Test'][0], 'The request is the same for every address.');
+            self::assertSame(['bar'], $body['form']['foo']);
+            self::assertSame($url, $body['url']);
+            self::assertSame($ip, curl_getinfo($ch, CURLINFO_PRIMARY_IP));
+            self::assertArrayNotHasKey('Cookie', $body['headers'], 'No empty Cookie header comes with the next address.');
+        });
+    }
+
+    public function testResolveWithSeveralAddressesNoneOfWhichWorks(): void
+    {
+        self::coRun(function () {
+            $host = HTTPBIN_SERVER_HOST;
+            $port = HTTPBIN_SERVER_PORT;
+            $ch   = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, HTTPBIN_SERVER_URL . '/get');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:192.0.2.1,198.51.100.1"]);
+            $tried = [];
+            curl_setopt($ch, CURLOPT_PREREQFUNCTION, function ($handler, string $primaryIp) use (&$tried): int {
+                $tried[] = $primaryIp;
+                return CURL_PREREQFUNC_OK;
+            });
+
+            $start = microtime(true);
+            self::assertFalse(curl_exec($ch));
+            self::assertSame(['192.0.2.1', '198.51.100.1'], $tried, 'Every address was tried, in turn.');
+            self::assertLessThan(1.8, microtime(true) - $start, 'CURLOPT_CONNECTTIMEOUT is the time to connect to any of the addresses.');
+            self::assertNotSame(0, curl_errno($ch));
+            self::assertSame('', curl_getinfo($ch, CURLINFO_PRIMARY_IP));
+        });
+    }
+
+    /**
+     * When every address failed, the next request on the handle starts again from the first address, and not from
+     * the one that failed last.
+     */
+    public function testResolveStartsOverAfterEveryAddressFailed(): void
+    {
+        self::coRun(function () {
+            // A port nothing listens on, for now: 127.0.0.1 and 127.0.0.2 refuse the connection at once. The socket
+            // only finds a free port; it never listens.
+            $socket = new Coroutine\Socket(AF_INET, SOCK_STREAM, 0);
+            self::assertTrue($socket->bind('127.0.0.1', 0));
+            $port = $socket->getsockname()['port'];
+            $socket->close();
+
+            $ch = curl_init("http://resolve.test:{$port}/");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["resolve.test:{$port}:127.0.0.1,127.0.0.2"]);
+            $tried = [];
+            curl_setopt($ch, CURLOPT_PREREQFUNCTION, function ($handler, string $primaryIp) use (&$tried): int {
+                $tried[] = $primaryIp;
+                return CURL_PREREQFUNC_OK;
+            });
+
+            self::assertFalse(curl_exec($ch));
+            self::assertSame(['127.0.0.1', '127.0.0.2'], $tried);
+
+            $server = new Server('127.0.0.1', $port);
+            Coroutine\go(function () use ($server) {
+                $server->handle('/', function ($request, $response) {
+                    $response->end('up');
+                });
+                $server->start();
+            });
+
+            $tried = [];
+            self::assertSame('up', curl_exec($ch), 'The first address works now.');
+            self::assertSame(['127.0.0.1'], $tried);
+            $server->shutdown();
+        });
+    }
+
+    /**
      * The handler can authenticate the basic way only. With a value of CURLOPT_HTTPAUTH that excludes that way, a
      * password is not sent, for it not to go out as it is against the wish of the caller.
      */

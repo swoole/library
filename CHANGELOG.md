@@ -19,6 +19,7 @@ Added:
 
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
 * The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
+* The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only.
 
 Changed:
 
