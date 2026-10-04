@@ -42,16 +42,27 @@ class PDOStatementProxy extends ObjectProxy
 
     public function __call(string $name, array $arguments)
     {
+        // Not the state PDO reports now, which a connection found dead makes "inside a transaction" on PostgreSQL, but
+        // the one the parent recorded, which includes a transaction started by hand. A connection known to be lost is
+        // in no transaction any more: that one went down with it, and was reported.
+        $inTransaction = $this->parent->hasOpenTransaction();
         try {
             $ret = $this->__object->{$name}(...$arguments);
         } catch (\PDOException $e) {
+            if ($inTransaction && DetectsLostConnections::causedByLostConnection($e)) {
+                // The transaction died with the connection. The caller is told, and the next call reconnects.
+                if ($this->parent->getRound() === $this->parentRound) {
+                    $this->parent->markAsLost();
+                }
+                throw $e;
+            }
             // Only execute() is retried on a fresh connection, since it runs the statement from the start. The
             // other methods (fetch*(), rowCount(), ...) read the result of an execute() that went down with the
             // connection; re-preparing the statement and calling one of them on it without executing it first
             // returns no rows and no error, so a lost connection there surfaces as the exception it is.
-            if (strcasecmp($name, 'execute') === 0 && !$this->parent->inTransaction() && DetectsLostConnections::causedByLostConnection($e)) {
-                if ($this->parent->getRound() === $this->parentRound) {
-                    /* if not equal, parent has reconnected */
+            if (strcasecmp($name, 'execute') === 0 && DetectsLostConnections::causedByLostConnection($e)) {
+                // A parent of another round has reconnected already, unless that reconnect failed and left it lost.
+                if ($this->parent->getRound() === $this->parentRound || $this->parent->isLost()) {
                     $this->parent->reconnect();
                 }
                 // Record the parent's round, or the next lost connection on this statement looks like one the parent

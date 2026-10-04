@@ -77,6 +77,7 @@ Fixed:
 * `\Swoole\Database\MysqliStatementProxy` did not re-bind the `bind_result()` variables correctly after a reconnect, and retried `fetch()` on a statement that was prepared again but never executed.
 * `\Swoole\Database\MysqliStatementProxy` did not recover from a second lost connection on the same statement.
 * `\Swoole\Database\PDOStatementProxy` turned a connection lost while reading rows into an empty result, and did not recover from a second lost connection on the same statement. It now retries `execute()` only, and reports a lost connection in any other method.
+* `\Swoole\Database\PDOStatementProxy`: after a connection lost inside a transaction started by hand, e.g. with `exec('BEGIN')`, `execute()` ran the statement again on a new connection, outside the transaction. The lost connection is now reported.
 * The database proxies recognise more lost-connection errors: SSL failures during a query, PostgreSQL's `canceling statement due to conflict with recovery`, and the PlanetScale PostgreSQL / pg_bouncer messages, in line with Laravel's list.
 * `\Swoole\Database\RedisPool` passed the `connect()` arguments in the wrong positions when only some of the connect timeout, retry interval and read timeout were configured.
 * `\Swoole\Coroutine\Server` never backed off when a coroutine could not be created for an accepted connection.
@@ -87,6 +88,7 @@ Fixed:
 * `\Swoole\ConnectionPool::close()` failed with an `Error` when called twice, and `fill()` on a closed pool made connections only to drop them.
 * `\Swoole\Database\PDOProxy`: `query()` and `prepare()` failed with a `TypeError` outside the exception error mode.
 * `\Swoole\Database\PDOProxy`: `query()`, `exec()` and `beginTransaction()` did not reconnect after a connection lost outside a transaction on PostgreSQL.
+* `\Swoole\Database\PDOProxy` stayed on a dead connection after a connection lost inside a transaction, and on PostgreSQL after a reconnect that failed. The next call now reconnects, and `rollBack()` of the transaction lost with the connection returns `true`.
 * `\Swoole\ArrayObject` and `swoole_array_default_value()` raised a deprecation on PHP 8.5 when given a `null` key, which still stands for the empty string.
 * The mysqli proxies raised a warning on `prepare(query: ...)`, with the query passed by name, and could not prepare that statement again after a reconnect.
 * `\Swoole\Database\PDOStatementProxy`: after a reconnect, a statement used the value a variable had when `bindParam()` was called, not its present one, and no longer filled the variables of `bindColumn()`.
