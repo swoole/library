@@ -149,6 +149,8 @@ class PDOProxy extends ObjectProxy
     /**
      * Whether the connection is inside a transaction, begun with beginTransaction() or by hand, as PDO reported it
      * after the last call through the proxy or one of its statements that could start or end one.
+     *
+     * @internal
      */
     public function hasOpenTransaction(): bool
     {
@@ -158,6 +160,8 @@ class PDOProxy extends ObjectProxy
     /**
      * Records the transaction state PDO reports now. Called by a statement of the proxy after a call that reached the
      * server and could start or end a transaction, e.g. prepare('BEGIN')->execute().
+     *
+     * @internal
      */
     public function recordTransactionState(): void
     {
@@ -168,6 +172,8 @@ class PDOProxy extends ObjectProxy
 
     /**
      * Whether the connection was lost and not replaced yet; the next call reconnects first.
+     *
+     * @internal
      */
     public function isLost(): bool
     {
@@ -177,6 +183,8 @@ class PDOProxy extends ObjectProxy
     /**
      * Records that the connection was lost inside a transaction, which went down with it: the next call reconnects
      * first. Called by the proxy, and by a statement of the connection that reports a lost connection.
+     *
+     * @internal
      */
     public function markAsLost(): void
     {
