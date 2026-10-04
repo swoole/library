@@ -90,6 +90,7 @@ Fixed:
 * `\Swoole\Database\PDOStatementProxy`: after a reconnect, a parameter bound by both `bindValue()` and `bindParam()` could take the binding made first instead of the one made last.
 * Array access on a `\Swoole\RemoteObject` used the properties of the object on the server instead of its `ArrayAccess` implementation.
 * The remote object server passed `null` to a function called with a remote object it no longer has, where it now reports the object as not found.
+* The default remote object server did not start in a directory whose path has a space or a quote in it.
 
 ## 6.2.3 (2026-09-22)
 
