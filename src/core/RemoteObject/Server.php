@@ -240,6 +240,35 @@ class Server
         $ctx->end(['code' => 0]);
     }
 
+    /**
+     * @throws Exception
+     */
+    private function _isset_property(Context $ctx): void
+    {
+        $object_id = $ctx->getParam('object');
+        $property  = $ctx->getParam('property');
+        if (!isset($this->objects[$object_id])) {
+            throw new Exception("object[#{$object_id}] not found");
+        }
+        $obj = $this->objects[$object_id];
+        $ctx->end(['code' => 0, 'value' => isset($obj->{$property})]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function _unset_property(Context $ctx): void
+    {
+        $object_id = $ctx->getParam('object');
+        $property  = $ctx->getParam('property');
+        if (!isset($this->objects[$object_id])) {
+            throw new Exception("object[#{$object_id}] not found");
+        }
+        $obj = $this->objects[$object_id];
+        unset($obj->{$property});
+        $ctx->end(['code' => 0]);
+    }
+
     private function _ping(Context $ctx): void
     {
         $ctx->end(['code' => 0]);

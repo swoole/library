@@ -77,6 +77,31 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         ]);
     }
 
+    /**
+     * Asks the server, so that isset(), empty() and ?? on a property of a remote object see the object on the server.
+     *
+     * @throws Exception
+     */
+    public function __isset(string $property): bool
+    {
+        $rs = $this->execute('/isset_property', [
+            'object'   => $this->objectId,
+            'property' => $property,
+        ]);
+        return (bool) $rs['value'];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function __unset(string $property): void
+    {
+        $this->execute('/unset_property', [
+            'object'   => $this->objectId,
+            'property' => $property,
+        ]);
+    }
+
     public function __unserialize(array $data): void
     {
         $this->objectId    = $data['objectId'];
