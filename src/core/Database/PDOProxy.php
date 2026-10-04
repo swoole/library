@@ -44,10 +44,13 @@ class PDOProxy extends ObjectProxy
 
     public function __call(string $name, array $arguments)
     {
+        // Read before the call: once the connection is lost, PDO reports it as inside a transaction, always with
+        // pdo_pgsql. Before the call PDO reports the real state, which includes a transaction started by hand.
+        $inTransaction = $this->__object->inTransaction();
         try {
             $ret = $this->__object->{$name}(...$arguments);
         } catch (\PDOException $e) {
-            if (!$this->__object->inTransaction() && DetectsLostConnections::causedByLostConnection($e)) {
+            if (!$inTransaction && DetectsLostConnections::causedByLostConnection($e)) {
                 $this->reconnect();
                 $ret = $this->__object->{$name}(...$arguments);
             } else {
