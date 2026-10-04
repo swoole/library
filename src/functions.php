@@ -304,15 +304,21 @@ function swoole_init_default_remote_object_server(): void
         $print_log("remove socket file[{$socket_file}]");
     }
 
+    // Not escapeshellarg(), which drops the bytes that are not valid in the current locale, such as those of a
+    // non-ASCII character after setlocale(LC_CTYPE, 'C').
+    $quote = static function (string $arg): string {
+        return "'" . str_replace("'", "'\\''", $arg) . "'";
+    };
+
     $hook_flags = Swoole\Runtime::getHookFlags();
     // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
     if (defined('SWOOLE_HOOK_MONGODB') and $hook_flags & SWOOLE_HOOK_MONGODB and !is_dir($dir . '/vendor/mongodb/mongodb')) {
-        system('cd ' . escapeshellarg($dir) . ' && composer require mongodb/mongodb');
+        system('cd ' . $quote($dir) . ' && composer require mongodb/mongodb');
         $print_log('install mongodb library');
     }
 
     // start server
-    $proc = proc_open(escapeshellarg($php_bin) . ' ' . escapeshellarg($php_file), [
+    $proc = proc_open($quote($php_bin) . ' ' . $quote($php_file), [
         0 => ['pipe', 'r'],
         1 => ['pipe', 'w'],
         2 => ['pipe', 'w'],
