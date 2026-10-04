@@ -99,6 +99,12 @@ class PDOStatementProxy extends ObjectProxy
             }
         }
 
+        // The statement may have started or ended a transaction, e.g. prepare('BEGIN') or a statement that commits
+        // implicitly. Recorded on the parent, unless the parent is on another connection by now.
+        if (strcasecmp($name, 'execute') === 0 && $this->parent->getRound() === $this->parentRound) {
+            $this->parent->recordTransactionState();
+        }
+
         return $ret;
     }
 

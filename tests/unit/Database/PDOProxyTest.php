@@ -93,15 +93,20 @@ class PDOProxyTest extends DatabaseTestCase
 
     /**
      * Inside a transaction a lost connection is reported, as the transaction is lost with it, whether the
-     * transaction was started with beginTransaction() or by hand. The code before the fix did the same; this test
-     * keeps it that way.
+     * transaction was started with beginTransaction(), by hand, or through a statement. The code before the fix did
+     * the same; this test keeps it that way.
      *
      * @dataProvider dataPools
      */
     public function testLostConnectionInsideATransactionIsReported(string $pool): void
     {
         self::coRun(function () use ($pool) {
-            foreach (['beginTransaction()' => fn (PDOProxy $pdo) => $pdo->beginTransaction(), "exec('BEGIN')" => fn (PDOProxy $pdo) => $pdo->exec('BEGIN')] as $how => $begin) {
+            $ways = [
+                'beginTransaction()'          => fn (PDOProxy $pdo) => $pdo->beginTransaction(),
+                "exec('BEGIN')"               => fn (PDOProxy $pdo) => $pdo->exec('BEGIN'),
+                "prepare('BEGIN')->execute()" => fn (PDOProxy $pdo) => $pdo->prepare('BEGIN')->execute(),
+            ];
+            foreach ($ways as $how => $begin) {
                 // A pool of its own for each case: this pool puts the lost connection back as it is.
                 $connections = self::{$pool}(1);
                 $pdo         = $connections->get();
@@ -115,6 +120,35 @@ class PDOProxyTest extends DatabaseTestCase
                 }
                 $connections->close();
             }
+        });
+    }
+
+    /**
+     * A transaction begun through a statement is seen as well, and a lost connection inside it is reported by a
+     * statement instead of retried outside of it.
+     *
+     * @dataProvider dataPools
+     */
+    public function testTransactionBegunThroughAStatement(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            $pdo->prepare('BEGIN')->execute();
+            self::assertTrue($pdo->hasOpenTransaction());
+
+            $statement = $pdo->prepare('SELECT 42');
+            self::killPdoConnection($pdo);
+            try {
+                $statement->execute();
+                self::fail('Inside a transaction the lost connection is reported.');
+            } catch (\PDOException) {
+                self::assertSame(0, $pdo->getRound(), 'The statement did not run again on a new connection.');
+                self::assertTrue($pdo->isLost());
+            }
+
+            $pool->close();
         });
     }
 
