@@ -52,6 +52,12 @@ class Client
      */
     public function execute(Request $request, float $timeout = -1): Response
     {
+        if (isset($this->socket) && !$this->socket->checkLiveness()) {
+            // The server closed the connection kept open since the last request. A new one is opened before anything
+            // is sent, so that the request reaches the server.
+            $this->socket->close();
+            $this->socket = null;
+        }
         if (!isset($this->socket)) {
             $this->socket = $socket = new Socket($this->af, SOCK_STREAM, IPPROTO_IP);
             $socket->setProtocol([

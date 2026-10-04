@@ -72,6 +72,10 @@ class Proxy
      * clients of the server need. A request that finds all connections in use waits for one, for as long as the
      * timeout of the proxy allows, and then fails with a \RuntimeException.
      *
+     * A request that runs into a connection the server has closed is sent once more, over a new connection, only
+     * when its method is idempotent, e.g. GET, and fails otherwise, e.g. POST: the client cannot tell whether the
+     * request ran on the server.
+     *
      * @param int $size the number of connections, or 0 for a connection per request, which is the default
      */
     public function withConnectionPool(int $size): self
@@ -248,9 +252,11 @@ class Proxy
                 try {
                     return $client->execute($request, $this->timeout);
                 } catch (Exception $e) {
-                    // The server may close a connection that is kept open at any time. The request that finds it
-                    // closed did not reach the server, and is sent once more, over a new connection.
-                    if (!$connected || !in_array($e->getCode(), [SOCKET_ECONNRESET, SOCKET_EPIPE], true)) {
+                    // The server may close a connection that is kept open at any time, also right after the client
+                    // found it open. A request that finds it closed may not have reached the server, but it may also
+                    // have run there, and the process that ran it died before it answered: the error is the same.
+                    // So only a request of an idempotent method is sent once more, over a new connection.
+                    if (!$connected || !in_array($e->getCode(), [SOCKET_ECONNRESET, SOCKET_EPIPE], true) || !self::isIdempotent($request)) {
                         throw $e;
                     }
                     return $client->execute($request, $this->timeout);
@@ -259,5 +265,14 @@ class Proxy
                 $request->withKeepConn($keepConn);
             }
         }, $this->timeout);
+    }
+
+    /**
+     * Whether running the request twice has the same effect on the server as running it once (RFC 9110, section
+     * 9.2.2). These are the methods nginx sends to the next server, by default, after an error.
+     */
+    private static function isIdempotent(HttpRequest $request): bool
+    {
+        return in_array(strtoupper($request->getMethod() ?? ''), ['GET', 'HEAD', 'OPTIONS', 'TRACE', 'PUT', 'DELETE'], true);
     }
 }

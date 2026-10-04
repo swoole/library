@@ -114,6 +114,54 @@ class ProxyTest extends TestCase
         });
     }
 
+    /**
+     * A connection that the server closes after it has received a request may have run the request. Only a request of
+     * an idempotent method is sent once more; a POST is not, and fails.
+     */
+    public function testConnectionClosedAfterTheRequestWasSent(): void
+    {
+        self::coRun(function (): void {
+            foreach (['GET' => 3, 'POST' => 2] as $method => $expected) {
+                $requests = 0;
+                $server   = new Server('127.0.0.1', 0);
+                $server->handle(static function (Connection $connection) use (&$requests): void {
+                    // The first request is answered over a connection kept open; the second one is received, and the
+                    // connection closed without an answer, as when the process that ran it dies. A request sent once
+                    // more is answered.
+                    while (!in_array($connection->recv(), ['', false], true)) {
+                        if (++$requests === 2) {
+                            break;
+                        }
+                        $connection->send(new Stdout("Content-Type: text/plain\r\n\r\nrequest {$requests}") . new Stdout('') . new EndRequest());
+                        if ($requests > 2) {
+                            break;
+                        }
+                    }
+                    $connection->close();
+                });
+                Coroutine::create(static fn () => $server->start());
+
+                $proxy = self::getProxy("tcp://127.0.0.1:{$server->port}")->withConnectionPool(1);
+                $proxy->pass(self::getRequest()->withMethod($method), new Response());
+                try {
+                    $proxy->pass(self::getRequest()->withMethod($method), new Response());
+                    $error = null;
+                } catch (Client\Exception $e) {
+                    $error = $e->getCode();
+                }
+                $server->shutdown();
+
+                self::assertSame($expected, $requests, "The number of {$method} requests the server received.");
+                if ($method === 'GET') {
+                    self::assertNull($error, 'The GET request was sent once more, and answered.');
+                    self::assertSame('request 3', $proxy->responses[1]->getBody());
+                } else {
+                    self::assertSame(SOCKET_ECONNRESET, $error, 'The POST request was not sent twice.');
+                }
+            }
+        });
+    }
+
     public function testNoConnectionIsFree(): void
     {
         self::coRun(function (): void {
