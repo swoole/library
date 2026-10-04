@@ -69,6 +69,60 @@ class ServerTest extends TestCase
      */
     public function testTransientAcceptFailureIsSkipped(): void
     {
+        [$socket, $server] = self::getServerWithTransientAcceptFailures();
+
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+
+        try {
+            $result = $server->start();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertTrue($result, 'The server ran until it was stopped, not until the first aborted connection.');
+        $this->assertSame(33, $socket->accepts, 'The server kept accepting past the aborted connections.');
+        $this->assertSame(0, $server->errCode);
+        $error = 'accept error ' . SOCKET_ECONNABORTED . '[' . SOCKET_ECONNABORTED . ']';
+        $this->assertSame(["accept keeps failing, Error: {$error}; the server goes on accepting, a millisecond apart"], $warnings);
+    }
+
+    /**
+     * An error handler that turns warnings into exceptions, as many frameworks install, does not stop the server
+     * through the warning about a run of transient accept errors.
+     */
+    public function testWarningAboutTransientAcceptFailuresThatThrows(): void
+    {
+        [$socket, $server] = self::getServerWithTransientAcceptFailures();
+
+        // Only for the warnings of the server: the handler is process-wide, and other tests run at the same time.
+        set_error_handler(static function (int $severity, string $message): bool {
+            if (!str_starts_with($message, 'accept ')) {
+                return false;
+            }
+            throw new \ErrorException($message, 0, $severity);
+        });
+        try {
+            $result = $server->start();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertTrue($result);
+        $this->assertSame(33, $socket->accepts, 'The server kept accepting past the warning.');
+    }
+
+    /**
+     * A server over a socket whose accept() fails with SOCKET_ECONNABORTED 32 times in a row, twice as many as the
+     * server skips without waiting, and then with SOCKET_ECANCELED, which stops the server.
+     *
+     * @return array{object, Server}
+     */
+    private static function getServerWithTransientAcceptFailures(): array
+    {
         $socket = new class {
             public int $errCode = 0;
 
@@ -107,22 +161,6 @@ class ServerTest extends TestCase
         };
         $server->handle(static function (): void {});
 
-        $warnings = [];
-        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
-            $warnings[] = $message;
-            return true;
-        });
-
-        try {
-            $result = $server->start();
-        } finally {
-            restore_error_handler();
-        }
-
-        $this->assertTrue($result, 'The server ran until it was stopped, not until the first aborted connection.');
-        $this->assertSame(33, $socket->accepts, 'The server kept accepting past the aborted connections.');
-        $this->assertSame(0, $server->errCode);
-        $error = 'accept error ' . SOCKET_ECONNABORTED . '[' . SOCKET_ECONNABORTED . ']';
-        $this->assertSame(["accept keeps failing, Error: {$error}; the server goes on accepting, a millisecond apart"], $warnings);
+        return [$socket, $server];
     }
 }

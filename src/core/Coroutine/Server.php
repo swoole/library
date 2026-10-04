@@ -166,7 +166,12 @@ class Server
                 if (self::isTransientAcceptError($socket->errCode)) {
                     if (++$skipped > self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW) {
                         if ($skipped === self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW + 1) {
-                            trigger_error("accept keeps failing, Error: {$socket->errMsg}[{$socket->errCode}]; the server goes on accepting, a millisecond apart", E_USER_WARNING);
+                            try {
+                                trigger_error("accept keeps failing, Error: {$socket->errMsg}[{$socket->errCode}]; the server goes on accepting, a millisecond apart", E_USER_WARNING);
+                            } catch (\Throwable) {
+                                // An error handler that turns warnings into exceptions must not stop the server: the
+                                // warning only reports that it goes on.
+                            }
                         }
                         Coroutine::sleep(0.001);
                     }
