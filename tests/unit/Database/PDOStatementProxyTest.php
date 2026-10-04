@@ -358,6 +358,40 @@ class PDOStatementProxyTest extends DatabaseTestCase
         });
     }
 
+    /**
+     * A statement does not run outside a transaction started by hand, with exec('BEGIN'): the lost connection is
+     * reported, as the transaction is lost with it, and the next call on the connection reconnects. The statement
+     * ran again on a new connection, outside the transaction, without a word.
+     *
+     * @dataProvider dataPools
+     */
+    public function testLostConnectionInsideATransactionStartedByHandIsReported(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            $pdo->exec('BEGIN');
+            $statement = $pdo->prepare('SELECT 42');
+            self::killPdoConnection($pdo);
+            try {
+                $statement->execute();
+                self::fail('Inside a transaction the lost connection is reported.');
+            } catch (\PDOException) {
+                self::assertSame(0, $pdo->getRound(), 'The statement did not run again on a new connection.');
+                self::assertTrue($pdo->isLost());
+            }
+            self::assertTrue($pdo->rollBack());
+
+            self::assertTrue($statement->execute(), 'The statement reconnects, now that the transaction is over.');
+            self::assertEquals(42, $statement->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
     public static function dataPools(): array
     {
         return [

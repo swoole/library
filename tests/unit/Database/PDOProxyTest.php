@@ -164,11 +164,88 @@ class PDOProxyTest extends DatabaseTestCase
         });
     }
 
+    /**
+     * A connection lost inside a transaction is reported, and the proxy reconnects on the next call, without a pool
+     * to replace the connection. rollBack() of the transaction that died with the connection does not fail.
+     *
+     * @dataProvider dataPools
+     */
+    public function testConnectionLostInsideATransactionRecoversOnTheNextCall(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            $pdo->beginTransaction();
+            self::killPdoConnection($pdo);
+            try {
+                $pdo->query('SELECT 42');
+                self::fail('Inside a transaction the lost connection is reported.');
+            } catch (\PDOException) {
+                self::assertTrue($pdo->isLost());
+                self::assertFalse($pdo->inTransaction(), 'The transaction went down with the connection.');
+            }
+            self::assertTrue($pdo->rollBack(), 'Nothing is left to roll back.');
+
+            self::assertEquals(43, $pdo->query('SELECT 43')->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+            self::assertFalse($pdo->isLost());
+            self::assertFalse($pdo->__getObject()->inTransaction());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
     public static function dataPools(): array
     {
         return [
             'MySQL'      => ['getPdoMysqlPool'],
             'PostgreSQL' => ['getPdoPgsqlPool'],
+        ];
+    }
+
+    /**
+     * A reconnect that fails, as while the server restarts, is tried again by the next call. On PostgreSQL the proxy
+     * stayed on the dead connection for good: PDO reports it as inside a transaction.
+     *
+     * @dataProvider dataDrivers
+     */
+    public function testFailedReconnectIsTriedAgain(string $driver): void
+    {
+        self::coRun(function () use ($driver) {
+            $down = false;
+            $pdo  = new PDOProxy(static function () use ($driver, &$down): \PDO {
+                if ($down) {
+                    throw new \PDOException('The server is down.');
+                }
+                return $driver === 'pgsql'
+                    ? new \PDO('pgsql:host=' . PGSQL_SERVER_HOST . ';port=' . PGSQL_SERVER_PORT . ';dbname=' . PGSQL_SERVER_DB, PGSQL_SERVER_USER, PGSQL_SERVER_PWD)
+                    : new \PDO('mysql:host=' . MYSQL_SERVER_HOST . ';port=' . MYSQL_SERVER_PORT . ';dbname=' . MYSQL_SERVER_DB, MYSQL_SERVER_USER, MYSQL_SERVER_PWD);
+            });
+
+            self::killPdoConnection($pdo);
+            $down = true;
+            try {
+                $pdo->query('SELECT 42');
+                self::fail('The reconnect fails.');
+            } catch (\PDOException $e) {
+                self::assertSame('The server is down.', $e->getMessage());
+                self::assertTrue($pdo->isLost());
+            }
+
+            $down = false;
+            self::assertEquals(43, $pdo->query('SELECT 43')->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+            self::assertFalse($pdo->isLost());
+        });
+    }
+
+    public static function dataDrivers(): array
+    {
+        return [
+            'MySQL'      => ['mysql'],
+            'PostgreSQL' => ['pgsql'],
         ];
     }
 }
