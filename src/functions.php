@@ -268,7 +268,8 @@ function swoole_init_default_remote_object_server(): void
         return "[\n" . implode("\n", $lines) . "\n" . str_repeat('    ', $depth - 1) . ']';
     };
 
-    $exported_options = $export_array($options);
+    $exported_options     = $export_array($options);
+    $exported_socket_file = var_export($socket_file, true);
 
     $rv = file_put_contents($php_file, <<<PHP
         <?php
@@ -289,7 +290,7 @@ function swoole_init_default_remote_object_server(): void
             require __DIR__ . '/bootstrap.php';
         }
 
-        (new Swoole\\RemoteObject\\Server('{$socket_file}', 0, {$exported_options}))->start();
+        (new Swoole\\RemoteObject\\Server({$exported_socket_file}, 0, {$exported_options}))->start();
 
         PHP);
     if (!$rv) {
@@ -306,12 +307,12 @@ function swoole_init_default_remote_object_server(): void
     $hook_flags = Swoole\Runtime::getHookFlags();
     // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
     if (defined('SWOOLE_HOOK_MONGODB') and $hook_flags & SWOOLE_HOOK_MONGODB and !is_dir($dir . '/vendor/mongodb/mongodb')) {
-        system("cd {$dir} && composer require mongodb/mongodb");
+        system('cd ' . escapeshellarg($dir) . ' && composer require mongodb/mongodb');
         $print_log('install mongodb library');
     }
 
     // start server
-    $proc = proc_open("{$php_bin} {$php_file}", [
+    $proc = proc_open(escapeshellarg($php_bin) . ' ' . escapeshellarg($php_file), [
         0 => ['pipe', 'r'],
         1 => ['pipe', 'w'],
         2 => ['pipe', 'w'],
