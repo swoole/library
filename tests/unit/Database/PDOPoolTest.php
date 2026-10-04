@@ -230,7 +230,7 @@ class PDOPoolTest extends DatabaseTestCase
     }
 
     /**
-     * A transaction started by hand is not tracked by the proxy, but the driver reports it.
+     * A transaction started by hand is seen, as the driver reports it, and rolled back as well.
      */
     public function testPutRollsBackATransactionStartedByHand(): void
     {
@@ -243,7 +243,7 @@ class PDOPoolTest extends DatabaseTestCase
 
             $pdo->exec('START TRANSACTION');
             $pdo->exec('INSERT INTO swoole_library_test_by_hand VALUES (1)');
-            self::assertFalse($pdo->inTransaction());
+            self::assertTrue($pdo->inTransaction());
             self::assertTrue($pdo->__getObject()->inTransaction());
             $pool->put($pdo);
 
@@ -259,8 +259,8 @@ class PDOPoolTest extends DatabaseTestCase
     }
 
     /**
-     * A transaction the proxy counts may have ended behind its back. There is nothing to roll back then, and the
-     * connection is as good as any.
+     * A transaction begun with beginTransaction() may have ended without commit() or rollBack(). There is nothing to
+     * roll back then, and the connection is as good as any.
      */
     public function testPutKeepsAConnectionWhoseTransactionEndedAlready(): void
     {
@@ -272,7 +272,7 @@ class PDOPoolTest extends DatabaseTestCase
 
             $pdo->beginTransaction();
             $pdo->exec('COMMIT');
-            self::assertTrue($pdo->inTransaction());
+            self::assertFalse($pdo->inTransaction());
             self::assertFalse($pdo->__getObject()->inTransaction());
             $pool->put($pdo);
 

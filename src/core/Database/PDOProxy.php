@@ -27,16 +27,10 @@ class PDOProxy extends ObjectProxy
     protected int $round = 0;
 
     /**
-     * The number of transactions started through beginTransaction() and not ended through commit() or rollBack().
-     *
-     * It is what inTransaction() reports. Whether a call may reconnect is decided from $openTransaction, which also
-     * covers a transaction started by hand.
-     */
-    protected int $inTransaction = 0;
-
-    /**
      * Whether the connection is inside a transaction, as PDO reported it right after the last call that reached the
-     * server and could start or end one. It decides whether a call that runs into a lost connection may reconnect.
+     * server and could start or end one: exec(), query(), beginTransaction(), commit() and rollBack() of the proxy,
+     * and execute() of its statements. It is what inTransaction() reports, and it decides whether a call that runs
+     * into a lost connection may reconnect.
      *
      * PDO is not asked before the call: on PostgreSQL a connection found dead by any call, a destructor included,
      * is reported as inside a transaction from then on, which says nothing about the transaction before it died.
@@ -91,14 +85,6 @@ class PDOProxy extends ObjectProxy
             $this->openTransaction = $this->__object->inTransaction();
         }
 
-        if (strcasecmp($name, 'beginTransaction') === 0) {
-            $this->inTransaction++;
-        }
-
-        if ((strcasecmp($name, 'commit') === 0 || strcasecmp($name, 'rollback') === 0) && $this->inTransaction > 0) {
-            $this->inTransaction--;
-        }
-
         // Not a statement but false when the call failed and the error mode is not the exception one.
         if ($ret instanceof \PDOStatement && (strcasecmp($name, 'prepare') === 0 || strcasecmp($name, 'query') === 0)) {
             $ret = new PDOStatementProxy($ret, $this);
@@ -133,25 +119,43 @@ class PDOProxy extends ObjectProxy
         return $this->__object->setAttribute($attribute, $value);
     }
 
+    /**
+     * Whether the connection is inside a transaction: one begun with beginTransaction() or by hand, e.g. with
+     * exec('BEGIN'), and not ended, by commit() or rollBack(), by exec('COMMIT'), or by a statement that commits
+     * implicitly. It is the state PDO reported after the last call that could start or end a transaction, and false
+     * for a connection known to be lost, whose transaction went down with it.
+     */
     public function inTransaction(): bool
     {
-        return $this->inTransaction > 0;
+        return $this->openTransaction;
     }
 
+    /**
+     * Forgets the transaction state the proxy recorded: when the pool hands the connection out, or after it rolled the
+     * transaction back on the PDO object.
+     */
     public function reset(): void
     {
-        $this->inTransaction   = 0;
         $this->openTransaction = false;
     }
 
     /**
-     * Whether the connection is inside a transaction, begun with beginTransaction() or by hand, as PDO reported it
-     * after the last call through the proxy that could start or end one. A transaction begun or ended through a
-     * statement of the proxy is not seen.
+     * The same as inTransaction(), which the statements of the proxy call.
      */
     public function hasOpenTransaction(): bool
     {
         return $this->openTransaction;
+    }
+
+    /**
+     * Records the transaction state PDO reports now. Called by a statement of the proxy after a call that reached the
+     * server and could start or end a transaction, e.g. prepare('BEGIN')->execute().
+     */
+    public function recordTransactionState(): void
+    {
+        if (!$this->lost) {
+            $this->openTransaction = $this->__object->inTransaction();
+        }
     }
 
     /**
@@ -169,7 +173,6 @@ class PDOProxy extends ObjectProxy
     public function markAsLost(): void
     {
         $this->lost            = true;
-        $this->inTransaction   = 0;
         $this->openTransaction = false;
     }
 }

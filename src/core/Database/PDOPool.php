@@ -82,8 +82,8 @@ class PDOPool extends ConnectionPool
     private function clean(PDOProxy $connection): bool
     {
         $pdo = $connection->__getObject();
-        // Not the state the proxy tracks: a transaction it counts may have ended behind its back, by a statement
-        // that commits implicitly or by exec('COMMIT'), and there is nothing to roll back then.
+        // The state PDO reports now, not the one the proxy recorded: a connection that was lost reads as inside a
+        // transaction, the rollback fails, and the connection is replaced.
         if ($pdo->inTransaction()) {
             try {
                 if (!$pdo->rollBack()) {
