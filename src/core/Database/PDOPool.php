@@ -51,8 +51,9 @@ class PDOPool extends ConnectionPool
      * Return a connection to the pool.
      *
      * A transaction left open on the connection is rolled back first, so that the next borrower does not work
-     * inside a transaction it never began. A connection that cannot be rolled back is replaced; when the
-     * replacement cannot be made, it is left to the next get() to make it and to report the failure.
+     * inside a transaction it never began. On MySQL and Oracle, autocommit is set back to the value of the pool's
+     * options, on by default. A connection that cannot be cleaned is replaced; when the replacement cannot be made,
+     * it is left to the next get() to make it and to report the failure.
      *
      * The transaction is the one the driver reports. pdo_mysql and pdo_pgsql report a transaction started by
      * hand, e.g. with exec('BEGIN'), too, and so does pdo_sqlite as of PHP 8.4 or with Swoole's coroutine SQLite.
@@ -75,9 +76,9 @@ class PDOPool extends ConnectionPool
     }
 
     /**
-     * Rolls back the transaction left open on the connection, if any.
+     * Rolls back the transaction left open on the connection, if any, and sets autocommit back.
      *
-     * @return bool false when the transaction cannot be rolled back, as when the connection was lost inside it
+     * @return bool false when that fails, as when the connection was lost inside the transaction
      */
     private function clean(PDOProxy $connection): bool
     {
@@ -87,6 +88,19 @@ class PDOPool extends ConnectionPool
         if ($pdo->inTransaction()) {
             try {
                 if (!$pdo->rollBack()) {
+                    return false;
+                }
+            } catch (\PDOException) {
+                return false;
+            }
+        }
+        // Autocommit turned off on the connection, e.g. with setAttribute(PDO::ATTR_AUTOCOMMIT, false), would leave
+        // the next borrower inside a transaction from its first statement on. Through the proxy, so that a reconnect
+        // restores the same value.
+        if (in_array($this->config->getDriver(), ['mysql', 'oci'], true)) {
+            $autocommit = (bool) ($this->config->getOptions()[\PDO::ATTR_AUTOCOMMIT] ?? true);
+            try {
+                if ((bool) $pdo->getAttribute(\PDO::ATTR_AUTOCOMMIT) !== $autocommit && !$connection->setAttribute(\PDO::ATTR_AUTOCOMMIT, $autocommit)) {
                     return false;
                 }
             } catch (\PDOException) {

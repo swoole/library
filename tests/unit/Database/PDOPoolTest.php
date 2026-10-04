@@ -259,6 +259,73 @@ class PDOPoolTest extends DatabaseTestCase
     }
 
     /**
+     * A connection put back with autocommit turned off is rolled back and gets autocommit on again: the next borrower
+     * would work inside a transaction from its first statement on.
+     */
+    public function testPutTurnsAutocommitBackOn(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $pool = self::getPdoMysqlPool(1);
+            $pdo  = $pool->get();
+            $pdo->exec('CREATE TEMPORARY TABLE swoole_library_test_autocommit (id INT)');
+
+            $pdo->setAttribute(\PDO::ATTR_AUTOCOMMIT, false);
+            $pdo->exec('INSERT INTO swoole_library_test_autocommit VALUES (1)');
+            self::assertTrue($pdo->inTransaction(), 'With autocommit off, the insert began a transaction.');
+            $pool->put($pdo);
+
+            $again = $pool->get();
+            self::assertSame($pdo, $again, 'The connection was reused, not replaced.');
+            self::assertTrue((bool) $again->getAttribute(\PDO::ATTR_AUTOCOMMIT));
+            self::assertSame(0, (int) $again->query('SELECT COUNT(*) FROM swoole_library_test_autocommit')->fetchColumn());
+
+            // A reconnect restores the attributes set through the proxy, autocommit as it is now included.
+            $again->reconnect();
+            self::assertTrue((bool) $again->getAttribute(\PDO::ATTR_AUTOCOMMIT));
+
+            $pool->put($again);
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
+    /**
+     * A pool whose options turn autocommit off keeps it off: put() sets autocommit back to the value of the options.
+     */
+    public function testPutSetsAutocommitBackAsConfigured(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $config = (new PDOConfig())
+                ->withHost(MYSQL_SERVER_HOST)
+                ->withPort(MYSQL_SERVER_PORT)
+                ->withDbName(MYSQL_SERVER_DB)
+                ->withCharset('utf8mb4')
+                ->withUsername(MYSQL_SERVER_USER)
+                ->withPassword(MYSQL_SERVER_PWD)
+                ->withOptions([\PDO::ATTR_AUTOCOMMIT => false])
+            ;
+            $pool = new PDOPool($config, 1);
+            $pdo  = $pool->get();
+            self::assertFalse((bool) $pdo->getAttribute(\PDO::ATTR_AUTOCOMMIT));
+
+            $pdo->setAttribute(\PDO::ATTR_AUTOCOMMIT, true);
+            $pool->put($pdo);
+
+            $again = $pool->get();
+            self::assertSame($pdo, $again, 'The connection was reused, not replaced.');
+            self::assertFalse((bool) $again->getAttribute(\PDO::ATTR_AUTOCOMMIT));
+
+            $pool->put($again);
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
+    /**
      * A transaction begun with beginTransaction() may have ended without commit() or rollBack(). There is nothing to
      * roll back then, and the connection is as good as any.
      */
