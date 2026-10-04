@@ -285,6 +285,37 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
+     * A callback of withConnection() that throws inside a transaction leaves nothing behind: put() rolls the
+     * transaction back, and the connection is reused, not replaced.
+     */
+    public function testWithConnectionRollsBackWhenTheCallbackThrows(): void
+    {
+        self::coRun(function () {
+            $pool = self::getMysqliPool(1);
+            $used = null;
+            try {
+                $pool->withConnection(function (MysqliProxy $mysqli) use (&$used): void {
+                    $used = $mysqli;
+                    $mysqli->query('CREATE TEMPORARY TABLE swoole_library_test_with_connection (id INT)');
+                    $mysqli->begin_transaction();
+                    $mysqli->query('INSERT INTO swoole_library_test_with_connection VALUES (1)');
+                    throw new \RuntimeException('failed');
+                });
+            } catch (\RuntimeException $e) {
+                self::assertSame('failed', $e->getMessage());
+            }
+
+            $pool->withConnection(function (MysqliProxy $mysqli) use ($used): void {
+                self::assertSame($used, $mysqli, 'The connection was reused, not replaced.');
+                self::assertFalse($mysqli->inTransaction());
+                self::assertSame(0, $mysqli->getRound());
+                self::assertEquals(0, $mysqli->query('SELECT COUNT(*) FROM swoole_library_test_with_connection')->fetch_row()[0]);
+            });
+            $pool->close();
+        });
+    }
+
+    /**
      * With autocommit off, putting the connection back rolls back and turns autocommit on again.
      */
     public function testPutRestoresAutocommit(): void

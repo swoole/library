@@ -16,7 +16,6 @@ use Swoole\ConnectionPool;
 
 /**
  * @method \Redis|false get(float $timeout = -1)
- * @method void put(Redis $connection)
  */
 class RedisPool extends ConnectionPool
 {
@@ -49,5 +48,49 @@ class RedisPool extends ConnectionPool
 
             return $redis;
         }, $size);
+    }
+
+    /**
+     * Return a connection to the pool.
+     *
+     * A connection left in MULTI or pipeline mode, as by a transaction that was never executed, is brought back to
+     * the normal mode first, so that the commands of the next borrower are run instead of queued. A connection that
+     * cannot be brought back is replaced; when the replacement cannot be made, it is left to the next get() to make
+     * it and to report the failure.
+     *
+     * State the connection does not report is not reset: a WATCH that was not ended with EXEC, DISCARD or UNWATCH, or
+     * a database chosen with select().
+     *
+     * @param \Redis|null $connection the connection to return, or null to have a broken connection replaced
+     */
+    public function put(mixed $connection): void
+    {
+        if ($connection instanceof \Redis && !$this->clean($connection)) {
+            try {
+                parent::put(null);
+            } catch (\Throwable) {
+                // Putting a connection back is no place to report that a new one cannot be made.
+            }
+            return;
+        }
+
+        parent::put($connection);
+    }
+
+    /**
+     * Discards a transaction or a pipeline left open on the connection, if any.
+     *
+     * @return bool false when that fails, as when the connection was lost
+     */
+    private function clean(\Redis $connection): bool
+    {
+        try {
+            if ($connection->getMode() !== \Redis::ATOMIC) {
+                $connection->discard();
+            }
+            return $connection->getMode() === \Redis::ATOMIC;
+        } catch (\RedisException) {
+            return false;
+        }
     }
 }

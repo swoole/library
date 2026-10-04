@@ -197,6 +197,39 @@ class PDOPoolTest extends DatabaseTestCase
     }
 
     /**
+     * A callback of withConnection() that throws inside a transaction leaves nothing behind: put() rolls the
+     * transaction back, and the connection is reused, not replaced.
+     */
+    public function testWithConnectionRollsBackWhenTheCallbackThrows(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $pool = self::getPdoSqlitePool(1);
+            $used = null;
+            try {
+                $pool->withConnection(function (PDOProxy $pdo) use (&$used): void {
+                    $used = $pdo;
+                    $pdo->exec('CREATE TABLE IF NOT EXISTS test_with_connection(id INT)');
+                    $pdo->beginTransaction();
+                    $pdo->exec('INSERT INTO test_with_connection VALUES(1)');
+                    throw new \RuntimeException('failed');
+                });
+            } catch (\RuntimeException $e) {
+                self::assertSame('failed', $e->getMessage());
+            }
+
+            $pool->withConnection(function (PDOProxy $pdo) use ($used): void {
+                self::assertSame($used, $pdo, 'The connection was reused, not replaced.');
+                self::assertFalse($pdo->__getObject()->inTransaction());
+                self::assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM test_with_connection')->fetchColumn());
+            });
+            $pool->close();
+            self::restoreHookFlags();
+        });
+    }
+
+    /**
      * A transaction started by hand is not tracked by the proxy, but the driver reports it.
      */
     public function testPutRollsBackATransactionStartedByHand(): void

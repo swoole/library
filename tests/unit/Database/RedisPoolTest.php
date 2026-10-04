@@ -201,4 +201,36 @@ class RedisPoolTest extends DatabaseTestCase
         });
         self::restoreHookFlags();
     }
+
+    /**
+     * A connection put back in MULTI or pipeline mode, as by a callback that threw before exec(), is brought back to
+     * the normal mode, so that the commands of the next borrower are run and not queued.
+     */
+    public function testPutDiscardsATransactionLeftOpen(): void
+    {
+        self::saveHookFlags();
+        self::setHookFlags(SWOOLE_HOOK_ALL);
+        self::coRun(function () {
+            $pool = self::getRedisPool(1);
+            $key  = 'swoole:library:test:put:discard';
+            foreach (['multi', 'pipeline'] as $mode) {
+                try {
+                    $pool->withConnection(function (\Redis $redis) use ($mode, $key): void {
+                        $redis->{$mode}();
+                        $redis->set($key, $mode);
+                        throw new \RuntimeException('failed');
+                    });
+                } catch (\RuntimeException $e) {
+                    $this->assertSame('failed', $e->getMessage());
+                }
+
+                $pool->withConnection(function (\Redis $redis) use ($mode, $key): void {
+                    $this->assertSame(\Redis::ATOMIC, $redis->getMode(), "Left in {$mode} mode.");
+                    $this->assertFalse($redis->get($key), "The command queued in {$mode} mode was not run.");
+                });
+            }
+            $pool->close();
+        });
+        self::restoreHookFlags();
+    }
 }

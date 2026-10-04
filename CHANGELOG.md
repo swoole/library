@@ -6,6 +6,7 @@ Backward-incompatible changes:
 
 * `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, and replace a connection that cannot be rolled back. The mysqli pool also turns autocommit back on, and does not see a transaction started with `query('START TRANSACTION')`.
+* `\Swoole\Database\RedisPool::put()` brings a connection left in MULTI or pipeline mode back to the normal mode, discarding the queued commands, and replaces a connection that cannot be brought back.
 * The coroutine curl handler throws a `\Swoole\Curl\Exception` instead of sending a password when `CURLOPT_HTTPAUTH` or `CURLOPT_PROXYAUTH` excludes `CURLAUTH_BASIC`, the only way it can authenticate. It sent the password the basic way regardless.
 * The database proxies use the parameter names of PHP's own methods, so a call that passes the old names by name fails: `bindParam()`, `bindColumn()` and `bindValue()` of `\Swoole\Database\PDOStatementProxy`, `attr_set()` of `\Swoole\Database\MysqliStatementProxy` and `change_user()` of `\Swoole\Database\MysqliProxy`.
 * Parameters that had no type now have one, so an argument of another type fails with a `TypeError`, e.g. in `\Swoole\NameResolver::__construct()`, `\Swoole\FastCGI\HttpRequest::withQuery()`, `\Swoole\ArrayObject::map()`, `\Swoole\Thread\Runnable::__construct()` and `swoole_curl_setopt_array()`.
@@ -20,6 +21,7 @@ Added:
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
 * The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
 * The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only.
+* `\Swoole\ConnectionPool::withConnection()` runs a callback with a connection from the pool and puts the connection back afterwards, also when the callback throws, so that no connection is lost to an exception.
 
 Changed:
 

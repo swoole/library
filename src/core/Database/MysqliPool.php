@@ -46,7 +46,7 @@ class MysqliPool extends ConnectionPool
      * as PDOPool does, so that a connection put back in the middle of a transaction does not keep the next
      * borrower from reconnecting when the connection is lost.
      *
-     * @param float $timeout > 0 means waiting for the specified number of seconds. other means no waiting.
+     * @param float $timeout the number of seconds to wait for a connection; 0 or less waits with no time limit
      * @return MysqliProxy|false Returns a MysqliProxy object from the pool, or false if the pool is full and the timeout is reached.
      */
     public function get(float $timeout = -1)

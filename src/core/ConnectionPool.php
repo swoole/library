@@ -44,8 +44,9 @@ class ConnectionPool
     /**
      * Get a connection from the pool.
      *
-     * @param float $timeout > 0 means waiting for the specified number of seconds. other means no waiting.
-     * @return mixed a connection object from the pool, or false if no connection is available before the timeout is reached
+     * @param float $timeout the number of seconds to wait for a connection; 0 or less waits with no time limit
+     * @return mixed a connection object from the pool, or false if no connection is available before the timeout is
+     *               reached, the pool is closed while waiting, or the waiting coroutine is canceled
      */
     public function get(float $timeout = -1)
     {
@@ -56,6 +57,48 @@ class ConnectionPool
             $this->make();
         }
         return $this->pool->pop($timeout);
+    }
+
+    /**
+     * Runs the callback with a connection from the pool, and puts the connection back when the callback is done,
+     * whether it returned or threw. A connection taken with get() and not put back stays counted by the pool, and
+     * once that has happened as many times as the pool is large, get() finds no connection any more.
+     *
+     * The connection is put back as it is, also when the callback threw. The pools of the library clean it in put():
+     * they roll back a transaction left open, and replace a connection that cannot be cleaned.
+     *
+     * The callback must not put the connection back itself, nor use it, or anything bound to it, such as a
+     * statement, a generator or another coroutine, after it returned: the connection is someone else's by then.
+     * A callback that calls withConnection() of the same pool needs a second free connection, or it waits forever;
+     * give the inner call a timeout. Code that has to discard a broken connection uses get() and put(null).
+     *
+     * @template T
+     * @param callable(mixed): T $callback called with the connection; what it returns is returned
+     * @param float $timeout the number of seconds to wait for a connection; 0 or less waits with no time limit
+     * @return T
+     * @throws \RuntimeException when no connection is available before the timeout is reached, or the pool is
+     *                           closed, or the coroutine is canceled while waiting
+     */
+    public function withConnection(callable $callback, float $timeout = -1): mixed
+    {
+        $connection = $this->get($timeout);
+        if ($connection === false) {
+            // Read before anything yields: close() wakes the coroutines waiting in get() before it drops the channel.
+            $errCode = $this->pool?->errCode;
+            if ($errCode === null || $errCode === SWOOLE_CHANNEL_CLOSED) {
+                throw new \RuntimeException('Pool has been closed');
+            }
+            if ($errCode === SWOOLE_CHANNEL_CANCELED) {
+                throw new \RuntimeException('Canceled while waiting for a connection from the pool');
+            }
+            throw new \RuntimeException("No connection is available from the pool within {$timeout} seconds");
+        }
+
+        try {
+            return $callback($connection);
+        } finally {
+            $this->put($connection);
+        }
     }
 
     public function put(mixed $connection): void
