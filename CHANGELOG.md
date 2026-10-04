@@ -86,6 +86,7 @@ Fixed:
 * Several scripts under `examples/` did not run: the remote object, Nacos, Consul, PDO and short name examples.
 * `\Swoole\ConnectionPool::close()` failed with an `Error` when called twice, and `fill()` on a closed pool made connections only to drop them.
 * `\Swoole\Database\PDOProxy`: `query()` and `prepare()` failed with a `TypeError` outside the exception error mode.
+* `\Swoole\Database\PDOProxy`: `query()`, `exec()` and `beginTransaction()` did not reconnect after a connection lost outside a transaction on PostgreSQL.
 * `\Swoole\ArrayObject` and `swoole_array_default_value()` raised a deprecation on PHP 8.5 when given a `null` key, which still stands for the empty string.
 * The mysqli proxies raised a warning on `prepare(query: ...)`, with the query passed by name, and could not prepare that statement again after a reconnect.
 * `\Swoole\Database\PDOStatementProxy`: after a reconnect, a statement used the value a variable had when `bindParam()` was called, not its present one, and no longer filled the variables of `bindColumn()`.

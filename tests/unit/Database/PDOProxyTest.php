@@ -65,4 +65,115 @@ class PDOProxyTest extends DatabaseTestCase
             self::assertFalse($pdo->__getObject()->inTransaction(), 'The pool rolled the transaction back.');
         });
     }
+
+    /**
+     * query() and exec() run again on a fresh connection after a lost one, as execute() of a statement does. On
+     * PostgreSQL they did not: PDO reports a connection it has lost as being inside a transaction.
+     *
+     * @dataProvider dataPools
+     */
+    public function testLostConnectionOnQueryAndExecIsRetriedOnTheServer(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            self::killPdoConnection($pdo);
+            self::assertEquals(42, $pdo->query('SELECT 42')->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+
+            self::killPdoConnection($pdo);
+            self::assertIsInt($pdo->exec('SELECT 43'));
+            self::assertSame(2, $pdo->getRound());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * Inside a transaction a lost connection is reported, as the transaction is lost with it, whether the
+     * transaction was started with beginTransaction() or by hand. The code before the fix did the same; this test
+     * keeps it that way.
+     *
+     * @dataProvider dataPools
+     */
+    public function testLostConnectionInsideATransactionIsReported(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            foreach (['beginTransaction()' => fn (PDOProxy $pdo) => $pdo->beginTransaction(), "exec('BEGIN')" => fn (PDOProxy $pdo) => $pdo->exec('BEGIN')] as $how => $begin) {
+                $pdo = $pool->get();
+                $begin($pdo);
+                self::killPdoConnection($pdo);
+                try {
+                    $pdo->query('SELECT 42');
+                    self::fail("Inside a transaction started with {$how} the lost connection is reported.");
+                } catch (\PDOException) {
+                    self::assertSame(0, $pdo->getRound(), "No reconnect inside a transaction started with {$how}.");
+                }
+                // The pool cannot roll the transaction back, and replaces the connection.
+                $pool->put($pdo);
+            }
+
+            $pdo = $pool->get();
+            self::assertEquals(43, $pdo->query('SELECT 43')->fetchColumn());
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * A transaction ended behind the back of the proxy, here with exec('COMMIT'), leaves the counter of the proxy
+     * at 1. The state PDO reports is what counts: the connection is outside a transaction, and reconnects.
+     *
+     * @dataProvider dataPools
+     */
+    public function testLostConnectionAfterATransactionEndedByHandIsRetried(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            $pdo->beginTransaction();
+            $pdo->exec('COMMIT');
+            self::killPdoConnection($pdo);
+            self::assertEquals(42, $pdo->query('SELECT 42')->fetchColumn());
+            self::assertSame(1, $pdo->getRound());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
+     * beginTransaction() on a connection lost while idle reconnects, and the transaction begins on the new one.
+     *
+     * @dataProvider dataPools
+     */
+    public function testBeginTransactionOnAConnectionLostWhileIdle(string $pool): void
+    {
+        self::coRun(function () use ($pool) {
+            $pool = self::{$pool}(1);
+            $pdo  = $pool->get();
+
+            self::killPdoConnection($pdo);
+            self::assertTrue($pdo->beginTransaction());
+            self::assertSame(1, $pdo->getRound());
+            self::assertTrue($pdo->inTransaction());
+            self::assertTrue($pdo->__getObject()->inTransaction());
+            self::assertTrue($pdo->rollBack());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    public static function dataPools(): array
+    {
+        return [
+            'MySQL'      => ['getPdoMysqlPool'],
+            'PostgreSQL' => ['getPdoPgsqlPool'],
+        ];
+    }
 }
