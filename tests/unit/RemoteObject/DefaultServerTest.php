@@ -58,6 +58,27 @@ class DefaultServerTest extends TestCase
         self::assertTrue($this->ping());
     }
 
+    /**
+     * escapeshellarg() drops the bytes that are not valid in the current locale, so with the "C" locale a non-ASCII
+     * character went missing from the directory in the shell command, and the server did not start.
+     */
+    public function testStartInADirectoryWithANonAsciiCharacterUnderTheCLocale(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-测试-' . uniqid());
+
+        $locale = setlocale(LC_CTYPE, '0');
+        setlocale(LC_CTYPE, 'C');
+        try {
+            self::coRun(static function () {
+                swoole_init_default_remote_object_server();
+            });
+        } finally {
+            setlocale(LC_CTYPE, $locale);
+        }
+
+        self::assertTrue($this->ping());
+    }
+
     private function useDirectory(string $dir): void
     {
         $this->dir = $dir;
