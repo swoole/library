@@ -46,7 +46,11 @@ class ServerTest extends TestCase
         $server->handle(static function (): void {});
 
         $warning = null;
+        // Only for the warnings of the server: the handler is process-wide, and other tests run at the same time.
         set_error_handler(static function (int $severity, string $message) use (&$warning): bool {
+            if (!str_starts_with($message, 'accept ')) {
+                return false;
+            }
             $warning = $message;
             return true;
         });
@@ -72,7 +76,12 @@ class ServerTest extends TestCase
         [$socket, $server] = self::getServerWithTransientAcceptFailures();
 
         $warnings = [];
+        // Only for the warnings of the server: the handler is process-wide, and other tests run at the same time
+        // while the server waits between accept() calls.
         set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            if (!str_starts_with($message, 'accept ')) {
+                return false;
+            }
             $warnings[] = $message;
             return true;
         });
