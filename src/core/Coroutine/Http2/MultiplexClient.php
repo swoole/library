@@ -490,9 +490,7 @@ final class MultiplexClient extends Client
      */
     private function interruptibleSleep(float $seconds): void
     {
-        // Deliberately not the null-coalescing assignment operator: written adjacently it contains
-        // a C trigraph sequence that breaks this file when packed into the extension header.
-        $this->sleepChannel = $this->sleepChannel ?? new Channel(1);
+        $this->sleepChannel ??= new Channel(1);
         $this->sleepChannel->pop($seconds);
     }
 }
