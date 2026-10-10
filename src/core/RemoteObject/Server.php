@@ -202,14 +202,32 @@ class Server
         return $data;
     }
 
+    private function resolveObject(int|string $objectId): mixed
+    {
+        if (!isset($this->objects[$objectId])) {
+            throw new Exception("object[#{$objectId}] not found");
+        }
+        return $this->objects[$objectId];
+    }
+
+    private function decodeValue(Context $ctx, string $name): mixed
+    {
+        return $this->unmarshal($ctx->getDataParam($name));
+    }
+
+    private function decodeArguments(Context $ctx): array
+    {
+        $args = $this->decodeValue($ctx, 'args');
+        if (!is_array($args)) {
+            throw new Exception('args must be an array');
+        }
+        return $args;
+    }
+
     private function unmarshal(mixed $data): mixed
     {
         if ($data instanceof RemoteObject) {
-            $object_id = $data->getObjectId();
-            if (!isset($this->objects[$object_id])) {
-                throw new Exception("object[#{$object_id}] not found");
-            }
-            return $this->objects[$object_id];
+            return $this->resolveObject($data->getObjectId());
         }
         if (is_array($data)) {
             foreach ($data as $key => $value) {
@@ -229,11 +247,8 @@ class Server
         if (count($this->allowedClasses) > 0 && !isset($this->allowedClasses[$class])) {
             throw new Exception("class[{$class}] not allowed");
         }
-        $class = '\\' . $class;
-        $args  = $ctx->getDataParam('args');
-        foreach ($args as $key => $value) {
-            $args[$key] = $this->unmarshal($value);
-        }
+        $class     = '\\' . $class;
+        $args      = $this->decodeArguments($ctx);
         $obj       = new $class(...$args);
         $object_id = $this->addObject($ctx, $obj);
         $ctx->end(['code' => 0, 'object' => $object_id]);
@@ -241,11 +256,8 @@ class Server
 
     private function _clone(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $object    = clone $this->objects[$object_id];
+        $object    = $this->resolveObject($ctx->getParam('object'));
+        $object    = clone $object;
         $object_id = $this->addObject($ctx, $object);
         $ctx->end(['code' => 0, 'object' => $object_id]);
     }
@@ -256,11 +268,8 @@ class Server
         if (count($this->allowedFunctions) > 0 && !isset($this->allowedFunctions[$fn])) {
             throw new Exception("function[{$fn}] not allowed");
         }
-        $args = $ctx->getDataParam('args');
-        foreach ($args as $key => $value) {
-            $args[$key] = $this->unmarshal($value);
-        }
-        $fn = '\\' . $fn;
+        $args = $this->decodeArguments($ctx);
+        $fn   = '\\' . $fn;
         if (!function_exists($fn)) {
             throw new Exception("function[{$fn}] not found");
         }
@@ -273,16 +282,9 @@ class Server
      */
     private function _call_method(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
+        $obj    = $this->resolveObject($ctx->getParam('object'));
         $method = $ctx->getParam('method');
-        $args   = $ctx->getDataParam('args');
-        foreach ($args as $key => $value) {
-            $args[$key] = $this->unmarshal($value);
-        }
-        $obj    = $this->objects[$object_id];
+        $args   = $this->decodeArguments($ctx);
         $result = $obj->{$method}(...$args);
         $ctx->end(['code' => 0, 'result' => $this->marshal($ctx, $result)]);
     }
@@ -292,13 +294,9 @@ class Server
      */
     private function _read_property(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
+        $obj       = $this->resolveObject($ctx->getParam('object'));
         $property  = $ctx->getParam('property');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj    = $this->objects[$object_id];
-        $result = $obj->{$property};
+        $result    = $obj->{$property};
         $ctx->end(['code' => 0, 'property' => $this->marshal($ctx, $result)]);
     }
 
@@ -307,14 +305,10 @@ class Server
      */
     private function _write_property(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        $property  = $ctx->getParam('property');
-        $value     = $ctx->getDataParam('value');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj              = $this->objects[$object_id];
-        $obj->{$property} = $this->unmarshal($value);
+        $obj              = $this->resolveObject($ctx->getParam('object'));
+        $property         = $ctx->getParam('property');
+        $value            = $this->decodeValue($ctx, 'value');
+        $obj->{$property} = $value;
         $ctx->end(['code' => 0]);
     }
 
@@ -323,12 +317,8 @@ class Server
      */
     private function _isset_property(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
+        $obj       = $this->resolveObject($ctx->getParam('object'));
         $property  = $ctx->getParam('property');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj = $this->objects[$object_id];
         $ctx->end(['code' => 0, 'value' => isset($obj->{$property})]);
     }
 
@@ -337,12 +327,8 @@ class Server
      */
     private function _unset_property(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
+        $obj       = $this->resolveObject($ctx->getParam('object'));
         $property  = $ctx->getParam('property');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj = $this->objects[$object_id];
         unset($obj->{$property});
         $ctx->end(['code' => 0]);
     }
@@ -358,34 +344,25 @@ class Server
     private function _destroy(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
+        $this->resolveObject($object_id);
         $this->releaseObject((int) $object_id);
         $ctx->end(['code' => 0]);
     }
 
     private function _to_string(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj = $this->objects[$object_id];
+        $obj = $this->resolveObject($ctx->getParam('object'));
         $ctx->end(['code' => 0, 'value' => (string) $obj]);
     }
 
     private function _iterate(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $method = $ctx->getParam('method');
+        $iterator  = $this->resolveObject($object_id);
+        $method    = $ctx->getParam('method');
         if (!in_array($method, ['rewind', 'valid', 'current', 'key', 'next'], true)) {
             throw new Exception("invalid iterator method[{$method}]");
         }
-        $iterator = $this->objects[$object_id];
         if ($iterator instanceof \IteratorAggregate) {
             // Each traversal gets a fresh iterator; a Generator cannot necessarily be rewound and reused.
             if ($method === 'rewind' || !isset($this->iterators[$object_id])) {
@@ -404,41 +381,29 @@ class Server
 
     private function _offset_get(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj    = $this->objects[$object_id];
-        $result = $obj instanceof \ArrayAccess ? $obj[$offset] : $obj->{$offset};
+        $obj       = $this->resolveObject($ctx->getParam('object'));
+        $offset    = $this->decodeValue($ctx, 'offset');
+        $result    = $obj instanceof \ArrayAccess ? $obj[$offset] : $obj->{$offset};
         $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
     }
 
     private function _offset_set(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
-        $value     = $ctx->getDataParam('value');
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj = $this->objects[$object_id];
+        $obj       = $this->resolveObject($ctx->getParam('object'));
+        $offset    = $this->decodeValue($ctx, 'offset');
+        $value     = $this->decodeValue($ctx, 'value');
         if ($obj instanceof \ArrayAccess) {
-            $obj[$offset] = $this->unmarshal($value);
+            $obj[$offset] = $value;
         } else {
-            $obj->{$offset} = $this->unmarshal($value);
+            $obj->{$offset} = $value;
         }
         $ctx->end(['code' => 0]);
     }
 
     private function _offset_unset(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj = $this->objects[$object_id];
+        $obj       = $this->resolveObject($ctx->getParam('object'));
+        $offset    = $this->decodeValue($ctx, 'offset');
         if ($obj instanceof \ArrayAccess) {
             unset($obj[$offset]);
         } else {
@@ -449,13 +414,9 @@ class Server
 
     private function _offset_exists(Context $ctx): void
     {
-        $object_id = $ctx->getParam('object');
-        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
-        if (!isset($this->objects[$object_id])) {
-            throw new Exception("object[#{$object_id}] not found");
-        }
-        $obj    = $this->objects[$object_id];
-        $result = $obj instanceof \ArrayAccess ? isset($obj[$offset]) : isset($obj->{$offset});
+        $obj       = $this->resolveObject($ctx->getParam('object'));
+        $offset    = $this->decodeValue($ctx, 'offset');
+        $result    = $obj instanceof \ArrayAccess ? isset($obj[$offset]) : isset($obj->{$offset});
         $ctx->end(['code' => 0, 'value' => $this->marshal($ctx, $result)]);
     }
 }
