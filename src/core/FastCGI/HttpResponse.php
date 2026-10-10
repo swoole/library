@@ -25,7 +25,7 @@ class HttpResponse extends Response
     protected $reasonPhrase;
 
     /**
-     * @var array<string, string>
+     * @var array<string, string|list<string>>
      */
     protected array $headers = [];
 
@@ -73,7 +73,12 @@ class HttpResponse extends Response
             } elseif (strcasecmp($name, 'Set-Cookie') === 0) {
                 $this->withSetCookieHeaderLine($value);
             } else {
-                $this->withHeader($name, $value);
+                $key = $this->headersMap[strtolower($name)] ?? null;
+                if ($key === null) {
+                    $this->withHeader($name, $value);
+                } else {
+                    $this->headers[$key] = [...(array) $this->headers[$key], $value];
+                }
             }
         }
         $statusCode   = (int) ($statusCode ?? Status::OK);
@@ -107,11 +112,11 @@ class HttpResponse extends Response
     public function getHeader(string $name): ?string
     {
         $name = $this->headersMap[strtolower($name)] ?? null;
-        return $name ? $this->headers[$name] : null;
+        return $name ? implode(', ', (array) $this->headers[$name]) : null;
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|list<string>>
      */
     public function getHeaders(): array
     {
@@ -120,6 +125,10 @@ class HttpResponse extends Response
 
     public function withHeader(string $name, string $value): self
     {
+        $previous = $this->headersMap[strtolower($name)] ?? null;
+        if ($previous !== null && $previous !== $name) {
+            unset($this->headers[$previous]);
+        }
         $this->headers[$name]                = $value;
         $this->headersMap[strtolower($name)] = $name;
         return $this;

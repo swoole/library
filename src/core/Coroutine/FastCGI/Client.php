@@ -14,6 +14,7 @@ namespace Swoole\Coroutine\FastCGI;
 use Swoole\Constant;
 use Swoole\Coroutine\FastCGI\Client\Exception;
 use Swoole\Coroutine\Socket;
+use Swoole\FastCGI;
 use Swoole\FastCGI\FrameParser;
 use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
@@ -52,6 +53,7 @@ class Client
      */
     public function execute(Request $request, float $timeout = -1): Response
     {
+        $sendData = (string) $request;
         if (isset($this->socket) && !$this->socket->checkLiveness()) {
             // The server closed the connection kept open since the last request. A new one is opened before anything
             // is sent, so that the request reaches the server.
@@ -70,8 +72,7 @@ class Client
         } else {
             $socket = $this->socket;
         }
-        $sendData = (string) $request;
-        if ($socket->sendAll($sendData) !== strlen($sendData)) {
+        if ($socket->sendAll($sendData, $timeout) !== strlen($sendData)) {
             $this->ioException();
         }
         $records = [];
@@ -90,21 +91,26 @@ class Client
             try {
                 do {
                     $records[] = $record = FrameParser::parseFrame($recvData);
+                    if ($record->getRequestId() !== FastCGI::DEFAULT_REQUEST_ID
+                        || !in_array($record->getType(), [FastCGI::STDOUT, FastCGI::STDERR, FastCGI::END_REQUEST], true)) {
+                        throw new \DomainException('Unexpected FastCGI response record', SOCKET_EPROTO);
+                    }
                 } while (strlen($recvData) !== 0);
+                if ($record instanceof EndRequest) {
+                    // @phpstan-ignore argument.type,argument.type
+                    $response = ($request instanceof HttpRequest) ? new HttpResponse($records) : new Response($records);
+                    if (!$request->getKeepConn()) {
+                        $this->socket->close();
+                        $this->socket = null;
+                    }
+                    return $response;
+                }
             } catch (\Throwable $e) {
                 // The rest of the response is still on the connection, and would be read as the response to the next
                 // request sent over it.
                 $this->socket->close();
                 $this->socket = null;
                 throw $e;
-            }
-            if ($record instanceof EndRequest) {
-                if (!$request->getKeepConn()) {
-                    $this->socket->close();
-                    $this->socket = null;
-                }
-                // @phpstan-ignore argument.type,argument.type
-                return ($request instanceof HttpRequest) ? new HttpResponse($records) : new Response($records);
             }
         }
 
@@ -124,6 +130,9 @@ class Client
     {
         $url  = parse_url($url);
         $host = $url['host'] ?? '';
+        if (str_starts_with($host, '[') && str_ends_with($host, ']')) {
+            $host = substr($host, 1, -1);
+        }
         $port = $url['port'] ?? 0;
         if (empty($host)) {
             $host = $url['path'] ?? '';

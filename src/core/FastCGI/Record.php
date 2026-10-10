@@ -84,6 +84,9 @@ class Record implements \Stringable
      */
     final public static function unpack(string $binaryData): static
     {
+        if (strlen($binaryData) < FastCGI::HEADER_LEN) {
+            throw new \RuntimeException('Not enough data in the buffer to parse');
+        }
         /** @var static $self */
         $self = (new \ReflectionClass(static::class))->newInstanceWithoutConstructor();
 
@@ -101,6 +104,16 @@ class Record implements \Stringable
             $self->reserved,
         ] = array_values($packet);
 
+        if ($self->version !== FastCGI::VERSION_1) {
+            throw new \DomainException("Invalid FastCGI protocol version {$self->version}");
+        }
+        if (strlen($binaryData) < FastCGI::HEADER_LEN + $self->contentLength + $self->paddingLength) {
+            throw new \RuntimeException('Not enough data in the buffer to parse');
+        }
+        if ($self instanceof Record\EndRequest && $self->contentLength !== 8) {
+            throw new \DomainException("Invalid FastCGI record content length {$self->contentLength}");
+        }
+
         $payload = substr($binaryData, FastCGI::HEADER_LEN);
         self::unpackPayload($self, $payload);
         if ($self->contentLength > 0 && self::overridesUnpackPayload()) {
@@ -117,13 +130,12 @@ class Record implements \Stringable
      */
     public function setContentData(string $data): self
     {
-        $this->contentLength = strlen($data);
-        if ($this->contentLength > FastCGI::MAX_CONTENT_LENGTH) {
-            $this->contentLength = FastCGI::MAX_CONTENT_LENGTH;
-            $this->contentData   = substr($data, 0, FastCGI::MAX_CONTENT_LENGTH);
-        } else {
-            $this->contentData = $data;
+        $length = strlen($data);
+        if ($length > FastCGI::MAX_CONTENT_LENGTH) {
+            throw new \LengthException('FastCGI record content exceeds 65535 bytes');
         }
+        $this->contentLength = $length;
+        $this->contentData   = $data;
         $extraLength         = $this->contentLength % 8;
         $this->paddingLength = $extraLength ? (8 - $extraLength) : 0;
         return $this;

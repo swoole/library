@@ -38,8 +38,8 @@ class RequestTest extends TestCase
             foreach (str_split($body, FastCGI::MAX_CONTENT_LENGTH) as $chunk) {
                 $expected .= self::stdinRecord($chunk);
             }
-            $expected .= self::stdinRecord('');
         }
+        $expected .= self::stdinRecord('');
 
         self::assertSame(bin2hex($expected), bin2hex((string) $request));
     }

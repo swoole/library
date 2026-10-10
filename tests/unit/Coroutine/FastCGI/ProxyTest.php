@@ -19,6 +19,7 @@ use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
 use Swoole\FastCGI\Record\EndRequest;
 use Swoole\FastCGI\Record\Stdout;
+use Swoole\Http\Request as ServerRequest;
 use Swoole\Http\Response;
 use Swoole\Tests\TestCase;
 
@@ -28,6 +29,74 @@ use Swoole\Tests\TestCase;
  */
 class ProxyTest extends TestCase
 {
+    public function testCookiesAreForwardedWithoutReencoding(): void
+    {
+        foreach ([true, false] as $parseCookie) {
+            $request = self::parseRequest('/inspect.php?0', $parseCookie,
+                "Cookie: session=a%2Bb%20c; zero=0\r\ncookie: other=%3B%00\r\n");
+            $translated = (new Proxy('tcp://php-fpm:9000', DOCUMENT_ROOT))->translateRequest($request);
+            self::assertSame('session=a%2Bb%20c; zero=0; other=%3B%00', $translated->getHeader('cookie'));
+            self::assertSame('0', $translated->getQueryString());
+        }
+    }
+
+    public function testIndexResolutionPreservesTheOriginalRequestUri(): void
+    {
+        $proxy      = new Proxy('tcp://php-fpm:9000', DOCUMENT_ROOT);
+        $translated = $proxy->translateRequest(self::parseRequest('/?query=1'));
+        self::assertSame(DOCUMENT_ROOT . '/index.php', $translated->getScriptFilename());
+        self::assertSame('/index.php', $translated->getScriptName());
+        self::assertSame('/index.php', $translated->getDocumentUri());
+        self::assertSame('/?query=1', $translated->getRequestUri());
+
+        $translated = $proxy->withIndex('default.php')->translateRequest(self::parseRequest('/dir/'));
+        self::assertSame('/dir/default.php', $translated->getScriptName());
+        self::assertSame('/dir/', $translated->getRequestUri());
+        self::assertSame('https', $proxy->withHttps(true)->translateRequest(self::parseRequest('/'))->getScheme());
+    }
+
+    public function testStaticFilesStayWithinTheCanonicalDocumentRoot(): void
+    {
+        $directory = sys_get_temp_dir() . '/swoole-fastcgi-' . bin2hex(random_bytes(8));
+        mkdir($directory);
+        mkdir($directory . '/www');
+        mkdir($directory . '/www-sibling');
+        file_put_contents($directory . '/www/inside.txt', 'inside');
+        file_put_contents($directory . '/www-sibling/outside.txt', 'outside');
+        try {
+            $proxy = new Proxy('tcp://php-fpm:9000', $directory . '/www/../www');
+            foreach (['inside.txt' => 200, '../www-sibling/outside.txt' => 404, 'missing.txt' => 404] as $path => $status) {
+                $response = self::captureResponse();
+                self::assertTrue($proxy->staticFileFiltrate(
+                    (new HttpRequest())->withScriptFilename($directory . '/www/' . $path), $response));
+                self::assertSame($status, $response->code);
+                self::assertSame($status === 200 ? realpath($directory . '/www/inside.txt') : null, $response->file);
+            }
+            $response = self::captureResponse();
+            self::assertTrue((new Proxy('tcp://php-fpm:9000', $directory . '/missing'))->staticFileFiltrate(
+                (new HttpRequest())->withScriptFilename($directory . '/www/inside.txt'), $response));
+            self::assertSame(404, $response->code);
+        } finally {
+            unlink($directory . '/www/inside.txt');
+            unlink($directory . '/www-sibling/outside.txt');
+            rmdir($directory . '/www');
+            rmdir($directory . '/www-sibling');
+            rmdir($directory);
+        }
+    }
+
+    public function testTranslationPreservesRepeatedResponseHeaders(): void
+    {
+        $response = self::captureResponse();
+        (new Proxy('tcp://php-fpm:9000'))->translateResponse(new HttpResponse([
+            new Stdout("Link: </one>\r\nLink: </two>\r\nSet-Cookie: one=1\r\nSet-Cookie: two=2\r\n\r\nbody"),
+            new EndRequest(),
+        ]), $response);
+        self::assertSame(['Link' => ['</one>', '</two>']], $response->header);
+        self::assertSame(['one=1', 'two=2'], $response->cookie);
+        self::assertSame('body', $response->body);
+    }
+
     public function testAConnectionForEveryRequestByDefault(): void
     {
         self::coRun(function (): void {
@@ -203,6 +272,43 @@ class ProxyTest extends TestCase
     private static function getRequest(): HttpRequest
     {
         return (new HttpRequest())->withScriptFilename(DOCUMENT_ROOT . '/pid.php');
+    }
+
+    private static function parseRequest(string $uri, bool $parseCookie = true, string $headers = ''): ServerRequest
+    {
+        $request = ServerRequest::create(['parse_cookie' => $parseCookie]);
+        $request->parse("GET {$uri} HTTP/1.1\r\nHost: localhost\r\n{$headers}\r\n");
+        $request->server += ['server_port' => 80, 'remote_addr' => '127.0.0.1', 'remote_port' => 12345];
+        return $request;
+    }
+
+    private static function captureResponse(): Response
+    {
+        return new class extends Response {
+            public int $code = 200;
+
+            public ?string $file = null;
+
+            public ?string $body = null;
+
+            public function status(int $http_code, string $reason = ''): bool
+            {
+                $this->code = $http_code;
+                return true;
+            }
+
+            public function sendfile(string $filename, int $offset = 0, int $length = 0): bool
+            {
+                $this->file = $filename;
+                return true;
+            }
+
+            public function end(?string $content = null): bool
+            {
+                $this->body = $content;
+                return true;
+            }
+        };
     }
 
     /**

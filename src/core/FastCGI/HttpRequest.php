@@ -408,7 +408,7 @@ class HttpRequest extends Request
         }
         parent::withBody($body);
 
-        return $this->withContentLength(strlen($body));
+        return $this->withContentLength(strlen($this->getBody()));
     }
 
     protected static function convertHeaderNameToParamName(string $name)

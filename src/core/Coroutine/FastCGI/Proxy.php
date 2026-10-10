@@ -144,6 +144,9 @@ class Proxy
     {
         $server   = $userRequest->server;
         $headers  = $userRequest->header;
+        if (isset($headers['cookie']) && is_array($headers['cookie'])) {
+            $headers['cookie'] = implode('; ', $headers['cookie']);
+        }
         $pathInfo = $userRequest->server['path_info'];
         $pathInfo = '/' . ltrim((string) $pathInfo, '/');
         if (strlen($this->index) !== 0) {
@@ -152,7 +155,8 @@ class Proxy
                 $pathInfo = rtrim($pathInfo, '/') . '/' . $this->index;
             }
         }
-        $requestUri  = $scriptName = $documentUri = $server['request_uri'];
+        $scriptName  = $documentUri = $pathInfo;
+        $requestUri  = $server['request_uri'];
         $queryString = $server['query_string'] ?? '';
         if (strlen($queryString) !== 0) {
             $requestUri .= "?{$server['query_string']}";
@@ -177,7 +181,7 @@ class Proxy
             ->withAddedParams($this->params)
         ;
         if ($this->https) {
-            $request->withParam('HTTPS', '1');
+            $request->withScheme('https')->withParam('HTTPS', '1');
         }
 
         return $request;
@@ -220,7 +224,8 @@ class Proxy
         $extension = pathinfo((string) $request->getScriptFilename(), PATHINFO_EXTENSION);
         if ($extension !== 'php') {
             $realPath = realpath((string) $request->getScriptFilename());
-            if (!$realPath || !str_starts_with($realPath, $this->documentRoot) || !is_file($realPath)) {
+            $root     = realpath($this->documentRoot);
+            if (!$realPath || !$root || !str_starts_with($realPath, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR) || !is_file($realPath)) {
                 $userResponse->status(Http\Status::NOT_FOUND);
             } else {
                 $userResponse->sendfile($realPath);

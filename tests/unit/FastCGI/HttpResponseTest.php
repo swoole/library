@@ -22,6 +22,23 @@ use Swoole\Tests\TestCase;
  */
 class HttpResponseTest extends TestCase
 {
+    public function testRepeatedHeadersAndCaseInsensitiveReplacement(): void
+    {
+        $response = new HttpResponse([
+            new Stdout("Link: </one>; rel=preload\r\nlink: </two>; rel=preload\r\n"
+                . "Set-Cookie: first=one\r\nSet-Cookie: second=two\r\n\r\nbody"),
+            new EndRequest(),
+        ]);
+        self::assertSame(['Link' => ['</one>; rel=preload', '</two>; rel=preload']], $response->getHeaders());
+        self::assertSame('</one>; rel=preload, </two>; rel=preload', $response->getHeader('LINK'));
+        self::assertSame(['first=one', 'second=two'], $response->getSetCookieHeaderLines());
+        self::assertSame('body', $response->getBody());
+
+        $response->withHeader('LINK', '</replacement>');
+        self::assertSame(['LINK' => '</replacement>'], $response->getHeaders());
+        self::assertSame('</replacement>', $response->getHeader('link'));
+    }
+
     /**
      * @dataProvider dataHeaders
      */

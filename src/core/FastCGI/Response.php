@@ -11,12 +11,15 @@ declare(strict_types=1);
 
 namespace Swoole\FastCGI;
 
+use Swoole\FastCGI;
 use Swoole\FastCGI\Record\EndRequest;
 use Swoole\FastCGI\Record\Stderr;
 use Swoole\FastCGI\Record\Stdout;
 
 class Response extends Message
 {
+    protected EndRequest $endRequest;
+
     /**
      * @param array<Stdout|Stderr|EndRequest> $records
      */
@@ -24,6 +27,10 @@ class Response extends Message
     {
         if (!static::verify($records)) {
             throw new \InvalidArgumentException('Bad records');
+        }
+        $this->endRequest = $records[array_key_last($records)];
+        if ($this->endRequest->getProtocolStatus() !== FastCGI::REQUEST_COMPLETE) {
+            throw new \DomainException('FastCGI request failed with protocol status ' . $this->endRequest->getProtocolStatus());
         }
 
         $body = $error = '';
@@ -39,6 +46,16 @@ class Response extends Message
             }
         }
         $this->withBody($body)->withError($error);
+    }
+
+    public function getAppStatus(): int
+    {
+        return $this->endRequest->getAppStatus();
+    }
+
+    public function getProtocolStatus(): int
+    {
+        return $this->endRequest->getProtocolStatus();
     }
 
     /**

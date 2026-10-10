@@ -20,6 +20,23 @@ use Swoole\Tests\TestCase;
  */
 class HttpRequestTest extends TestCase
 {
+    public function testStringableBodyIsConvertedOnce(): void
+    {
+        $body = new class implements \Stringable {
+            public int $calls = 0;
+
+            public function __toString(): string
+            {
+                $this->calls++;
+                return "0\0\xff";
+            }
+        };
+        $request = (new HttpRequest())->withBody($body);
+        self::assertSame("0\0\xff", $request->getBody());
+        self::assertSame(3, $request->getContentLength());
+        self::assertSame(1, $body->calls);
+    }
+
     /**
      * To test the Keep-Alive header when sending multiple requests to a FastCGI server.
      *

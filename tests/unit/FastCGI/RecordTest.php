@@ -23,6 +23,24 @@ class RecordTest extends TestCase
     // from the wireshark captured traffic
     public static string $rawRequest = '01010001000800000001010000000000';
 
+    public function testMaximumContentLengthAndOverflow(): void
+    {
+        $record  = new Record();
+        $content = str_repeat('x', FastCGI::MAX_CONTENT_LENGTH);
+        $record->setContentData($content);
+        $decoded = Record::unpack((string) $record);
+        self::assertSame($content, $decoded->getContentData());
+        self::assertSame(1, $decoded->getPaddingLength());
+
+        try {
+            $record->setContentData($content . 'x');
+            self::fail('Oversized content must be rejected.');
+        } catch (\LengthException $e) {
+            self::assertSame($content, $record->getContentData(), 'A failed update leaves the record intact.');
+            self::assertSame(FastCGI::MAX_CONTENT_LENGTH, $record->getContentLength());
+        }
+    }
+
     public function testUnpackingPacket(): void
     {
         /** @var string $packet */

@@ -33,8 +33,8 @@ class Request extends Message implements \Stringable
             for ($offset = 0; $offset < $bodyLength; $offset += FastCGI::MAX_CONTENT_LENGTH) {
                 $message .= new Stdin(substr($body, $offset, FastCGI::MAX_CONTENT_LENGTH));
             }
-            $message .= new Stdin('');
         }
+        $message .= new Stdin('');
         return $message;
     }
 

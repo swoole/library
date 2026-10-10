@@ -34,6 +34,24 @@ class ParamsTest extends TestCase
         'SERVER_SOFTWARE'   => 'PHP/Protocol-FCGI',
     ];
 
+    public function testMaximumEncodedLength(): void
+    {
+        // One byte for the name length, four for the value length, and the one-byte name.
+        $params = ['a' => str_repeat('x', FastCGI::MAX_CONTENT_LENGTH - 6)];
+        $record = new Params($params);
+        self::assertSame(FastCGI::MAX_CONTENT_LENGTH, $record->getContentLength());
+        self::assertSame($params, Params::unpack((string) $record)->getValues());
+
+        $this->expectException(\LengthException::class);
+        new Params(['a' => $params['a'] . 'x']);
+    }
+
+    public function testCombinedParametersCannotOverflowARecord(): void
+    {
+        $this->expectException(\LengthException::class);
+        new Params(['a' => str_repeat('x', 32768), 'b' => str_repeat('y', 32768)]);
+    }
+
     public function testPacking(): void
     {
         $request = new Params(self::$params);

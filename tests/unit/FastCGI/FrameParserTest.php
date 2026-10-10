@@ -21,6 +21,20 @@ use Swoole\Tests\TestCase;
  */
 class FrameParserTest extends TestCase
 {
+    /** @dataProvider incompleteFrames */
+    public function testIncompleteFramesAreRejected(string $frame): void
+    {
+        self::assertFalse(FrameParser::hasFrame($frame));
+        $this->expectException(\RuntimeException::class);
+        FrameParser::parseFrame($frame);
+    }
+
+    public static function incompleteFrames(): array
+    {
+        $frame = "\x01\x06\x00\x01\x00\x03\x01\x00abc\0";
+        return [[''], [substr($frame, 0, 7)], [substr($frame, 0, 10)], [substr($frame, 0, -1)]];
+    }
+
     public function testHasFrame(): void
     {
         /** @var string $incompletePacket */
