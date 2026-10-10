@@ -41,10 +41,12 @@ class ProxyTest extends TestCase
     /** @dataProvider paths */
     public function testScriptPathResolution(string $uri, string $script): void
     {
-        $translated = (new Proxy('tcp://php-fpm:9000', DOCUMENT_ROOT . '/fastcgi'))
+        // Path resolution uses the local filesystem; DOCUMENT_ROOT points inside the PHP-FPM container.
+        $documentRoot = dirname(__DIR__, 3) . '/www/fastcgi';
+        $translated   = (new Proxy('tcp://php-fpm:9000', $documentRoot))
             ->translateRequest(self::parseRequest($uri))
         ;
-        self::assertSame(DOCUMENT_ROOT . '/fastcgi' . $script, $translated->getScriptFilename());
+        self::assertSame($documentRoot . $script, $translated->getScriptFilename());
         self::assertSame($script, $translated->getScriptName());
         self::assertSame($script, $translated->getDocumentUri());
         self::assertSame($uri, $translated->getRequestUri());
