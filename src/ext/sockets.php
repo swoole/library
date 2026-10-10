@@ -103,8 +103,8 @@ function swoole_socket_recv(Socket $socket, mixed &$buffer, int $length, int $fl
         $buffer = null;
         return false;
     }
-    $buffer = $data;
-    return strlen($buffer);
+    $buffer = $data === '' ? null : $data;
+    return strlen($data);
 }
 
 function swoole_socket_sendto(Socket $socket, string $buffer, int $length, int $flags, string $addr, int $port = 0): int|false
