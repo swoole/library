@@ -18,6 +18,7 @@
 
 # Ignore the script Swoole\Thread\Pool writes next to the class it runs.
 thread_runner.php
+thread_runner_*.php
 
 # Ignore project files.
 /Dockerfile.bak

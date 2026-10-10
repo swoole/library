@@ -36,8 +36,6 @@ class Pool
 
     private Queue $queue;
 
-    private array $indexes = [];
-
     public function __construct(private readonly string $runnableClass, int $threadNum)
     {
         if ($threadNum <= 0) {
@@ -98,28 +96,32 @@ class Pool
         }
 
         if ($this->autoloader) {
-            $this->proxyFile = dirname($this->autoloader) . '/thread_runner.php';
+            $proxyDirectory = dirname($this->autoloader);
         } else {
-            $this->proxyFile = dirname($this->classDefinitionFile) . '/thread_runner.php';
+            $proxyDirectory = dirname($this->classDefinitionFile);
         }
 
+        $script = '<?php' . PHP_EOL;
+        $script .= '$arguments = Swoole\Thread::getArguments();' . PHP_EOL;
+        $script .= '$autoloader = $arguments[0];' . PHP_EOL;
+        $script .= '$runnableClass = $arguments[1];' . PHP_EOL;
+        $script .= '$queue = $arguments[2];' . PHP_EOL;
+        $script .= '$index = $arguments[5];' . PHP_EOL;
+        // PHP exit() and fatal errors skip finally, but still run request shutdown functions.
+        $script .= 'register_shutdown_function(static function () use ($queue, $index): void {' . PHP_EOL;
+        $script .= '    $queue->push($index, Swoole\Thread\Queue::NOTIFY_ONE);' . PHP_EOL;
+        $script .= '});' . PHP_EOL;
+        $script .= '$classDefinitionFile = $arguments[3];' . PHP_EOL;
+        $script .= '$running = $arguments[4];' . PHP_EOL;
+        $script .= '$threadArguments = array_slice($arguments, 6);' . PHP_EOL;
+        $script .= 'if ($autoloader) require_once $autoloader;' . PHP_EOL;
+        $script .= 'if ($classDefinitionFile) require_once $classDefinitionFile;' . PHP_EOL;
+        $script .= '$runnable = new $runnableClass($running, $index);' . PHP_EOL;
+        $script .= '$runnable->run($threadArguments);' . PHP_EOL;
+
+        // Existing installations may still have a runner using the old finally-based notification.
+        $this->proxyFile = $proxyDirectory . '/thread_runner_' . sha1($script) . '.php';
         if (!is_file($this->proxyFile)) {
-            $script = '<?php' . PHP_EOL;
-            $script .= '$arguments = Swoole\Thread::getArguments();' . PHP_EOL;
-            $script .= '$threadId = Swoole\Thread::getId();' . PHP_EOL;
-            $script .= '$autoloader = $arguments[0];' . PHP_EOL;
-            $script .= '$runnableClass = $arguments[1];' . PHP_EOL;
-            $script .= '$queue = $arguments[2];' . PHP_EOL;
-            $script .= '$classDefinitionFile = $arguments[3];' . PHP_EOL;
-            $script .= '$running = $arguments[4];' . PHP_EOL;
-            $script .= '$index = $arguments[5];' . PHP_EOL;
-            $script .= '$threadArguments = array_slice($arguments, 6);' . PHP_EOL;
-            $script .= 'if ($autoloader) require_once $autoloader;' . PHP_EOL;
-            $script .= 'if ($classDefinitionFile) require_once $classDefinitionFile;' . PHP_EOL;
-            $script .= '$runnable = new $runnableClass($running, $index);' . PHP_EOL;
-            $script .= 'try { $runnable->run($threadArguments); }' . PHP_EOL;
-            $script .= 'finally { $queue->push($threadId, Swoole\Thread\Queue::NOTIFY_ONE); }' . PHP_EOL;
-            $script .= PHP_EOL;
             file_put_contents($this->proxyFile, $script);
         }
 
@@ -131,11 +133,10 @@ class Pool
         }
 
         while ($this->running->get()) {
-            $threadId = $this->queue->pop(-1);
-            $thread   = $this->threads[$threadId];
-            $index    = $this->indexes[$threadId];
+            $index  = $this->queue->pop(-1);
+            $thread = $this->threads[$index];
             $thread->join();
-            unset($this->threads[$threadId], $this->indexes[$threadId]);
+            unset($this->threads[$index]);
 
             $this->createThread($index);
         }
@@ -196,7 +197,7 @@ class Pool
 
     protected function createThread(int $index): void
     {
-        $thread = new Thread($this->proxyFile,
+        $this->threads[$index] = new Thread($this->proxyFile,
             $this->autoloader,
             $this->runnableClass,
             $this->queue,
@@ -205,7 +206,5 @@ class Pool
             $index,
             ...$this->arguments
         );
-        $this->indexes[$thread->id] = $index;
-        $this->threads[$thread->id] = $thread;
     }
 }
