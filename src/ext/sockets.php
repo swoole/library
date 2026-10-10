@@ -30,15 +30,40 @@ function swoole_socket_connect(Socket $socket, string $address, int $port = 0): 
 
 function swoole_socket_read(Socket $socket, int $length, int $type = PHP_BINARY_READ): string|false
 {
-    if ($type != PHP_BINARY_READ) {
-        return $socket->recvLine($length);
+    if ($length <= 0 || $length === PHP_INT_MAX) {
+        return false;
     }
-    return $socket->recv($length);
+    if ($type !== PHP_NORMAL_READ) {
+        return $socket->recv($length);
+    }
+
+    $buffer = '';
+    while (strlen($buffer) < $length) {
+        // Consume only this line; binary reads must still see the following bytes.
+        $data = $socket->peek($length - strlen($buffer), 0);
+        if ($data === false || $data === '') {
+            return $buffer !== '' ? $buffer : $data;
+        }
+        $lineLength = strcspn($data, "\r\n");
+        $hasNewline = $lineLength < strlen($data);
+        $data       = $socket->recv($hasNewline ? $lineLength + 1 : strlen($data));
+        if ($data === false || $data === '') {
+            return $buffer !== '' ? $buffer : $data;
+        }
+        $buffer .= $data;
+        if ($hasNewline) {
+            break;
+        }
+    }
+    return $buffer;
 }
 
-function swoole_socket_write(Socket $socket, string $buffer, int $length = 0): int|false
+function swoole_socket_write(Socket $socket, string $buffer, ?int $length = null): int|false
 {
-    if ($length > 0 && $length < strlen($buffer)) {
+    if ($length !== null) {
+        if ($length < 0) {
+            throw new ValueError('socket_write(): Argument #3 ($length) must be greater than or equal to 0');
+        }
         $buffer = substr($buffer, 0, $length);
     }
     return $socket->send($buffer);
@@ -49,6 +74,9 @@ function swoole_socket_send(Socket $socket, string $buffer, int $length, int $fl
     if ($flags != 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
+    if ($length < 0) {
+        throw new ValueError('socket_send(): Argument #3 ($length) must be greater than or equal to 0');
+    }
     return swoole_socket_write($socket, $buffer, $length);
 }
 
@@ -57,17 +85,16 @@ function swoole_socket_send(Socket $socket, string $buffer, int $length, int $fl
  */
 function swoole_socket_recv(Socket $socket, mixed &$buffer, int $length, int $flags): int|false
 {
+    if ($length <= 0 || $length === PHP_INT_MAX) {
+        return false;
+    }
     if ($flags & MSG_OOB) {
         throw new RuntimeException('\$flags[MSG_OOB] is not supported');
     }
-    if ($flags & MSG_PEEK) {
-        /* MSG_PEEK is not truly supported: the peeked result is intentionally discarded, and the
-         * recv*() call below consumes the data, unlike native socket_recv() where MSG_PEEK leaves
-         * the data in the socket buffer. This behavior is kept for backward compatibility. */
-        $socket->peek($length);
-    }
     $timeout = $flags & MSG_DONTWAIT ? 0.001 : 0;
-    if ($flags & MSG_WAITALL) {
+    if ($flags & MSG_PEEK) {
+        $data = $socket->peek($length, 0, $flags & MSG_DONTWAIT);
+    } elseif ($flags & MSG_WAITALL) {
         $data = $socket->recvAll($length, $timeout);
     } else {
         $data = $socket->recv($length, $timeout);
@@ -88,9 +115,10 @@ function swoole_socket_sendto(Socket $socket, string $buffer, int $length, int $
     if ($socket->type != SOCK_DGRAM) {
         throw new RuntimeException('only supports dgram type socket');
     }
-    if ($length > 0 && $length < strlen($buffer)) {
-        $buffer = substr($buffer, 0, $length);
+    if ($length < 0) {
+        throw new ValueError('socket_sendto(): Argument #3 ($length) must be greater than or equal to 0');
     }
+    $buffer = substr($buffer, 0, $length);
     return $socket->sendto($addr, $port, $buffer);
 }
 
@@ -99,8 +127,7 @@ function swoole_socket_recvfrom(Socket $socket, mixed &$buffer, int $length, int
     if ($flags != 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
-    if ($length == 0) {
-        $socket->errCode = SOCKET_EAGAIN;
+    if ($length <= 0 || $length === PHP_INT_MAX) {
         return false;
     }
     if ($socket->type != SOCK_DGRAM) {
