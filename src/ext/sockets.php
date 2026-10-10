@@ -317,3 +317,8 @@ function swoole_socket_import_stream(mixed $stream): Socket|false
 {
     return Socket::import($stream);
 }
+
+function swoole_socket_export_stream(Socket $socket): mixed
+{
+    return $socket->export();
+}
