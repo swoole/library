@@ -394,15 +394,16 @@ final class Handler implements \Stringable
         } else {
             $urlInfo['port'] = intval($urlInfo['port']);
         }
-        $port = $urlInfo['port'];
+        // create() applies CURLOPT_RESOLVE to urlInfo; keep the selected address after replacing the client.
+        $port          = $urlInfo['port'];
+        $oldUrlInfo    = $this->urlInfo;
+        $this->urlInfo = $urlInfo;
         if (isset($this->client)) {
-            $oldUrlInfo = $this->urlInfo;
             if (($host !== $oldUrlInfo['host']) || ($port !== $oldUrlInfo['port']) || ($scheme !== $oldUrlInfo['scheme'])) {
                 /* target changed */
                 $this->create($urlInfo);
             }
         }
-        $this->urlInfo = $urlInfo;
         return true;
     }
 
@@ -1095,7 +1096,7 @@ final class Handler implements \Stringable
                     return $this->setTimeoutError($timeBegin);
                 }
                 $errCode = $client->errCode;
-                if ($errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED || $errCode == SWOOLE_ERROR_DNSLOOKUP_RESOLVE_TIMEOUT) {
+                if ($errCode === SWOOLE_ERROR_DNSLOOKUP_RESOLVE_FAILED) {
                     $this->setError(CURLE_COULDNT_RESOLVE_HOST, 'Could not resolve host: ' . $client->host);
                 } elseif ($errCode === SWOOLE_ERROR_SSL_VERIFY_FAILED) {
                     $this->setError(CURLE_SSL_CACERT, $client->errMsg);

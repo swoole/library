@@ -346,7 +346,7 @@ class HandlerTest extends TestCase
 
             self::assertSame($body['headers']['Host'][0], $host);
             self::assertEquals($body['url'], $url);
-            self::assertSame('', $httpPrimaryIp);
+            self::assertSame($ip, $httpPrimaryIp);
         });
     }
 
@@ -427,6 +427,8 @@ class HandlerTest extends TestCase
 
             $ch = curl_init("http://resolve.test:{$port}/");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
             curl_setopt($ch, CURLOPT_RESOLVE, ["resolve.test:{$port}:127.0.0.1,127.0.0.2"]);
             $tried = [];
             curl_setopt($ch, CURLOPT_PREREQFUNCTION, function ($handler, string $primaryIp) use (&$tried): int {
@@ -445,10 +447,13 @@ class HandlerTest extends TestCase
                 $server->start();
             });
 
-            $tried = [];
-            self::assertSame('up', curl_exec($ch), 'The first address works now.');
-            self::assertSame(['127.0.0.1'], $tried);
-            $server->shutdown();
+            try {
+                $tried = [];
+                self::assertSame('up', curl_exec($ch), 'The first address works now.');
+                self::assertSame(['127.0.0.1'], $tried);
+            } finally {
+                $server->shutdown();
+            }
         });
     }
 

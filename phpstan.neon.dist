@@ -8,3 +8,6 @@ parameters:
   # it, so scanning the parent directory would redeclare our own classes whenever that hook has not run.
   scanDirectories:
     - vendor/swoole/ide-helper/src/swoole
+  # Current Socket methods missing from the ide-helper release; retain checking of their argument/return types.
+  stubFiles:
+    - stubs/Socket.stub
