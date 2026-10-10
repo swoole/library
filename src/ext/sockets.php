@@ -133,6 +133,14 @@ function swoole_socket_recvfrom(Socket $socket, mixed &$buffer, int $length, int
     if ($socket->type != SOCK_DGRAM) {
         throw new RuntimeException('only supports dgram type socket');
     }
+    if ($socket->domain === AF_UNIX && $length > 65536) {
+        trigger_error(
+            'socket_recvfrom(): Swoole sockets hook differs from the sockets extension: '
+            . 'the receive buffer is limited to 64 KiB; larger UNIX datagrams may be truncated '
+            . 'and excess data discarded even when a larger receive length is requested',
+            E_USER_WARNING
+        );
+    }
     $data = $socket->recvfrom($peer);
     if ($data === false) {
         return false;
@@ -275,6 +283,13 @@ function swoole_socket_set_nonblock(Socket $socket): bool
     if ($socket->__ext_sockets_nonblock) {
         return true;
     }
+    trigger_error(
+        'socket_set_nonblock(): Swoole sockets hook differs from the sockets extension: '
+        . 'nonblocking reads are simulated with a 1 ms receive timeout, changing SO_RCVTIMEO; '
+        . 'operations may suspend the coroutine and report ETIMEDOUT instead of EAGAIN/EWOULDBLOCK. '
+        . 'Other operations may still wait',
+        E_USER_WARNING
+    );
     $socket->__ext_sockets_nonblock = true;
     $socket->__ext_sockets_timeout  = $socket->getOption(SOL_SOCKET, SO_RCVTIMEO);
     $socket->setOption(SOL_SOCKET, SO_RCVTIMEO, ['sec' => 0, 'usec' => 1000]);
