@@ -149,7 +149,12 @@ class Server
     {
         $objects = $this->connections[$fd]['objects'];
         unset($this->connections[$fd]);
-        foreach ($objects as $objectId => $_) {
+        $this->releaseObjects(array_keys($objects));
+    }
+
+    private function releaseObjects(array $objects): void
+    {
+        foreach ($objects as $objectId) {
             try {
                 $this->releaseObject($objectId);
             } catch (\Throwable $e) {
@@ -346,6 +351,22 @@ class Server
         $object_id = $ctx->getParam('object');
         $this->resolveObject($object_id);
         $this->releaseObject((int) $object_id);
+        $ctx->end(['code' => 0]);
+    }
+
+    private function _destroy_batch(Context $ctx): void
+    {
+        $objects = $ctx->getDataParam('objects');
+        if (!is_array($objects)) {
+            throw new Exception('objects must be an array');
+        }
+        foreach ($objects as $objectId) {
+            if (!is_int($objectId) || $objectId <= 0) {
+                throw new Exception('object IDs must be positive integers');
+            }
+        }
+        // Already released IDs are harmless; one throwing destructor must not stop the batch.
+        $this->releaseObjects($objects);
         $ctx->end(['code' => 0]);
     }
 

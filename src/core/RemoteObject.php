@@ -33,9 +33,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         // and does not need to be destructed.
         if ($this->client && $this->objectId > 0) {
             try {
-                $this->execute('/destroy', [
-                    'object' => $this->objectId,
-                ]);
+                $this->client->release($this->objectId);
             } catch (Exception $e) {
                 error_log($e->getMessage());
                 debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);

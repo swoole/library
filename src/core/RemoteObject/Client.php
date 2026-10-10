@@ -15,16 +15,26 @@ use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Http\Client as HttpClient;
 use Swoole\RemoteObject;
+use Swoole\Timer;
 
 class Client
 {
+    private const RELEASE_BATCH_SIZE = 16;
+
+    private const RELEASE_DELAY_MS = 100;
+
+    /** @var array<int, int> */
+    private array $releaseQueue = [];
+
+    private ?int $releaseTimer = null;
+
     /**
      * The live clients, keyed by client id.
      *
      * The references are weak on purpose. A RemoteObject holds a strong reference to the client it came
      * from, so a client stays reachable here for exactly as long as one of its remote objects is alive,
-     * which is the lifetime RemoteObject::__destruct() needs to be able to send /destroy. A client nobody
-     * else holds on to is freed right away instead of being pinned for the lifetime of the process.
+     * which is the lifetime RemoteObject::__destruct() needs to queue its release. A timer callback keeps
+     * the client alive until pending releases have been sent.
      *
      * @var array<string, \WeakReference>
      */
@@ -38,7 +48,7 @@ class Client
      * The HTTP connection underneath can only be driven by one coroutine at a time: a second coroutine using
      * it while a request is in flight is a fatal "Socket has already been bound to another coroutine". A client
      * is routinely shared, though: by a service object handling concurrent requests, and by every remote object
-     * it created, whose destructor sends a /destroy from whichever coroutine drops the last reference.
+     * it created, whose destructor queues a release from whichever coroutine drops the last reference.
      */
     private readonly Channel $lock;
 
@@ -122,6 +132,46 @@ class Client
 
     public function execute(string $path, array $array)
     {
+        return $this->withLock(fn () => $this->request($path, $array));
+    }
+
+    public function release(int $objectId): void
+    {
+        $this->releaseQueue[$objectId] = $objectId;
+        // A destructor may run inside request unserialization. It must not wait for its own lock.
+        if (count($this->releaseQueue) >= self::RELEASE_BATCH_SIZE
+            && $this->lockOwner !== Coroutine::getCid()) {
+            $this->flushReleasedObjects();
+        }
+        if ($this->releaseQueue === [] || $this->releaseTimer !== null) {
+            return;
+        }
+        $this->releaseTimer = Timer::after(self::RELEASE_DELAY_MS, function (): void {
+            $this->releaseTimer = null;
+            if ($this->releaseQueue === []) {
+                return;
+            }
+            // Timer callbacks can run without a coroutine when enable_coroutine is disabled.
+            if (Coroutine::getCid() === -1) {
+                Coroutine::create($this->flushReleasedObjects(...));
+            } else {
+                $this->flushReleasedObjects();
+            }
+        });
+    }
+
+    public function ping(): bool
+    {
+        try {
+            $this->execute('/ping', []);
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function withLock(callable $callback): mixed
+    {
         $cid = Coroutine::getCid();
         // Outside a coroutine both sides are -1. The call goes on to the lock below, where Channel::push() ends it
         // with the fatal error "API must be called in the coroutine".
@@ -137,16 +187,53 @@ class Client
         }
         $this->lockOwner = $cid;
         try {
-            $rs = $this->client->post($path, $array);
-            if (!$rs) {
-                throw new Exception($this->client->errMsg);
-            }
-            // A body that does not unserialize is reported below, as an exception; the warning would only come first.
-            $result = @unserialize($this->client->body);
+            return $callback();
         } finally {
             $this->lockOwner = -1;
             $this->lock->pop();
         }
+    }
+
+    private function flushReleasedObjects(): void
+    {
+        try {
+            $this->withLock(fn () => $this->flushReleaseQueue());
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+        }
+    }
+
+    // Called with the HTTP connection locked. Detach the queue before the request can yield.
+    private function flushReleaseQueue(): void
+    {
+        if ($this->releaseTimer !== null) {
+            Timer::clear($this->releaseTimer);
+            $this->releaseTimer = null;
+        }
+        $objects            = $this->releaseQueue;
+        $this->releaseQueue = [];
+        foreach (array_chunk($objects, self::RELEASE_BATCH_SIZE, true) as $batch) {
+            try {
+                $this->request('/destroy_batch', ['objects' => serialize(array_values($batch))]);
+            } catch (Exception $e) {
+                // Retry on subsequent releases, without scheduling an endless loop on a broken connection.
+                $this->releaseQueue = $objects + $this->releaseQueue;
+                error_log($e->getMessage());
+                return;
+            }
+            foreach ($batch as $objectId) {
+                unset($objects[$objectId]);
+            }
+        }
+    }
+
+    private function request(string $path, array $array): array
+    {
+        if (!$this->client->post($path, $array)) {
+            throw new Exception($this->client->errMsg);
+        }
+        // A malformed body is reported below as an exception, without an unserialize warning.
+        $result = @unserialize($this->client->body);
         if (!is_array($result) || !array_key_exists('code', $result)) {
             throw new Exception('Malformed response from the remote object server');
         }
@@ -154,16 +241,6 @@ class Client
             throw Exception::fromResponse($result);
         }
         return $result;
-    }
-
-    public function ping(): bool
-    {
-        try {
-            $this->execute('/ping', []);
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
     }
 
     private function genUuid(): string

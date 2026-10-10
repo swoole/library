@@ -300,8 +300,8 @@ class RemoteObjectTest extends TestCase
     }
 
     /**
-     * A client lives exactly as long as the remote objects it produced, whether they came from call() or from
-     * create(): RemoteObject::$client is the strong reference that keeps it in the weak registry, see
+     * A client outlives the remote objects it produced and their queued releases, whether they came from
+     * call() or create(): RemoteObject::$client keeps it in the weak registry, see
      * Swoole\RemoteObject\Client::$clients.
      */
     public function testClientOutlivesItsRemoteObjects(): void
@@ -328,6 +328,11 @@ class RemoteObjectTest extends TestCase
                 // Look at the registry itself first: getInstance() drops a dead entry, which would hide a client
                 // that failed to unregister.
                 unset($date);
+                $deadline = microtime(true) + 5;
+                while (isset($registry->getValue()[$id])) {
+                    $this->assertLessThan($deadline, microtime(true), 'Queued release must finish');
+                    Coroutine::sleep(0.001);
+                }
                 $this->assertArrayNotHasKey($id, $registry->getValue(), $producer);
                 $this->assertNull(RemoteObject\Client::getInstance($id), $producer);
             }
@@ -349,12 +354,18 @@ class RemoteObjectTest extends TestCase
             $this->assertEquals('2026', $twin->format('Y'));
 
             unset($date);
-
+            $deadline = microtime(true) + 5;
             try {
-                $twin->format('Y');
-                $this->fail('The server-side object survived its RemoteObject');
-            } catch (RemoteObject\Exception $e) {
-                $this->assertStringContainsString("object[#{$id}] not found", $e->getMessage());
+                while (true) {
+                    try {
+                        $twin->format('Y');
+                    } catch (RemoteObject\Exception $e) {
+                        $this->assertStringContainsString("object[#{$id}] not found", $e->getMessage());
+                        break;
+                    }
+                    $this->assertLessThan($deadline, microtime(true), 'Queued release must finish');
+                    Coroutine::sleep(0.001);
+                }
             } finally {
                 // Disarm the twin: a second /destroy would fail, and RemoteObject::__destruct() would log it.
                 (new \ReflectionProperty(RemoteObject::class, 'objectId'))->setValue($twin, 0);
