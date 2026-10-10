@@ -29,6 +29,52 @@ use Swoole\Tests\TestCase;
  */
 class ProxyTest extends TestCase
 {
+    public function testRepeatedRequestHeadersAreCombined(): void
+    {
+        $request = self::parseRequest('/inspect.php', true,
+            "X-Test: one\r\nx-test: two\r\nX-Forwarded-For: 192.0.2.1\r\nX-Forwarded-For: 192.0.2.2\r\n");
+        $translated = (new Proxy('tcp://php-fpm:9000', DOCUMENT_ROOT))->translateRequest($request);
+        self::assertSame('one, two', $translated->getHeader('X-Test'));
+        self::assertSame('192.0.2.1, 192.0.2.2', $translated->getHeader('X-Forwarded-For'));
+    }
+
+    /** @dataProvider paths */
+    public function testScriptPathResolution(string $uri, string $script): void
+    {
+        $translated = (new Proxy('tcp://php-fpm:9000', DOCUMENT_ROOT . '/fastcgi'))
+            ->translateRequest(self::parseRequest($uri))
+        ;
+        self::assertSame(DOCUMENT_ROOT . '/fastcgi' . $script, $translated->getScriptFilename());
+        self::assertSame($script, $translated->getScriptName());
+        self::assertSame($script, $translated->getDocumentUri());
+        self::assertSame($uri, $translated->getRequestUri());
+    }
+
+    public static function paths(): array
+    {
+        return [
+            'literal plus'            => ['/plus+name.php', '/plus+name.php'],
+            'encoded plus'            => ['/plus%2Bname.php', '/plus+name.php'],
+            'encoded space'           => ['/plus%20name.php', '/plus name.php'],
+            'decode once'             => ['/percent%252B.php', '/percent%2B.php'],
+            'parent segment'          => ['/dir/../inspect.php?0', '/inspect.php'],
+            'encoded parent segment'  => ['/dir/%2e%2e/inspect.php', '/inspect.php'],
+            'current segment'         => ['/./inspect.php', '/inspect.php'],
+            'repeated slash'          => ['//dir///../inspect.php', '/inspect.php'],
+            'extensionless file'      => ['/LICENSE', '/LICENSE'],
+            'dotted directory'        => ['/v1.2/', '/v1.2/index.php'],
+            'directory without slash' => ['/v1.2', '/v1.2/index.php'],
+            'trailing dot segment'    => ['/v1.2/.', '/v1.2/index.php'],
+            'zero extension file'     => ['/file.0', '/file.0'],
+        ];
+    }
+
+    public function testParentSegmentCannotEscapeTheRoot(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        (new Proxy('tcp://php-fpm:9000', DOCUMENT_ROOT))->translateRequest(self::parseRequest('/../outside.php'));
+    }
+
     public function testCookiesAreForwardedWithoutReencoding(): void
     {
         foreach ([true, false] as $parseCookie) {

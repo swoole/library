@@ -4,6 +4,10 @@
 FastCGI Proxy. Both must use the same PHP-FPM pool and the same `tests/www/fastcgi`
 directory. The remaining FastCGI tests do not require nginx.
 
+Use nginx 1.28 or newer for the comparison: it combines repeated request headers
+with `, ` and Cookie headers with `; `. Older versions can pass duplicate FastCGI
+parameters instead, causing PHP-FPM to retain only the last value.
+
 Example nginx server configuration (adjust the absolute root and upstream):
 
 ```nginx
@@ -12,6 +16,7 @@ server {
     server_name localhost;
     root /var/www/tests/www/fastcgi;
     index index.php;
+    default_type application/octet-stream;
     client_max_body_size 32m;
     large_client_header_buffers 16 32k;
     location / { try_files $uri $uri/ =404; }
@@ -42,5 +47,7 @@ fixture uses PUT so PHP does not consume the request body before the script star
 Gateway failures compare status codes; successful FastCGI responses compare the
 body, Cookies, and application headers. Server, Date, and transport framing headers
 are excluded. Requests run sequentially so the two paths do not compete for workers.
-The sibling-directory probe requires rejection by both paths: nginx rejects the
-invalid URI with 400, while Proxy returns 404 for the file outside its document root.
+The static-file case compares status, content type, and body; front-end-generated
+ETag, Last-Modified, and Accept-Ranges headers are excluded. The sibling-directory
+and null-byte probes require rejection with 400 by both paths. Gateway-generated
+error pages are not compared.

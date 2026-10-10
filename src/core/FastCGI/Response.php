@@ -21,31 +21,33 @@ class Response extends Message
     protected EndRequest $endRequest;
 
     /**
-     * @param array<Stdout|Stderr|EndRequest> $records
+     * @param iterable<Stdout|Stderr|EndRequest> $records
      */
-    public function __construct(array $records)
+    public function __construct(iterable $records)
     {
-        if (!static::verify($records)) {
+        if (is_array($records) && !static::verify($records)) {
             throw new \InvalidArgumentException('Bad records');
         }
-        $this->endRequest = $records[array_key_last($records)];
-        if ($this->endRequest->getProtocolStatus() !== FastCGI::REQUEST_COMPLETE) {
-            throw new \DomainException('FastCGI request failed with protocol status ' . $this->endRequest->getProtocolStatus());
-        }
-
-        $body = $error = '';
+        $lastRecord = null;
         foreach ($records as $record) {
+            $lastRecord = $record;
             if ($record instanceof Stdout) {
                 if ($record->getContentLength() > 0) {
-                    $body .= $record->getContentData();
+                    $this->appendStdout($record->getContentData());
                 }
             } elseif ($record instanceof Stderr) {
                 if ($record->getContentLength() > 0) {
-                    $error .= $record->getContentData();
+                    $this->error .= $record->getContentData();
                 }
             }
         }
-        $this->withBody($body)->withError($error);
+        if (!$lastRecord instanceof EndRequest) {
+            throw new \InvalidArgumentException('Bad records');
+        }
+        $this->endRequest = $lastRecord;
+        if ($this->endRequest->getProtocolStatus() !== FastCGI::REQUEST_COMPLETE) {
+            throw new \DomainException('FastCGI request failed with protocol status ' . $this->endRequest->getProtocolStatus());
+        }
     }
 
     public function getAppStatus(): int
@@ -56,6 +58,11 @@ class Response extends Message
     public function getProtocolStatus(): int
     {
         return $this->endRequest->getProtocolStatus();
+    }
+
+    protected function appendStdout(string $content): void
+    {
+        $this->body .= $content;
     }
 
     /**

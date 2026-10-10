@@ -144,16 +144,31 @@ class Proxy
     {
         $server   = $userRequest->server;
         $headers  = $userRequest->header;
-        if (isset($headers['cookie']) && is_array($headers['cookie'])) {
-            $headers['cookie'] = implode('; ', $headers['cookie']);
-        }
-        $pathInfo = $userRequest->server['path_info'];
-        $pathInfo = '/' . ltrim((string) $pathInfo, '/');
-        if (strlen($this->index) !== 0) {
-            $extension = pathinfo($pathInfo, PATHINFO_EXTENSION);
-            if (empty($extension)) {
-                $pathInfo = rtrim($pathInfo, '/') . '/' . $this->index;
+        foreach ($headers as $name => $value) {
+            if (is_array($value)) {
+                $headers[$name] = implode(strcasecmp($name, 'cookie') === 0 ? '; ' : ', ', $value);
             }
+        }
+        // path_info uses form decoding, which turns a literal '+' into a space. Decode the original URI once.
+        $pathInfo = rawurldecode($server['request_uri']);
+        if (str_contains($pathInfo, "\0")) {
+            throw new \InvalidArgumentException('Request path contains a null byte');
+        }
+        $segments = [];
+        foreach (explode('/', $pathInfo) as $segment) {
+            if ($segment === '..') {
+                if ($segments === []) {
+                    throw new \InvalidArgumentException('Request path escapes the document root');
+                }
+                array_pop($segments);
+            } elseif ($segment !== '' && $segment !== '.') {
+                $segments[] = $segment;
+            }
+        }
+        $directory = str_ends_with($pathInfo, '/') || str_ends_with($pathInfo, '/.') || str_ends_with($pathInfo, '/..');
+        $pathInfo  = '/' . implode('/', $segments);
+        if ($this->index !== '' && ($directory || is_dir($this->documentRoot . $pathInfo))) {
+            $pathInfo = rtrim($pathInfo, '/') . '/' . $this->index;
         }
         $scriptName  = $documentUri = $pathInfo;
         $requestUri  = $server['request_uri'];
@@ -198,7 +213,13 @@ class Proxy
     public function pass(SwooleHttpRequest|HttpRequest $userRequest, SwooleHttpResponse $userResponse): void
     {
         if (!$userRequest instanceof HttpRequest) {
-            $request = $this->translateRequest($userRequest);
+            try {
+                $request = $this->translateRequest($userRequest);
+            } catch (\InvalidArgumentException $e) {
+                $userResponse->status(Http\Status::BAD_REQUEST);
+                $userResponse->end();
+                return;
+            }
         } else {
             $request = $userRequest;
         }

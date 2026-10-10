@@ -19,6 +19,8 @@ use Swoole\FastCGI\FrameParser;
 use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
 use Swoole\FastCGI\Record\EndRequest;
+use Swoole\FastCGI\Record\Stderr;
+use Swoole\FastCGI\Record\Stdout;
 use Swoole\FastCGI\Request;
 use Swoole\FastCGI\Response;
 
@@ -75,47 +77,20 @@ class Client
         if ($socket->sendAll($sendData, $timeout) !== strlen($sendData)) {
             $this->ioException();
         }
-        $records = [];
-        while (true) {
-            $recvData = $socket->recvPacket($timeout);
-            if (!$recvData) {
-                if ($recvData === '') {
-                    $this->ioException(SOCKET_ECONNRESET);
-                }
-                $this->ioException();
-            }
-            if (!FrameParser::hasFrame($recvData)) {
-                $this->ioException(SOCKET_EPROTO);
-            }
-
-            try {
-                do {
-                    $records[] = $record = FrameParser::parseFrame($recvData);
-                    if ($record->getRequestId() !== FastCGI::DEFAULT_REQUEST_ID
-                        || !in_array($record->getType(), [FastCGI::STDOUT, FastCGI::STDERR, FastCGI::END_REQUEST], true)) {
-                        throw new \DomainException('Unexpected FastCGI response record', SOCKET_EPROTO);
-                    }
-                } while (strlen($recvData) !== 0);
-                if ($record instanceof EndRequest) {
-                    // @phpstan-ignore argument.type,argument.type
-                    $response = ($request instanceof HttpRequest) ? new HttpResponse($records) : new Response($records);
-                    if (!$request->getKeepConn()) {
-                        $this->socket->close();
-                        $this->socket = null;
-                    }
-                    return $response;
-                }
-            } catch (\Throwable $e) {
-                // The rest of the response is still on the connection, and would be read as the response to the next
-                // request sent over it.
+        try {
+            $records  = $this->receiveRecords($socket, $timeout);
+            $response = ($request instanceof HttpRequest) ? new HttpResponse($records) : new Response($records);
+            if (!$request->getKeepConn()) {
                 $this->socket->close();
                 $this->socket = null;
-                throw $e;
             }
+            return $response;
+        } catch (\Throwable $e) {
+            // An incomplete response must never be read as the response to the next request.
+            $this->socket?->close();
+            $this->socket = null;
+            throw $e;
         }
-
-        // Code execution should never reach here. However, we still put an exit() statement here for safe purpose.
-        exit(1); // @phpstan-ignore deadCode.unreachable
     }
 
     /**
@@ -153,7 +128,7 @@ class Client
         $scriptName  = '/' . basename($path);
         $documentUri = $scriptName;
         $query       = $pathInfo['query'] ?? '';
-        $requestUri  = $query ? "{$documentUri}?{$query}" : $documentUri;
+        $requestUri  = $query !== '' ? "{$documentUri}?{$query}" : $documentUri;
         $request     = new HttpRequest();
         $request->withDocumentRoot($root)
             ->withScriptFilename($path)
@@ -178,5 +153,34 @@ class Client
         $socket->close();
         $this->socket = null;
         throw new Exception($socket->errMsg, $socket->errCode);
+    }
+
+    /**
+     * Yields each record as it arrives, so the response does not retain a second copy of the entire payload.
+     *
+     * @return \Generator<int, Stdout|Stderr|EndRequest>
+     */
+    private function receiveRecords(Socket $socket, float $timeout): \Generator
+    {
+        while (true) {
+            $recvData = $socket->recvPacket($timeout);
+            if (!$recvData) {
+                $this->ioException($recvData === '' ? SOCKET_ECONNRESET : null);
+            }
+            if (!FrameParser::hasFrame($recvData)) {
+                $this->ioException(SOCKET_EPROTO);
+            }
+            do {
+                $record = FrameParser::parseFrame($recvData);
+                if ($record->getRequestId() !== FastCGI::DEFAULT_REQUEST_ID
+                    || !($record instanceof Stdout || $record instanceof Stderr || $record instanceof EndRequest)) {
+                    throw new \DomainException('Unexpected FastCGI response record', SOCKET_EPROTO);
+                }
+                yield $record;
+                if ($record instanceof EndRequest) {
+                    return;
+                }
+            } while ($recvData !== '');
+        }
     }
 }

@@ -39,52 +39,22 @@ class HttpResponse extends Response
      */
     protected array $setCookieHeaderLines = [];
 
+    private bool $headersComplete = false;
+
+    private bool $invalidResponse = false;
+
     /**
-     * @param array<Stdout|Stderr|EndRequest> $records
+     * @param iterable<Stdout|Stderr|EndRequest> $records
      */
-    public function __construct(array $records = [])
+    public function __construct(iterable $records = [])
     {
         parent::__construct($records);
-        $body = $this->getBody();
-        if (strlen($body) === 0) {
-            /* An empty FastCGI response carries no HTTP payload at all; report it the same way as a malformed one
-             * so that the accessors are always safe to call. */
-            $this->withStatusCode(Status::BAD_GATEWAY)->withReasonPhrase('Invalid FastCGI Response');
-            return;
-        }
-        $array = explode("\r\n\r\n", $body, 2); // An array that contains the HTTP headers and the body.
-        if (count($array) != 2) {
-            $this->withStatusCode(Status::BAD_GATEWAY)->withReasonPhrase('Invalid FastCGI Response')->withError($body);
-            return;
-        }
-        $headers = explode("\r\n", $array[0]);
-        $body    = $array[1];
-        foreach ($headers as $header) {
-            $array = explode(':', $header, 2); // An array that contains the name and the value of an HTTP header.
-            if (count($array) != 2) {
-                continue; // Invalid HTTP header? Ignore it!
+        if (!$this->headersComplete) {
+            if ($this->body !== '') {
+                $this->withError($this->body);
             }
-            $name  = trim($array[0]);
-            $value = trim($array[1]);
-            if (strcasecmp($name, 'Status') === 0) {
-                $array        = explode(' ', $value, 2); // An array that contains the status code (and the reason phrase).
-                $statusCode   = $array[0];
-                $reasonPhrase = $array[1] ?? null;
-            } elseif (strcasecmp($name, 'Set-Cookie') === 0) {
-                $this->withSetCookieHeaderLine($value);
-            } else {
-                $key = $this->headersMap[strtolower($name)] ?? null;
-                if ($key === null) {
-                    $this->withHeader($name, $value);
-                } else {
-                    $this->headers[$key] = [...(array) $this->headers[$key], $value];
-                }
-            }
+            $this->invalidateResponse();
         }
-        $statusCode   = (int) ($statusCode ?? Status::OK);
-        $reasonPhrase = $reasonPhrase ?? Status::getReasonPhrase($statusCode);
-        $this->withStatusCode($statusCode)->withReasonPhrase($reasonPhrase);
-        $this->withBody($body);
     }
 
     public function getStatusCode(): int
@@ -157,5 +127,58 @@ class HttpResponse extends Response
     {
         $this->setCookieHeaderLines[] = $value;
         return $this;
+    }
+
+    protected function appendStdout(string $content): void
+    {
+        if ($this->invalidResponse) {
+            return;
+        }
+        $offset = max(0, strlen($this->body) - 3);
+        parent::appendStdout($content);
+        if ($this->headersComplete || !preg_match('/\r?\n\r?\n/', $this->body, $separator, PREG_OFFSET_CAPTURE, $offset)) {
+            return;
+        }
+        [$newline, $position]  = $separator[0];
+        $headers               = substr($this->body, 0, $position);
+        $this->body            = substr($this->body, $position + strlen($newline));
+        $this->headersComplete = true;
+        foreach (explode("\n", $headers) as $header) {
+            $array = explode(':', $header, 2); // An array that contains the name and the value of an HTTP header.
+            if (count($array) != 2) {
+                continue; // Invalid HTTP header? Ignore it!
+            }
+            $name  = trim($array[0]);
+            $value = trim($array[1]);
+            if (strcasecmp($name, 'Status') === 0) {
+                if (!preg_match('/^([1-9][0-9]{2})(?: (.*))?$/D', $value, $status)) {
+                    $this->withError($headers);
+                    $this->invalidateResponse();
+                    return;
+                }
+                $statusCode   = (int) $status[1];
+                $reasonPhrase = $status[2] ?? null;
+            } elseif (strcasecmp($name, 'Set-Cookie') === 0) {
+                $this->withSetCookieHeaderLine($value);
+            } else {
+                $key = $this->headersMap[strtolower($name)] ?? null;
+                if ($key === null) {
+                    $this->withHeader($name, $value);
+                } else {
+                    $this->headers[$key] = [...(array) $this->headers[$key], $value];
+                }
+            }
+        }
+        $statusCode   = $statusCode ?? ($this->getHeader('Location') ? Status::FOUND : Status::OK);
+        $reasonPhrase = $reasonPhrase ?? Status::getReasonPhrase($statusCode);
+        $this->withStatusCode($statusCode)->withReasonPhrase($reasonPhrase);
+    }
+
+    private function invalidateResponse(): void
+    {
+        $this->invalidResponse = true;
+        $this->body            = '';
+        $this->headers         = $this->headersMap = $this->setCookieHeaderLines = [];
+        $this->withStatusCode(Status::BAD_GATEWAY)->withReasonPhrase('Invalid FastCGI Response');
     }
 }

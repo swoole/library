@@ -22,6 +22,69 @@ use Swoole\Tests\TestCase;
  */
 class HttpResponseTest extends TestCase
 {
+    /** @dataProvider responseFragments */
+    public function testHeadersAcrossRecords(string $payload, int $split): void
+    {
+        $records  = [new Stdout(substr($payload, 0, $split)), new Stdout(substr($payload, $split)), new EndRequest()];
+        $response = new HttpResponse($records);
+        self::assertSame(201, $response->getStatusCode());
+        self::assertSame('Created', $response->getReasonPhrase());
+        self::assertSame('text/plain', $response->getHeader('content-type'));
+        self::assertSame("hello\n\r\n\0world", $response->getBody());
+    }
+
+    public static function responseFragments(): array
+    {
+        $cases = [];
+        foreach (["\r\n", "\n"] as $newline) {
+            $header  = "Status: 201 Created{$newline}Content-Type: text/plain{$newline}{$newline}";
+            $payload = $header . "hello\n\r\n\0world";
+            for ($split = 0; $split <= strlen($header); $split++) {
+                $cases[] = [$payload, $split];
+            }
+        }
+        return $cases;
+    }
+
+    /** @dataProvider invalidStatuses */
+    public function testInvalidStatusIsAGatewayError(string $status): void
+    {
+        $response = new HttpResponse([new Stdout("Content-Type: text/plain\r\nStatus: {$status}\r\n\r\nprivate body"), new EndRequest()]);
+        self::assertSame(502, $response->getStatusCode());
+        self::assertSame('', $response->getBody());
+        self::assertSame([], $response->getHeaders());
+    }
+
+    public static function invalidStatuses(): array
+    {
+        return [['fish'], ['20'], ['2000'], ['000'], ['200OK'], ['-200'], ['']];
+    }
+
+    public function testLocationDefaultsToRedirectUnlessStatusIsExplicit(): void
+    {
+        foreach (['' => 302, "Status: 200 OK\r\n" => 200, "Status: 307 Temporary Redirect\r\n" => 307] as $status => $expected) {
+            $response = new HttpResponse([new Stdout($status . "Location: https://example.com/target\r\n\r\n"), new EndRequest()]);
+            self::assertSame($expected, $response->getStatusCode());
+            self::assertSame('https://example.com/target', $response->getHeader('Location'));
+        }
+    }
+
+    public function testIncompleteHeadersAreNotReturnedAsBody(): void
+    {
+        $response = new HttpResponse([new Stdout('X-Private: diagnostic'), new EndRequest()]);
+        self::assertSame(502, $response->getStatusCode());
+        self::assertSame('', $response->getBody());
+        self::assertSame('X-Private: diagnostic', $response->getError());
+    }
+
+    public function testAnEmptyResponsePreservesStderr(): void
+    {
+        $response = new HttpResponse([new Record\Stderr('diagnostic'), new EndRequest()]);
+        self::assertSame(502, $response->getStatusCode());
+        self::assertSame('diagnostic', $response->getError());
+        self::assertSame('', $response->getBody());
+    }
+
     public function testRepeatedHeadersAndCaseInsensitiveReplacement(): void
     {
         $response = new HttpResponse([

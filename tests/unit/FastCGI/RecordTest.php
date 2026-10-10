@@ -23,6 +23,17 @@ class RecordTest extends TestCase
     // from the wireshark captured traffic
     public static string $rawRequest = '01010001000800000001010000000000';
 
+    public function testUpdatedPayloadMatchesTheSerializedLength(): void
+    {
+        $record = new Record\Params(['a' => 'b']);
+        $record->setContentData('xyz');
+        $packet = $record->toString();
+        self::assertSame(16, strlen($packet));
+        self::assertSame('xyz', Record::unpack($packet)->getContentData());
+        self::assertSame(5, Record::unpack($packet)->getPaddingLength());
+        self::assertSame($record->__toString(), $packet);
+    }
+
     public function testMaximumContentLengthAndOverflow(): void
     {
         $record  = new Record();

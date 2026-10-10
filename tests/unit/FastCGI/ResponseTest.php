@@ -23,6 +23,24 @@ use Swoole\Tests\TestCase;
  */
 class ResponseTest extends TestCase
 {
+    public function testRecordsAreConsumedWithoutRetainingEarlierPayloads(): void
+    {
+        $first   = null;
+        $records = (static function () use (&$first): \Generator {
+            $record = new Stdout('first');
+            $first  = \WeakReference::create($record);
+            yield $record;
+            unset($record);
+            yield new Stderr('diagnostic');
+            self::assertNull($first->get(), 'A consumed STDOUT record must not remain buffered.');
+            yield new Stdout('second');
+            yield new EndRequest();
+        })();
+        $response = new Response($records);
+        self::assertSame('firstsecond', $response->getBody());
+        self::assertSame('diagnostic', $response->getError());
+    }
+
     public function testApplicationStatusIsPreservedWithoutDiscardingOutput(): void
     {
         $response = new Response([new Stdout('body'), new Stderr('diagnostic'), new EndRequest(FastCGI::REQUEST_COMPLETE, 23)]);

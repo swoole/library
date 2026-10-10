@@ -28,6 +28,45 @@ use Swoole\Tests\TestCase;
  */
 class ClientTest extends TestCase
 {
+    public function testLargeResponseWithInterleavedStderr(): void
+    {
+        self::coRun(function (): void {
+            $chunk  = str_repeat("a\0\xffb", 8192);
+            $server = new Server('127.0.0.1', 0);
+            $server->handle(static function (Connection $connection) use ($chunk): void {
+                $connection->recv();
+                $connection->send((new Stdout("Content-Type: application/octet-stream\n"))->toString());
+                $connection->send((new Stdout("\n"))->toString());
+                for ($i = 0; $i < 64; $i++) {
+                    $connection->send((new Stdout($chunk))->toString());
+                    $connection->send((new FastCGI\Record\Stderr('diagnostic'))->toString());
+                }
+                $connection->send(new Stdout('') . new EndRequest(FastCGI::REQUEST_COMPLETE, 23));
+                $connection->close();
+            });
+            Coroutine::create(static fn () => $server->start());
+            try {
+                $response = (new Client('127.0.0.1', $server->port))->execute(new HttpRequest(), 1);
+                self::assertSame(200, $response->getStatusCode());
+                self::assertSame(str_repeat($chunk, 64), $response->getBody());
+                self::assertSame(str_repeat('diagnostic', 64), $response->getError());
+                self::assertSame(23, $response->getAppStatus());
+            } finally {
+                $server->shutdown();
+            }
+        });
+    }
+
+    public function testCallPreservesAZeroQueryString(): void
+    {
+        self::coRun(function (): void {
+            $body   = Client::call('tcp://php-fpm:9000', DOCUMENT_ROOT . '/fastcgi/inspect.php?0', '', 1);
+            $result = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            self::assertSame('/inspect.php?0', $result['request_uri']);
+            self::assertSame('0', $result['query']);
+        });
+    }
+
     /** @dataProvider invalidResponses */
     public function testInvalidResponsesCloseKeptConnections(string $frames): void
     {

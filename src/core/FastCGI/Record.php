@@ -63,6 +63,11 @@ class Record implements \Stringable
      */
     final public function __toString(): string
     {
+        return $this->toString();
+    }
+
+    final public function toString(): string
+    {
         $headerPacket = pack(
             'CCnnCC',
             $this->version,
@@ -73,7 +78,7 @@ class Record implements \Stringable
             $this->reserved
         );
 
-        $payloadPacket = $this->packPayload();
+        $payloadPacket = $this->contentData;
         $paddingPacket = pack("a{$this->paddingLength}", $this->paddingData);
 
         return $headerPacket . $payloadPacket . $paddingPacket;
