@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole\Thread;
 
 use PhpParser\Error;
+use PhpParser\Node\Stmt;
 use PhpParser\ParserFactory;
 use Swoole\Thread;
 
@@ -95,54 +96,41 @@ class Pool
             }
         }
 
-        if ($this->autoloader) {
-            $proxyDirectory = dirname($this->autoloader);
-        } else {
-            $proxyDirectory = dirname($this->classDefinitionFile);
+        // Thread requests have their own working directory; resolve paths before launching them.
+        if ($this->autoloader !== '') {
+            $this->autoloader = realpath($this->autoloader) ?: $this->autoloader;
+        }
+        if ($this->classDefinitionFile !== '') {
+            $this->classDefinitionFile = realpath($this->classDefinitionFile) ?: $this->classDefinitionFile;
         }
 
-        $script = '<?php' . PHP_EOL;
-        $script .= '$arguments = Swoole\Thread::getArguments();' . PHP_EOL;
-        $script .= '$autoloader = $arguments[0];' . PHP_EOL;
-        $script .= '$runnableClass = $arguments[1];' . PHP_EOL;
-        $script .= '$queue = $arguments[2];' . PHP_EOL;
-        $script .= '$index = $arguments[5];' . PHP_EOL;
-        // PHP exit() and fatal errors skip finally, but still run request shutdown functions.
-        $script .= 'register_shutdown_function(static function () use ($queue, $index): void {' . PHP_EOL;
-        $script .= '    $queue->push($index, Swoole\Thread\Queue::NOTIFY_ONE);' . PHP_EOL;
-        $script .= '});' . PHP_EOL;
-        $script .= '$classDefinitionFile = $arguments[3];' . PHP_EOL;
-        $script .= '$running = $arguments[4];' . PHP_EOL;
-        $script .= '$threadArguments = array_slice($arguments, 6);' . PHP_EOL;
-        $script .= 'if ($autoloader) require_once $autoloader;' . PHP_EOL;
-        $script .= 'if ($classDefinitionFile) require_once $classDefinitionFile;' . PHP_EOL;
-        $script .= '$runnable = new $runnableClass($running, $index);' . PHP_EOL;
-        $script .= '$runnable->run($threadArguments);' . PHP_EOL;
+        $this->queue     = new Queue();
+        $this->running   = new Atomic(1);
+        $this->proxyFile = $this->createRunner();
 
-        // Existing installations may still have a runner using the old finally-based notification.
-        $this->proxyFile = $proxyDirectory . '/thread_runner_' . sha1($script) . '.php';
-        if (!is_file($this->proxyFile)) {
-            file_put_contents($this->proxyFile, $script);
-        }
+        try {
+            for ($index = 0; $index < $this->threadNum; $index++) {
+                $this->createThread($index);
+            }
 
-        $this->queue   = new Queue();
-        $this->running = new Atomic(1);
+            while ($this->running->get()) {
+                $index  = $this->queue->pop(-1);
+                $thread = $this->threads[$index];
+                $thread->join();
+                unset($this->threads[$index]);
 
-        for ($index = 0; $index < $this->threadNum; $index++) {
-            $this->createThread($index);
-        }
-
-        while ($this->running->get()) {
-            $index  = $this->queue->pop(-1);
-            $thread = $this->threads[$index];
-            $thread->join();
-            unset($this->threads[$index]);
-
-            $this->createThread($index);
-        }
-
-        foreach ($this->threads as $thread) {
-            $thread->join();
+                $this->createThread($index);
+            }
+        } finally {
+            $this->running->set(0);
+            try {
+                foreach ($this->threads as $thread) {
+                    $thread->join();
+                }
+            } finally {
+                $this->threads = [];
+                unlink($this->proxyFile);
+            }
         }
     }
 
@@ -161,42 +149,22 @@ class Pool
             throw new \Exception('The file of the class to run cannot be checked without the package nikic/php-parser. Install it, or set the file with withClassDefinitionFile().');
         }
 
-        $allowedNodeTypes = [
-            \PhpParser\Node\Stmt\Class_::class,
-            \PhpParser\Node\Stmt\Const_::class,
-            \PhpParser\Node\Stmt\Use_::class,
-            \PhpParser\Node\Stmt\Namespace_::class,
-            \PhpParser\Node\Stmt\Declare_::class,
-        ];
-
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
         try {
-            $code     = file_get_contents($filePath);
-            $stmts    = $parser->parse($code);
-            $skipLine = -1;
-            foreach ($stmts as $stmt) {
-                $isAllowed = false;
-                foreach ($allowedNodeTypes as $allowedNodeType) {
-                    if ($stmt instanceof $allowedNodeType) {
-                        $isAllowed = true;
-                        break;
-                    }
-                }
-                if (!$isAllowed) {
-                    if ($stmt->getLine() == $skipLine) {
-                        continue;
-                    }
-                    return false;
-                }
-            }
+            $code  = file_get_contents($filePath);
+            $stmts = $parser->parse($code);
+            return $this->containsOnlyDeclarations($stmts ?? []);
         } catch (Error) {
             return false;
         }
-        return true;
     }
 
     protected function createThread(int $index): void
     {
+        if (!$this->running->get()) {
+            return;
+        }
+
         $this->threads[$index] = new Thread($this->proxyFile,
             $this->autoloader,
             $this->runnableClass,
@@ -206,5 +174,71 @@ class Pool
             $index,
             ...$this->arguments
         );
+    }
+
+    private function createRunner(): string
+    {
+        $script = <<<'PHP'
+<?php
+$arguments = Swoole\Thread::getArguments();
+$autoloader = $arguments[0];
+$runnableClass = $arguments[1];
+$queue = $arguments[2];
+$index = $arguments[5];
+// PHP exit() and fatal errors skip finally, but still run request shutdown functions.
+register_shutdown_function(static function () use ($queue, $index): void {
+    $queue->push($index, Swoole\Thread\Queue::NOTIFY_ONE);
+});
+$classDefinitionFile = $arguments[3];
+$running = $arguments[4];
+$threadArguments = array_slice($arguments, 6);
+// Preserve the working directory used when runners lived next to the autoloader or class file.
+chdir(dirname($autoloader ?: $classDefinitionFile));
+if ($autoloader) require_once $autoloader;
+if ($classDefinitionFile) require_once $classDefinitionFile;
+$runnable = new $runnableClass($running, $index);
+$runnable->run($threadArguments);
+PHP;
+
+        $file = @tempnam(sys_get_temp_dir(), 'swoole_thread_runner_');
+        if ($file === false) {
+            throw new \RuntimeException('Failed to create thread runner in the temporary directory.');
+        }
+        try {
+            if (@file_put_contents($file, $script) !== strlen($script)) {
+                throw new \RuntimeException("Failed to write thread runner '{$file}'.");
+            }
+            return $file;
+        } catch (\Throwable $exception) {
+            unlink($file);
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param Stmt[] $statements
+     */
+    private function containsOnlyDeclarations(array $statements): bool
+    {
+        foreach ($statements as $statement) {
+            if ($statement instanceof Stmt\Namespace_ || $statement instanceof Stmt\Declare_) {
+                if (!$this->containsOnlyDeclarations($statement->stmts ?? [])) {
+                    return false;
+                }
+                continue;
+            }
+
+            // Class and function bodies are deferred; only inspect containers executed when loading the file.
+            if ($statement instanceof Stmt\ClassLike
+                || $statement instanceof Stmt\Function_
+                || $statement instanceof Stmt\Const_
+                || $statement instanceof Stmt\Use_
+                || $statement instanceof Stmt\GroupUse
+                || $statement instanceof Stmt\Nop) {
+                continue;
+            }
+            return false;
+        }
+        return true;
     }
 }

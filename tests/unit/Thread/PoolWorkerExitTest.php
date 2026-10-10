@@ -70,7 +70,45 @@ class PoolWorkerExitTest extends TestCase
         $this->assertWorkerRecovery('worker_indexes');
     }
 
-    private function assertWorkerRecovery(string $mode, bool $legacyRunner = false): void
+    public function testShutdownDoesNotRestartWorker(): void
+    {
+        $this->assertWorkerRecovery('shutdown', false, 'worker_shutdown.php');
+    }
+
+    public function testShutdownDuringStartupDoesNotCreateRemainingWorkers(): void
+    {
+        $this->assertWorkerRecovery('shutdown_during_startup', false, 'worker_shutdown.php');
+    }
+
+    public function testRunnerWithReadOnlyDeployment(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows' || (function_exists('posix_geteuid') && posix_geteuid() === 0)) {
+            self::markTestSkipped('Requires Unix directory permissions and an unprivileged user.');
+        }
+        $this->assertWorkerRecovery('runner_read_only', false, 'worker_runner.php');
+    }
+
+    public function testRunnerWithRelativePaths(): void
+    {
+        $this->assertWorkerRecovery('runner_relative_paths', false, 'worker_runner.php');
+    }
+
+    public function testOverlappingPoolsHaveIndependentRunners(): void
+    {
+        $this->assertWorkerRecovery('runner_overlapping_pools', false, 'worker_runner.php');
+    }
+
+    public function testRunnerIsRemovedAfterStartupFailure(): void
+    {
+        $this->assertWorkerRecovery('runner_startup_failure', false, 'worker_runner.php');
+    }
+
+    public function testRunnerCreationFailure(): void
+    {
+        $this->assertWorkerRecovery('runner_creation_failure', false, 'worker_runner.php');
+    }
+
+    private function assertWorkerRecovery(string $mode, bool $legacyRunner = false, string $fixture = 'worker_exit.php'): void
     {
         $directory = sys_get_temp_dir() . '/' . uniqid('swoole_thread_exit_', true);
         mkdir($directory);
@@ -79,11 +117,16 @@ class PoolWorkerExitTest extends TestCase
             $command[] = '-c';
             $command[] = $ini;
         }
+        if ($mode === 'runner_creation_failure') {
+            file_put_contents($directory . '/unwritable-temp', 'not a directory');
+            $command[] = '-d';
+            $command[] = 'sys_temp_dir=' . $directory . '/unwritable-temp';
+        }
         // Composer also defines SWOOLE_LIBRARY; select the implementation actually under test.
         $embedded = str_starts_with((new \ReflectionClass(Pool::class))->getFileName(), '@swoole/library/');
         $command  = array_merge($command, [
             '-d', 'swoole.enable_library=' . ($embedded ? 'On' : 'Off'),
-            dirname(__DIR__, 2) . '/fixtures/Thread/worker_exit.php', $mode, $directory,
+            dirname(__DIR__, 2) . '/fixtures/Thread/' . $fixture, $mode, $directory,
             $legacyRunner ? 'legacy' : '',
         ]);
         // Thread tests run serially; use native process functions outside a coroutine.
@@ -118,6 +161,7 @@ class PoolWorkerExitTest extends TestCase
                 proc_close($process);
             }
             Runtime::setHookFlags($hookFlags);
+            chmod($directory, 0700);
             foreach (glob($directory . '/*') as $file) {
                 unlink($file);
             }

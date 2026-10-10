@@ -16,7 +16,7 @@
 /.phplint-cache
 /.phplint.cache/*
 
-# Ignore the script Swoole\Thread\Pool writes next to the class it runs.
+# Ignore runner files left by older Swoole\Thread\Pool versions.
 thread_runner.php
 thread_runner_*.php
 
