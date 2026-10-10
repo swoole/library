@@ -25,6 +25,15 @@ class Server
 
     private array $objects = [];
 
+    /** @var array<int, \Iterator> */
+    private array $iterators = [];
+
+    /** @var array<int, array{objects: array<int, true>, requests: int, closed: bool}> */
+    private array $connections = [];
+
+    /** @var array<int, int> */
+    private array $objectConnections = [];
+
     private array $allowedClasses = [];
 
     private array $allowedFunctions = [];
@@ -38,6 +47,11 @@ class Server
         // By default, thread mode is used, and when viewed with ps, only one process will be displayed.
         $server_mode = $options['server_mode'] ?? SWOOLE_THREAD;
         $socket_type = $options['socket_type'] ?? SWOOLE_SOCK_TCP;
+        if ($server_mode === SWOOLE_PROCESS
+            && ((int) ($options['dispatch_mode'] ?? SWOOLE_DISPATCH_FDMOD) !== SWOOLE_DISPATCH_FDMOD
+                || isset($options['dispatch_func']))) {
+            throw new Exception('Remote objects require dispatch_mode=SWOOLE_DISPATCH_FDMOD without a custom dispatch_func');
+        }
         $server      = new HttpServer($host, $port, $server_mode, $socket_type);
         unset($options['server_mode'], $options['socket_type']);
 
@@ -66,6 +80,7 @@ class Server
             $server->set($options);
         }
         $server->on('request', $this->onRequest(...));
+        $server->on('close', $this->onClose(...));
         $server->on('start', $this->onStart(...));
         $this->server       = $server;
         $this->nextObjectId = new Long(1);
@@ -89,6 +104,11 @@ class Server
             $ctx->end(['code' => -3, 'msg' => 'invalid api key']);
             return;
         }
+        $fd = $request->fd;
+        if (!isset($this->connections[$fd])) {
+            $this->connections[$fd] = ['objects' => [], 'requests' => 0, 'closed' => false];
+        }
+        $this->connections[$fd]['requests']++;
         try {
             $method = $ctx->getHandler();
             if (method_exists($this, $method)) {
@@ -102,25 +122,76 @@ class Server
                 'code'    => $e->getCode(),
                 'class'   => $e::class,
             ]]);
+        } finally {
+            $this->connections[$fd]['requests']--;
+            if ($this->connections[$fd]['closed'] && $this->connections[$fd]['requests'] === 0) {
+                $this->releaseConnection($fd);
+            }
+        }
+    }
+
+    public function onClose(HttpServer $server, int|\Swoole\Server\Event $fd, int $reactorId = -1): void
+    {
+        if ($fd instanceof \Swoole\Server\Event) {
+            $fd = $fd->fd;
+        }
+        if (!isset($this->connections[$fd])) {
+            return;
+        }
+        $this->connections[$fd]['closed'] = true;
+        // A suspended request can still create or return objects after the connection closes.
+        if ($this->connections[$fd]['requests'] === 0) {
+            $this->releaseConnection($fd);
+        }
+    }
+
+    private function releaseConnection(int $fd): void
+    {
+        $objects = $this->connections[$fd]['objects'];
+        unset($this->connections[$fd]);
+        foreach ($objects as $objectId => $_) {
+            try {
+                $this->releaseObject($objectId);
+            } catch (\Throwable $e) {
+                error_log("Failed to release remote object[#{$objectId}]: " . $e->getMessage());
+            }
+        }
+    }
+
+    private function releaseObject(int $objectId): void
+    {
+        if (!isset($this->objectConnections[$objectId])) {
+            return;
+        }
+        $fd = $this->objectConnections[$objectId];
+        // Remove ownership before running user destructors, which can throw or suspend.
+        unset($this->objectConnections[$objectId], $this->connections[$fd]['objects'][$objectId]);
+        try {
+            unset($this->iterators[$objectId]);
+        } finally {
+            unset($this->objects[$objectId]);
         }
     }
 
     /**
      * @param object|resource $object
      */
-    private function addObject(mixed $object): int
+    private function addObject(Context $ctx, mixed $object): int
     {
         // The spl_object_id/spl_object_hash cannot be used,
         // as the IDs they generate will be reused after the objects are destroyed.
-        $object_id                 = $this->nextObjectId->add();
-        $this->objects[$object_id] = $object;
+        $object_id                                     = $this->nextObjectId->add();
+        $this->objects[$object_id]                     = $object;
+        $fd                                            = $ctx->request->fd;
+        $this->connections[$fd]['objects'][$object_id] = true;
+        $this->objectConnections[$object_id]           = $fd;
         return $object_id;
     }
 
     private function marshal(Context $ctx, mixed $data): mixed
     {
         if (is_object($data) || is_resource($data)) {
-            $object_id = $this->addObject($data);
+            $object_id = $this->addObject($ctx, $data);
             return RemoteObject::marshal($object_id, $ctx->getCoroutineId(), $ctx->getClientId());
         }
         if (is_array($data)) {
@@ -164,7 +235,18 @@ class Server
             $args[$key] = $this->unmarshal($value);
         }
         $obj       = new $class(...$args);
-        $object_id = $this->addObject($obj);
+        $object_id = $this->addObject($ctx, $obj);
+        $ctx->end(['code' => 0, 'object' => $object_id]);
+    }
+
+    private function _clone(Context $ctx): void
+    {
+        $object_id = $ctx->getParam('object');
+        if (!isset($this->objects[$object_id])) {
+            throw new Exception("object[#{$object_id}] not found");
+        }
+        $object    = clone $this->objects[$object_id];
+        $object_id = $this->addObject($ctx, $object);
         $ctx->end(['code' => 0, 'object' => $object_id]);
     }
 
@@ -200,11 +282,7 @@ class Server
         foreach ($args as $key => $value) {
             $args[$key] = $this->unmarshal($value);
         }
-        $obj = $this->objects[$object_id];
-        if (!method_exists($obj, $method)) {
-            $class = $obj::class;
-            throw new Exception("method[{$class}::{$method}] not found");
-        }
+        $obj    = $this->objects[$object_id];
         $result = $obj->{$method}(...$args);
         $ctx->end(['code' => 0, 'result' => $this->marshal($ctx, $result)]);
     }
@@ -283,7 +361,7 @@ class Server
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }
-        unset($this->objects[$object_id]);
+        $this->releaseObject((int) $object_id);
         $ctx->end(['code' => 0]);
     }
 
@@ -297,13 +375,37 @@ class Server
         $ctx->end(['code' => 0, 'value' => (string) $obj]);
     }
 
+    private function _iterate(Context $ctx): void
+    {
+        $object_id = $ctx->getParam('object');
+        if (!isset($this->objects[$object_id])) {
+            throw new Exception("object[#{$object_id}] not found");
+        }
+        $method = $ctx->getParam('method');
+        if (!in_array($method, ['rewind', 'valid', 'current', 'key', 'next'], true)) {
+            throw new Exception("invalid iterator method[{$method}]");
+        }
+        $iterator = $this->objects[$object_id];
+        if ($iterator instanceof \IteratorAggregate) {
+            // Each traversal gets a fresh iterator; a Generator cannot necessarily be rewound and reused.
+            if ($method === 'rewind' || !isset($this->iterators[$object_id])) {
+                $this->iterators[$object_id] = new \IteratorIterator($iterator);
+            }
+            $iterator = $this->iterators[$object_id];
+        } elseif (!$iterator instanceof \Iterator) {
+            throw new Exception("object[#{$object_id}] is not an iterator");
+        }
+        $result = $iterator->{$method}();
+        $ctx->end(['code' => 0, 'result' => $this->marshal($ctx, $result)]);
+    }
+
     // The four offset handlers go through the ArrayAccess implementation of the object. An object without one gets
     // the property access these handlers used to do for every object, so that nothing relying on that breaks.
 
     private function _offset_get(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
-        $offset    = $ctx->getParam('offset');
+        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }
@@ -315,7 +417,7 @@ class Server
     private function _offset_set(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
-        $offset    = $ctx->getParam('offset');
+        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
         $value     = $ctx->getDataParam('value');
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
@@ -332,7 +434,7 @@ class Server
     private function _offset_unset(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
-        $offset    = $ctx->getParam('offset');
+        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }
@@ -348,7 +450,7 @@ class Server
     private function _offset_exists(Context $ctx): void
     {
         $object_id = $ctx->getParam('object');
-        $offset    = $ctx->getParam('offset');
+        $offset    = $this->unmarshal($ctx->getDataParam('offset'));
         if (!isset($this->objects[$object_id])) {
             throw new Exception("object[#{$object_id}] not found");
         }

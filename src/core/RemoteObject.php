@@ -43,6 +43,15 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         }
     }
 
+    public function __clone(): void
+    {
+        $objectId = $this->objectId;
+        // A failed clone must not release the original remote object during destruction.
+        $this->objectId = 0;
+        $rs             = $this->execute('/clone', ['object' => $objectId]);
+        $this->objectId = intval($rs['object']);
+    }
+
     /**
      * @throws Exception
      */
@@ -182,7 +191,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     {
         $rs = $this->execute('/offset_get', [
             'object' => $this->objectId,
-            'offset' => $offset,
+            'offset' => serialize($offset),
         ]);
         return $rs['value'];
     }
@@ -194,7 +203,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     {
         $this->execute('/offset_set', [
             'object' => $this->objectId,
-            'offset' => $offset,
+            'offset' => serialize($offset),
             'value'  => serialize($value),
         ]);
     }
@@ -206,7 +215,7 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     {
         $this->execute('/offset_unset', [
             'object' => $this->objectId,
-            'offset' => $offset,
+            'offset' => serialize($offset),
         ]);
     }
 
@@ -214,39 +223,48 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
     {
         $rs = $this->execute('/offset_exists', [
             'object' => $this->objectId,
-            'offset' => $offset,
+            'offset' => serialize($offset),
         ]);
         return (bool) $rs['value'];
     }
 
     public function current(): mixed
     {
-        return $this->__call('current', []);
+        return $this->iterate('current');
     }
 
     public function next(): void
     {
-        $this->__call('next', []);
+        $this->iterate('next');
     }
 
     public function key(): mixed
     {
-        return $this->__call('key', []);
+        return $this->iterate('key');
     }
 
     public function valid(): bool
     {
-        return $this->__call('valid', []);
+        return $this->iterate('valid');
     }
 
     public function rewind(): void
     {
-        $this->__call('rewind', []);
+        $this->iterate('rewind');
     }
 
     public function count(): int
     {
         return $this->__call('count', []);
+    }
+
+    private function iterate(string $method): mixed
+    {
+        $rs = $this->execute('/iterate', [
+            'object' => $this->objectId,
+            'method' => $method,
+        ]);
+        return $rs['result'];
     }
 
     private function execute(string $path, array $params = []): array
