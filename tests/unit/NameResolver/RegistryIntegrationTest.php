@@ -29,7 +29,11 @@ class RegistryIntegrationTest extends TestCase
                 try {
                     self::assertNotNull($resolver->getCluster($name));
                     $first = $registration->getLastHeartbeat();
-                    Coroutine::sleep(0.08);
+                    // Under concurrent load, overdue sleep timers can resume before heartbeat I/O completes.
+                    $deadline = hrtime(true) + 2000000000;
+                    while ($registration->getLastHeartbeat() <= $first && hrtime(true) < $deadline) {
+                        Coroutine::sleep(0.01);
+                    }
                     self::assertGreaterThan($first, $registration->getLastHeartbeat());
                     self::assertNull($registration->getLastError());
                     self::assertNotNull($resolver->getCluster($name));
