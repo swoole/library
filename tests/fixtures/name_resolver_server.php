@@ -19,6 +19,10 @@ use Swoole\NameResolver\Redis;
 if (!defined('SWOOLE_LIBRARY')) {
     require dirname(__DIR__, 2) . '/vendor/autoload.php';
 }
+// Give the parent test a process group it can terminate, including server workers, on timeout.
+if (posix_setsid() < 0) {
+    throw new RuntimeException('Unable to create lifecycle test process group');
+}
 [$script, $backend, $mode, $redisUrl, $consulUrl, $nacosUrl] = $argv;
 $mode                                                        = (int) $mode;
 // Source-loaded classes also use the extension's Server Helper hooks.
@@ -31,10 +35,11 @@ $resolver = match ($backend) {
 $name    = 'swoole-lifecycle-' . bin2hex(random_bytes(8)) . '.service';
 $visible = new Atomic(0);
 $server  = new Server('127.0.0.1', 0, $mode);
-$server->set(['worker_num' => 2, 'reactor_num' => 1, 'log_file' => '/dev/null', 'max_wait_time' => 2,
+$server->set(['worker_num' => 2, 'reactor_num' => 1, 'log_file' => '/dev/stderr', 'log_level' => SWOOLE_LOG_WARNING, 'max_wait_time' => 2,
     'service_name'         => $name, 'service_resolver' => $resolver, 'service_heartbeat_interval' => 0.05]);
 $server->on('request', static fn ($request, $response) => $response->end('OK'));
 $server->on('workerStart', static function ($server, $workerId) use ($resolver, $name, $visible): void {
+    fwrite(STDERR, "{$name}: worker {$workerId} started\n");
     if ($workerId !== 1) {
         return;
     }
@@ -43,17 +48,21 @@ $server->on('workerStart', static function ($server, $workerId) use ($resolver, 
             $deadline = microtime(true) + 3;
             do {
                 if ($resolver->getCluster($name) !== null) {
+                    fwrite(STDERR, "{$name}: service became discoverable\n");
                     $visible->set(1);
                     break;
                 }
                 Coroutine::sleep(0.02);
             } while (microtime(true) < $deadline);
         } finally {
+            fwrite(STDERR, "{$name}: requesting shutdown\n");
             $server->shutdown();
         }
     });
 });
+fwrite(STDERR, "{$backend}/{$mode}: starting server\n");
 $server->start();
+fwrite(STDERR, "{$backend}/{$mode}: server stopped\n");
 if ($visible->get() !== 1) {
     throw new RuntimeException('The server never became discoverable');
 }

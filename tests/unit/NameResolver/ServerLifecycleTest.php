@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole\NameResolver;
 
 use Swoole\Tests\TestCase;
+use Swoole\Timer;
 
 /**
  * @internal
@@ -27,18 +28,44 @@ class ServerLifecycleTest extends TestCase
         }
         self::coRun(function () use ($backend, $mode): void {
             $embedded = str_starts_with((new \ReflectionClass(Registration::class))->getFileName(), '@swoole/');
-            $process  = proc_open([PHP_BINARY, '-d', 'swoole.enable_library=' . ($embedded ? 'On' : 'Off'),
+            // A file for stderr cannot fill a pipe while stdout is being read.
+            $stderr = tmpfile();
+            self::assertIsResource($stderr);
+            $process = proc_open([PHP_BINARY, '-d', 'swoole.enable_library=' . ($embedded ? 'On' : 'Off'),
                 dirname(__DIR__, 2) . '/fixtures/name_resolver_server.php', $backend, (string) $mode,
                 REDIS_SERVER_URL, CONSUL_AGENT_URL, NACOS_SERVER_URL,
-            ], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            ], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => $stderr], $pipes);
             self::assertIsResource($process);
-            fclose($pipes[0]);
-            $output = stream_get_contents($pipes[1]);
-            $errors = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-            self::assertSame(0, proc_close($process), $errors . $output);
-            self::assertSame('DONE', trim($output), $errors);
+            $pid      = proc_get_status($process)['pid'];
+            $timedOut = false;
+            $timer    = Timer::after(20000, static function () use ($process, $pid, &$timedOut): void {
+                $timedOut = true;
+                // The fixture owns its session; kill workers too, so none can keep stdout open.
+                if (!posix_kill(-$pid, SIGKILL)) {
+                    proc_terminate($process, SIGKILL);
+                }
+            });
+            try {
+                fclose($pipes[0]);
+                $output = stream_get_contents($pipes[1]);
+                fclose($pipes[1]);
+                $status = proc_close($process);
+                rewind($stderr);
+                $errors = stream_get_contents($stderr);
+                self::assertFalse($timedOut, "Lifecycle test timed out ({$backend}/{$mode}):\n" . $errors . $output);
+                self::assertSame(0, $status, $errors . $output);
+                self::assertSame('DONE', trim($output), $errors);
+            } finally {
+                if (Timer::exists($timer)) {
+                    Timer::clear($timer);
+                }
+                if (is_resource($process)) {
+                    posix_kill(-$pid, SIGKILL);
+                    proc_terminate($process, SIGKILL);
+                    proc_close($process);
+                }
+                fclose($stderr);
+            }
         });
     }
 

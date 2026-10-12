@@ -66,13 +66,11 @@ jobs:
         run: |
           docker compose pull
           docker compose build
-          docker compose up -d
+          docker compose up --wait --wait-timeout 180
 
           docker compose exec -T app php -v
           docker compose exec -T app php --ri swoole
           docker compose exec -T app composer install -n -q --no-progress
-
-          sleep 40s
 
       # Coding style does not depend on the PHP version the code runs on, so it is checked once.
       - name: Run Coding Style Checks
@@ -94,6 +92,14 @@ jobs:
         timeout-minutes: 5
         if: matrix.php == '8.2' || matrix.php == '8.5'
         run: docker compose exec -T app composer test
+
+      - name: Dump Test Environment On Failure
+        if: failure()
+        env:
+          COMPOSE_FILE: ${{ matrix['image-tag-prefix'] == '' && 'docker-compose.yml' || 'docker-compose.yml:docker-compose.ci.yml' }}
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 200
 
   # The Swoole\Thread classes only exist in a thread-safe (ZTS) build of PHP, which the app image is not, so the
   # tests of tests/unit/Thread are left out of both test suites and run here, in the ZTS images of

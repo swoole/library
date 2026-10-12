@@ -88,11 +88,9 @@ jobs:
 
           echo '127.0.0.1 consul local.httpbin.org mongodb mysql nacos oracle pgsql php-fpm redis' | sudo tee -a /etc/hosts
 
-          docker compose -f docker-compose.yml -f docker-compose.host.yml up -d consul httpbin mongodb mysql nacos oracle pgsql php-fpm redis
+          docker compose -f docker-compose.yml -f docker-compose.host.yml up --wait --wait-timeout 180 consul httpbin mongodb mysql nacos oracle pgsql php-fpm redis
 
           COMPOSER=composer-embedded.json composer update -n -q --no-progress
-
-          sleep 40s
 
       - name: Run Unit Tests
         timeout-minutes: 5
@@ -102,8 +100,15 @@ jobs:
           concurrent=0
           serial=0
           php ./vendor/bin/counit --testsuite concurrent || concurrent=$?
-          php ./vendor/bin/phpunit --testsuite serial || serial=$?
+          php ./vendor/bin/phpunit --testsuite serial --debug || serial=$?
           if [ "$concurrent" -ne 0 ]; then
             exit "$concurrent"
           fi
           exit "$serial"
+
+      - name: Dump Test Environment On Failure
+        if: failure() && (matrix.php == '8.2' || matrix.php == '8.5')
+        working-directory: ./swoole/library
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.host.yml ps --all
+          docker compose -f docker-compose.yml -f docker-compose.host.yml logs --no-color --tail 200

@@ -62,6 +62,12 @@ services:
 
   mysql:
     image: mysql:8
+    healthcheck:
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE -e 'SELECT 1'"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
     environment:
       MYSQL_DATABASE: test
       MYSQL_USER: username
@@ -70,6 +76,11 @@ services:
 
   pgsql:
     image: postgres:17-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h127.0.0.1 -U$$POSTGRES_USER -d$$POSTGRES_DB"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
     environment:
       POSTGRES_DB: test
       POSTGRES_USER: username
@@ -77,12 +88,23 @@ services:
 
   oracle:
     image: gvenzl/oracle-xe:slim
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
     platform: linux/amd64
     environment:
       ORACLE_PASSWORD: oracle
 
   redis:
     image: redis:7.2
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
 
   # A local stand-in for httpbin.org (a Go reimplementation of its API), so the HTTP/curl tests are not at the
   # mercy of the real site's throttling. The app container reaches it as local.httpbin.org (see the link alias
@@ -103,6 +125,11 @@ services:
   # it to "mongodb" (the service name) makes that name stop resolving from the other containers.
   mongodb:
     image: mongo:7.0
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
     restart: always
     ports:
         - "27017:27017"
@@ -112,6 +139,12 @@ services:
   # NACOS_AUTH_IDENTITY_VALUE, and later 3.x releases no longer serve the v1 API at all (HTTP 501).
   nacos:
     image: nacos/nacos-server:v2.5.4
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "3", "http://127.0.0.1:8848/nacos/v1/console/health/readiness"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
     environment:
       MODE: standalone
       PREFER_HOST_MODE: hostname
@@ -122,6 +155,11 @@ services:
 
   consul:
     image: consul:1.15
+    healthcheck:
+      test: ["CMD", "consul", "operator", "raft", "list-peers"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
     command:
       consul agent -dev -client=0.0.0.0
 
