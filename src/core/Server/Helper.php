@@ -13,6 +13,7 @@ namespace Swoole\Server;
 
 use Swoole\Constant;
 use Swoole\Coroutine;
+use Swoole\NameResolver\ServiceRegistration;
 use Swoole\Server;
 use Swoole\Timer;
 
@@ -204,6 +205,12 @@ class Helper
     ];
 
     public const HELPER_OPTIONS = [
+        'service_name'                        => true,
+        'service_resolver'                    => true,
+        'service_address'                     => true,
+        'service_port'                        => true,
+        'service_options'                     => true,
+        'service_heartbeat_interval'          => true,
         Constant::OPTION_STATS_FILE           => true,
         Constant::OPTION_STATS_TIMER_INTERVAL => true,
         Constant::OPTION_ADMIN_SERVER         => true,
@@ -233,6 +240,7 @@ class Helper
 
     public static function onBeforeShutdown(Server $server): void
     {
+        ServiceRegistration::stopServer($server, $server->mode !== SWOOLE_BASE);
         if (isset($server->admin_server)) {
             $server->admin_server->shutdown();
             $server->admin_server = null;
@@ -241,6 +249,9 @@ class Helper
 
     public static function onWorkerStart(Server $server, int $workerId): void
     {
+        if ($server->mode === SWOOLE_BASE && $workerId === 0) {
+            ServiceRegistration::startServer($server);
+        }
         if (!empty($server->setting[Constant::OPTION_STATS_FILE]) && $workerId == 0) {
             $interval_ms = empty($server->setting[Constant::OPTION_STATS_TIMER_INTERVAL]) ? self::STATS_TIMER_INTERVAL_TIME : intval($server->setting[Constant::OPTION_STATS_TIMER_INTERVAL]);
 
@@ -265,6 +276,9 @@ class Helper
 
     public static function onWorkerExit(Server $server, int $workerId): void
     {
+        if ($server->mode === SWOOLE_BASE && $workerId === 0) {
+            ServiceRegistration::stopServer($server, false);
+        }
         if ($server->stats_timer) {
             Timer::clear($server->stats_timer);
             $server->stats_timer = null;
@@ -273,10 +287,14 @@ class Helper
 
     public static function onWorkerStop(Server $server, int $workerId)
     {
+        if ($server->mode === SWOOLE_BASE && $workerId === 0) {
+            ServiceRegistration::stopServer($server, false);
+        }
     }
 
     public static function onStart(Server $server): void
     {
+        ServiceRegistration::startServer($server);
         if (!empty($server->setting[Constant::OPTION_ADMIN_SERVER])) {
             Coroutine::create(function () use ($server): void {
                 Admin::start($server);
@@ -286,6 +304,7 @@ class Helper
 
     public static function onShutdown(Server $server)
     {
+        ServiceRegistration::shutdownServer($server);
     }
 
     public static function onBeforeReload(Server $server)

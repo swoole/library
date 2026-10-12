@@ -11,47 +11,58 @@ declare(strict_types=1);
 
 namespace Swoole\NameResolver;
 
-use Swoole\Exception;
-
 class Cluster
 {
     private array $nodes = [];
 
-    /**
-     * @throws Exception
-     */
-    public function add(string $host, int $port, int $weight = 100): void
+    public function add(string $host, int $port, int|float $weight = 100): void
     {
         if (!filter_var($host, FILTER_VALIDATE_IP)) {
             throw new Exception("Bad IP Address [{$host}]");
         }
-        if ($port < 0 || $port > 65535) {
+        if ($port < 1 || $port > 65535) {
             throw new Exception("Bad Port [{$port}]");
         }
-        if ($weight < 0 || $weight > 100) {
+        if (!is_finite((float) $weight) || $weight < 0 || $weight > 65535) {
             throw new Exception("Bad Weight [{$weight}]");
         }
-        $this->nodes[] = ['host' => $host, 'port' => $port, 'weight' => $weight];
+        $key = bin2hex(inet_pton($host)) . ':' . $port;
+        if ($weight === 0 || $weight === 0.0) {
+            unset($this->nodes[$key]);
+            return;
+        }
+        $this->nodes[$key] = ['host' => $host, 'port' => $port, 'weight' => $weight];
     }
 
-    /**
-     * Remove and return a random node, or false if the cluster is empty.
-     *
-     * @return array|false a node as ['host' => string, 'port' => int, 'weight' => int], or false
-     */
-    public function pop()
+    /** Remove one node by weight, without replacement. A zero weight disables a node. */
+    public function pop(): array|false
     {
-        if (empty($this->nodes)) {
+        if ($this->nodes === []) {
             return false;
         }
-        $index = array_rand($this->nodes, 1);
-        $node  = $this->nodes[$index];
-        unset($this->nodes[$index]);
+        $total  = array_sum(array_column($this->nodes, 'weight'));
+        $target = random_int(0, 2147483647) / 2147483648 * $total;
+        foreach ($this->nodes as $key => $node) {
+            $target -= $node['weight'];
+            if ($target < 0) {
+                unset($this->nodes[$key]);
+                return $node;
+            }
+        }
+        // Floating-point rounding must not make a nonempty cluster appear exhausted.
+        $key  = array_key_last($this->nodes);
+        $node = $this->nodes[$key];
+        unset($this->nodes[$key]);
         return $node;
     }
 
     public function count(): int
     {
         return count($this->nodes);
+    }
+
+    public function getNodes(): array
+    {
+        return array_values($this->nodes);
     }
 }

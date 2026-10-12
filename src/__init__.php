@@ -95,6 +95,8 @@ return [
         'core/NameResolver/Cluster.php',
         'core/NameResolver/Redis.php',
         'core/NameResolver/Nacos.php',
+        'core/NameResolver/Registration.php',
+        'core/NameResolver/ServiceRegistration.php',
         'core/NameResolver/Consul.php',
         # <core for Thread> #
         'core/Thread/Pool.php',

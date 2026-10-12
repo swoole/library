@@ -14,6 +14,7 @@
     <testsuite name="concurrent">
       <directory suffix="Test.php">tests/unit</directory>
       <exclude>tests/unit/Thread</exclude>
+      <exclude>tests/unit/NameResolver/ServerLifecycleTest.php</exclude>
       <exclude>tests/unit/Coroutine/FunctionTest.php</exclude>
       <exclude>tests/unit/Coroutine/HttpFunctionTest.php</exclude>
       <exclude>tests/unit/Database/MysqliReportModeTest.php</exclude>
@@ -43,6 +44,8 @@
       - Database/RedisPoolTest sets a server-wide `requirepass` and creates ACL users on the shared Redis
         server. That is invisible while tests run one at a time, but it breaks any test using Redis
         concurrently: NameResolverTest's Redis cases fail whenever the two overlap.
+      - NameResolver/ServerLifecycleTest starts process servers and needs an independent event loop
+        for each backend/mode; it also exercises synchronous final deregistration in BASE managers.
       - Process/ProcessManagerTest forks worker processes, and Swoole refuses to fork from inside a
         coroutine ("must be forked outside the coroutine" from Swoole\Process\Pool::start()). Under counit
         the run dies at exit 255 with no summary at all, because PHPUnit's output buffer swallows the fatal.
@@ -51,6 +54,7 @@
         meanwhile would start it in that directory, which goes away with the test.
     -->
     <testsuite name="serial">
+      <file>tests/unit/NameResolver/ServerLifecycleTest.php</file>
       <file>tests/unit/Coroutine/FunctionTest.php</file>
       <file>tests/unit/Coroutine/HttpFunctionTest.php</file>
       <file>tests/unit/Database/MysqliReportModeTest.php</file>
