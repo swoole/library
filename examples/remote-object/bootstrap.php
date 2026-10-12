@@ -14,8 +14,9 @@ declare(strict_types=1);
  *
  * No file refers to it by its path. swoole_init_default_remote_object_server() (src/functions.php) generates the
  * script the daemon runs, remote-object-server.php, in the server directory, and that script loads the file named
- * bootstrap.php next to it, if there is one. tests/bootstrap.php makes this directory the server directory (option
- * "default_remote_object_server_dir"), for the unit tests and for every example that loads examples/bootstrap.php.
+ * bootstrap.php next to it, if there is one. tests/bootstrap.php gives each client process a private runtime
+ * directory and writes a bootstrap there that loads this fixture, avoiding socket/cleanup conflicts between
+ * PHPUnit and examples that run at the same time.
  *
  * It does two things for the daemon:
  *   1. It loads the Composer autoloader. The generated script only looks for a vendor directory next to itself,

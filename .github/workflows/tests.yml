@@ -96,6 +96,8 @@ jobs:
       - name: Dump Test Environment On Failure
         if: failure()
         env:
+          IMAGE_TAG_PREFIX: ${{ matrix.image-tag-prefix }}
+          PHP_VERSION: ${{ matrix.php }}
           COMPOSE_FILE: ${{ matrix['image-tag-prefix'] == '' && 'docker-compose.yml' || 'docker-compose.yml:docker-compose.ci.yml' }}
         run: |
           docker compose ps --all

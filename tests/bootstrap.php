@@ -120,19 +120,28 @@ function swoole_tests_stop_remote_object_server(string $dir): void
     }
 }
 
-$remote_object_dir = dirname(__DIR__) . '/examples/remote-object';
+// Examples and PHPUnit may bootstrap at the same time (e.g. the supervised WordPress proxy in CI).
+// Each process must own its socket and cleanup, including when the repository is a shared bind mount.
+$remote_object_owner = getmypid();
+$remote_object_dir   = sys_get_temp_dir() . '/sw-ro-' . bin2hex(random_bytes(6));
+if (!mkdir($remote_object_dir, 0700)) {
+    throw new RuntimeException('Unable to create remote object test directory');
+}
+$remote_object_bootstrap = var_export(dirname(__DIR__) . '/examples/remote-object/bootstrap.php', true);
+file_put_contents($remote_object_dir . '/bootstrap.php', "<?php\nrequire {$remote_object_bootstrap};\n");
 swoole_library_set_option('default_remote_object_server_worker_num', 8);
 swoole_library_set_option('default_remote_object_server_dir', $remote_object_dir);
 
-// Start from a clean directory, whatever an earlier run left behind, and leave a clean one: the server is stopped
-// again by the process that loaded this file, provided it used the server. Processes forked from it inherit the
-// shutdown function and have to leave the server alone, hence the check on the process id.
-swoole_tests_stop_remote_object_server($remote_object_dir);
-$remote_object_owner = getmypid();
+// Forked workers inherit this handler but never own the parent process's server directory.
 register_shutdown_function(static function () use ($remote_object_dir, $remote_object_owner): void {
-    if (getmypid() === $remote_object_owner && SwooleLibrary::$remote_object_server_initiated) {
+    if (getmypid() !== $remote_object_owner) {
+        return;
+    }
+    if (SwooleLibrary::$remote_object_server_initiated) {
         swoole_tests_stop_remote_object_server($remote_object_dir);
     }
+    @unlink($remote_object_dir . '/bootstrap.php');
+    @rmdir($remote_object_dir);
 });
 
 // Swoole\Curl\Handler -- the library's own curl implementation, and what Curl\HandlerTest exercises -- is
