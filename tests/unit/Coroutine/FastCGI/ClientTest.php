@@ -60,7 +60,8 @@ class ClientTest extends TestCase
     public function testCallPreservesAZeroQueryString(): void
     {
         self::coRun(function (): void {
-            $body   = Client::call('tcp://php-fpm:9000', DOCUMENT_ROOT . '/fastcgi/inspect.php?0', '', 1);
+            // The shared PHP-FPM pool also serves slow streaming tests during concurrent runs.
+            $body   = Client::call(getenv('SWOOLE_FASTCGI_FPM_URL') ?: 'tcp://php-fpm:9000', DOCUMENT_ROOT . '/fastcgi/inspect.php?0', '', 5);
             $result = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame('/inspect.php?0', $result['request_uri']);
             self::assertSame('0', $result['query']);

@@ -44,17 +44,33 @@ class NameResolverTest extends TestCase
         if (!function_exists('swoole_name_resolver_lookup')) {
             $this->markTestSkipped('Swoole v4.9 or later is required.');
         }
-        $count = 0;
-        $ns    = new NameResolver\Redis(REDIS_SERVER_URL);
-        $ns->withFilter(function ($name) use (&$count) {
-            $count++;
-            return swoole_string($name)->endsWith('.service');
+        self::coRun(function (): void {
+            $count = 0;
+            $cid   = Coroutine::getCid();
+            $ns    = new NameResolver\Redis(REDIS_SERVER_URL);
+            $ns->withFilter(function ($name) use (&$count, $cid) {
+                // Resolver registration is thread-wide; concurrent tests also perform DNS lookups.
+                if (Coroutine::getCid() !== $cid) {
+                    return false;
+                }
+                $count++;
+                return swoole_string($name)->endsWith('.service');
+            });
+            swoole_name_resolver_add($ns);
+            try {
+                $domain = 'localhost';
+                $other  = new Coroutine\Channel(1);
+                Coroutine::create(static function () use ($domain, $other): void {
+                    $other->push(swoole_name_resolver_lookup($domain, new NameResolver\Context()));
+                });
+                $this->assertSame(gethostbyname($domain), $other->pop(2));
+                $this->assertSame(0, $count);
+                $this->assertEquals(swoole_name_resolver_lookup($domain, new NameResolver\Context()), gethostbyname($domain));
+                $this->assertEquals(1, $count);
+            } finally {
+                $this->assertTrue(swoole_name_resolver_remove($ns));
+            }
         });
-        swoole_name_resolver_add($ns);
-        $domain = 'localhost';
-        $this->assertEquals(swoole_name_resolver_lookup($domain, new NameResolver\Context()), gethostbyname($domain));
-        $this->assertEquals(1, $count);
-        $this->assertTrue(swoole_name_resolver_remove($ns));
     }
 
     public function testRedisCo(): void

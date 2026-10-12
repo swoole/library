@@ -24,7 +24,7 @@ class Cluster
             throw new Exception("Bad Port [{$port}]");
         }
         if (!is_finite((float) $weight) || $weight < 0 || $weight > 65535) {
-            throw new Exception("Bad Weight [{$weight}]");
+            throw new Exception('Weight must be finite and between zero and 65535');
         }
         $key = bin2hex(inet_pton($host)) . ':' . $port;
         if ($weight === 0 || $weight === 0.0) {
