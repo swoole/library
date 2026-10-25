@@ -104,6 +104,12 @@ Fixed:
 * The default remote object server did not start in a directory whose path has a space or a quote in it.
 * `isset()`, `empty()` and `??` on a property of a `\Swoole\RemoteObject` treated the property as unset without asking the server, and `unset()` did not reach the server.
 
+## 6.1.11 (2026-10-25)
+
+Built-in PHP library included in [Swoole v6.1.11](https://github.com/swoole/swoole-src/releases/tag/v6.1.11).
+
+This release is the same as Swoole Library [v6.1.10](https://github.com/swoole/library/releases/tag/v6.1.10).
+
 ## 6.2.3 (2026-09-22)
 
 Built-in PHP library included in [Swoole v6.2.3](https://github.com/swoole/swoole-src/releases/tag/v6.2.3).
