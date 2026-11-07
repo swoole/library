@@ -345,9 +345,12 @@ class ProxyTest extends TestCase
                 return true;
             }
 
-            public function sendfile(string $filename, int $offset = 0, int $length = 0): bool
+            // $filename is typed as mixed, and $delete_file is declared, so that this override stays compatible with
+            // both signatures of the parent method: sendfile(string $filename, ...) in older Swoole versions, and
+            // sendfile(Swoole\SendFile|string $filename, ..., bool $delete_file = false) in newer ones.
+            public function sendfile(mixed $filename, int $offset = 0, int $length = 0, bool $delete_file = false): bool
             {
-                $this->file = $filename;
+                $this->file = is_string($filename) ? $filename : null;
                 return true;
             }
 
