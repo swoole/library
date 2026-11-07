@@ -365,11 +365,13 @@ class HandlerTest extends TestCase
 
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, 'foo=bar');
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Test: several addresses']);
+            // The connect timeout is shared by the three addresses. It must leave the server enough time to be
+            // connected to even when a busy scheduler fires the timeouts of the first two addresses late.
             // TEST-NET-1 and TEST-NET-2, which nothing can be connected to, and then the server.
             curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:192.0.2.1, 198.51.100.1,{$ip}"]);
 
