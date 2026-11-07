@@ -43,6 +43,12 @@ Removed:
 
 * The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
 
+## 6.2.5 (2026-11-07)
+
+Built-in PHP library included in [Swoole v6.2.5](https://github.com/swoole/swoole-src/releases/tag/v6.2.5).
+
+This release is the same as Swoole Library [v6.2.4](https://github.com/swoole/library/releases/tag/v6.2.4).
+
 ## 6.1.12 (2026-11-07)
 
 Built-in PHP library included in [Swoole v6.1.12](https://github.com/swoole/swoole-src/releases/tag/v6.1.12).
