@@ -14,11 +14,14 @@ namespace Swoole\Coroutine\FastCGI;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Server;
 use Swoole\Coroutine\Server\Connection;
+use Swoole\Coroutine\Socket;
 use Swoole\Coroutine\WaitGroup;
 use Swoole\FastCGI\HttpRequest;
 use Swoole\FastCGI\HttpResponse;
 use Swoole\FastCGI\Record\EndRequest;
 use Swoole\FastCGI\Record\Stdout;
+use Swoole\FastCGI\Request;
+use Swoole\FastCGI\Response as FastCGIResponse;
 use Swoole\Http\Request as ServerRequest;
 use Swoole\Http\Response;
 use Swoole\Tests\TestCase;
@@ -173,9 +176,18 @@ class ProxyTest extends TestCase
             self::assertCount(1, $proxy->clients, 'One request at a time needs one connection.');
             self::assertTrue($proxy->clients[0]->isConnected());
             self::assertCount(6, $proxy->responses);
-            // A process of PHP-FPM serves its connection and nothing else for as long as it is open.
-            self::assertCount(1, array_unique(array_map(static fn (HttpResponse $response): string => $response->getBody(), $proxy->responses)));
-            self::assertGreaterThan(0, (int) $proxy->responses[0]->getBody());
+            // A process of PHP-FPM serves its connection and nothing else for as long as it is open. PHP-FPM may still
+            // close the connection: a spare process it stops can take one more connection, answer one request on it
+            // and then exit. The client then connects again, so the responses are grouped by connection.
+            $connections = [];
+            foreach ($proxy->clients[0]->served as [$socket, $body]) {
+                $connections[spl_object_id($socket)][] = $body;
+            }
+            self::assertLessThan(6, count($connections), 'Requests are sent over a connection that is kept open.');
+            foreach ($connections as $bodies) {
+                self::assertCount(1, array_unique($bodies));
+                self::assertGreaterThan(0, (int) $bodies[0]);
+            }
 
             $proxy->withConnectionPool(0);
         });
@@ -381,7 +393,24 @@ class ProxyTest extends TestCase
 
             protected function createClient(): Client
             {
-                return $this->clients[] = parent::createClient();
+                return $this->clients[] = new class($this->host, $this->port) extends Client {
+                    /**
+                     * The connection each response came over, and the body of the response. Keeping the sockets also
+                     * keeps their object IDs from being reused while the test runs.
+                     *
+                     * @var array<array{Socket, string}>
+                     */
+                    public array $served = [];
+
+                    public function execute(Request $request, float $timeout = -1): FastCGIResponse
+                    {
+                        $response = parent::execute($request, $timeout);
+                        if ($this->socket !== null) {
+                            $this->served[] = [$this->socket, $response->getBody()];
+                        }
+                        return $response;
+                    }
+                };
             }
         };
     }
