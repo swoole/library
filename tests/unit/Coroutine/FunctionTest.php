@@ -60,6 +60,8 @@ class FunctionTest extends TestCase
         self::coRun(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
             $start   = microtime(true);
+            // batch() waits indefinitely by default. Bound the wait so a task that never finishes
+            // fails with its name instead of hanging the runner until the step's 5-minute timeout.
             $results = batch([
                 'gethostbyname'     => fn () => gethostbyname('localhost'),
                 'file_get_contents' => fn () => file_get_contents(__FILE__),
@@ -71,10 +73,12 @@ class FunctionTest extends TestCase
                     usleep(1000);
                     return true;
                 },
-            ]);
+            ], 5.0);
             Runtime::setHookFlags(0);
             $end = microtime(true);
             $this->assertEquals(count($results), 4);
+            $pending = array_keys(array_filter($results, static fn ($value) => $value === null));
+            self::assertSame([], $pending, 'Tasks that did not finish: ' . implode(', ', $pending));
             // The lower bound allows for a little clock skew rather than being exactly 1: the batch is timed
             // with microtime() while sleep(1) is served by Swoole's timer, and on a virtualized CI runner the
             // two can disagree by a fraction of a millisecond (0.9996709823608398 was seen in CI). What the

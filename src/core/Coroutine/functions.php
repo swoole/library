@@ -39,9 +39,14 @@ function batch(array $tasks, float $timeout = -1): array
     $wg = new WaitGroup(count($tasks));
     foreach ($tasks as $id => $task) {
         Coroutine::create(function () use ($wg, &$tasks, $id, $task) {
-            $tasks[$id] = null;
-            $tasks[$id] = $task();
-            $wg->done();
+            try {
+                $tasks[$id] = null;
+                $tasks[$id] = $task();
+            } finally {
+                // A task that exits early (an exception, or a fatal in the coroutine) must not
+                // leave the counter above zero: wait() with no timeout would then block forever.
+                $wg->done();
+            }
         });
     }
     $wg->wait($timeout);
@@ -54,8 +59,11 @@ function parallel(int $n, callable $fn): void
     $wg    = new WaitGroup($n);
     while ($count--) {
         Coroutine::create(function () use ($fn, $wg) {
-            $fn();
-            $wg->done();
+            try {
+                $fn();
+            } finally {
+                $wg->done();
+            }
         });
     }
     $wg->wait();
@@ -80,9 +88,12 @@ function map(array $list, callable $fn, float $timeout = -1): array
     $wg = new WaitGroup(count($list));
     foreach ($list as $id => $elem) {
         Coroutine::create(function () use ($wg, &$list, $id, $elem, $fn): void {
-            $list[$id] = null;
-            $list[$id] = $fn($elem, $id);
-            $wg->done();
+            try {
+                $list[$id] = null;
+                $list[$id] = $fn($elem, $id);
+            } finally {
+                $wg->done();
+            }
         });
     }
     $wg->wait($timeout);
