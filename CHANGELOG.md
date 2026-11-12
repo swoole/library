@@ -32,6 +32,7 @@ Added:
 * `\Swoole\ConnectionPool::withConnection()` runs a callback with a connection from the pool and puts the connection back afterwards, also when the callback throws, so that no connection is lost to an exception.
 * `\Swoole\Coroutine\FastCGI\Proxy::withConnectionPool()` keeps connections to the FastCGI server open for reuse. Off by default. A request that finds its connection closed by the server is sent again only when its method is idempotent, e.g. GET but not POST.
 * `\Swoole\Coroutine\FastCGI\Client::isConnected()` tells whether the client holds a connection kept open by an earlier request.
+* `\Swoole\Debugger\RemoteShell` is the remote shell previously published as `swoole/debugger`. `RemoteShell::listen($server)` opens it on `127.0.0.1:9599`. It is a Composer-only component and is not packed into the Swoole extension. Bind it to a local address. `exec` evaluates PHP in the selected worker, prints an expression's value, and keeps the variables it assigns there until `reset`. `print` reads those, then globals.
 
 Changed:
 

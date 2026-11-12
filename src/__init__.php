@@ -20,6 +20,7 @@ return [
      */
     'ignore' => [
         'core/Grpc',
+        'core/Debugger',
     ],
     /* Notice: Sort by dependency */
     'files' => [
