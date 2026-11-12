@@ -34,6 +34,7 @@ Added:
 
 Changed:
 
+* The library header generator (`make-library`) is now vendored under `tools/make-library/` and run through `tools/build-library.php`. The Build Swoole workflow invokes it directly and no longer installs the pinned `swoole/make-library` release from Packagist, so the generator stays in sync with `src/__init__.php` in this repository.
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
 * `ext-posix` is now suggested, not required, so that Composer installs the library on Windows. Only the default remote object server needs it.
 * Modernized the codebase for PHP 8.2+.

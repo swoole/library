@@ -50,10 +50,12 @@ jobs:
           sudo apt-get install -y -q libcurl4-openssl-dev libssl-dev
 
           cd swoole
-          composer install -d ./tools -n -q --no-progress
+          # The library generator is vendored in this repository (tools/make-library) and invoked
+          # via tools/build-library.php, so no Composer install of a pinned swoole/make-library
+          # release is needed. The generator stays in sync with library/src/__init__.php.
 
           cat ext-src/php_swoole_library.h | grep '/* $Id:' # the commit # of Swoole Library used in Swoole.
-          php ./tools/build-library.php
+          php ./library/tools/build-library.php
           cat ext-src/php_swoole_library.h | grep '/* $Id:' # the commit # of current Swoole Library.
 
           phpize

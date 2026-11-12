@@ -63,7 +63,8 @@ return (new PhpCsFixer\Config())
     ->setFinder(
         PhpCsFixer\Finder::create()
             // examples/grpc/generated holds protoc output; it is regenerated, not styled.
-            ->exclude(['html', 'temp', 'vendor', 'generated'])
+            // tools/ is the vendored make-library build tool (its own style, not the library's).
+            ->exclude(['html', 'temp', 'vendor', 'generated', 'tools'])
             ->in(__DIR__)
     )
     ->setUsingCache(false);

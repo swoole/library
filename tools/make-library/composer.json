@@ -1,0 +1,30 @@
+{
+  "name": "swoole/make-library",
+  "type": "utils",
+  "homepage": "https://www.swoole.com/",
+  "license": "Apache-2.0",
+  "autoload": {
+    "psr-4": {
+      "SwooleLibrary\\": "src"
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "bin": [
+    "bin/make-library.php"
+  ],
+  "authors": [
+    {
+      "name": "Tianfeng Han",
+      "email": "rango@swoole.com"
+    }
+  ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0"
+    },
+    "scripts": {
+        "test": "php tests/run.php"
+    }
+}
