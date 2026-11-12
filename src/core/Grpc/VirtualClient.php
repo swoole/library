@@ -25,7 +25,7 @@ class VirtualClient
     public function __construct(string $hostname, array $opts = [])
     {
         if (!empty($opts['use'])) {
-            if (!($opts['use'] instanceof Client)) {
+            if (!$opts['use'] instanceof Client) {
                 throw new \InvalidArgumentException('parameter use must be instanceof Swoole\Grpc\Client');
             }
             $this->use($opts['use']);
