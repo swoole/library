@@ -62,7 +62,8 @@ return (new PhpCsFixer\Config())
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
-            ->exclude(['html', 'temp', 'vendor'])
+            // examples/grpc/generated holds protoc output; it is regenerated, not styled.
+            ->exclude(['html', 'temp', 'vendor', 'generated'])
             ->in(__DIR__)
     )
     ->setUsingCache(false);

@@ -1,0 +1,52 @@
+# Stand-alone gRPC/Etcd integration environment for the Swoole\Grpc tests.
+#
+# It is intentionally NOT part of the main docker-compose.yml: those services (mysql, redis,
+# httpbin, ...) belong to the library's own test suite, while these two are only needed to exercise
+# the real gRPC wire protocol end to end. Start it with:
+#
+#   docker compose -f tests/grpc/docker-compose.yml -p swoole-library-grpc up -d --build
+#   docker compose -f tests/grpc/docker-compose.yml -p swoole-library-grpc down -v
+#
+# The integration tests (tests/unit/Grpc/IntegrationTest.php) skip themselves when the endpoints
+# below are not listening, so the normal test suite and CI are unaffected.
+
+name: swoole-library-grpc
+
+services:
+  # etcd speaks gRPC over plain h2c on 2379 (no TLS), matching GRPC_SERVER_DEFAULT_URI and the
+  # shipped examples. It provides unary KV calls and the bidirectional Watch stream.
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.16
+    command:
+      - /usr/local/bin/etcd
+      - --data-dir=/etcd-data
+      - --name=node1
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://127.0.0.1:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://127.0.0.1:2380
+      - --initial-cluster=node1=http://127.0.0.1:2380
+    environment:
+      ETCDCTL_API: "3"
+    ports:
+      - "127.0.0.1:2379:2379"
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/etcdctl", "--endpoints=http://127.0.0.1:2379", "endpoint", "health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 3s
+
+  # Minimal Helloworld.Greeter implementation used by the GreeterClient example/tests. It also
+  # speaks plain h2c (add_insecure_port), so the Swoole gRPC client needs no TLS.
+  greeter:
+    build:
+      context: ./greeter
+    ports:
+      - "127.0.0.1:50051:50051"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',50051),1); s.close()"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 3s

@@ -1,0 +1,165 @@
+#!/usr/bin/env php
+<?php
+/*
+  +----------------------------------------------------------------------+
+  | Swoole-gRPC                                                   |
+  +----------------------------------------------------------------------+
+  | This source file is subject to version 2.0 of the Apache license,    |
+  | that is bundled with this package in the file LICENSE, and is        |
+  | available through the world-wide-web at the following url:           |
+  | http://www.apache.org/licenses/LICENSE-2.0.html                      |
+  | If you did not receive a copy of the Apache2.0 license and are unable|
+  | to obtain it through the world-wide-web, please send a note to       |
+  | license@swoole.com so we can mail you a copy immediately.            |
+  +----------------------------------------------------------------------+
+  | Author: Twosee <twose@qq.com>                                        |
+  +----------------------------------------------------------------------+
+*/
+
+function scan_dir(string $dir, callable $filter = null): array
+{
+    $files = scandir($dir);
+    $files = array_filter($files, function (string $f) {
+        return $f[0] !== '.';
+    });
+    array_walk($files, function (string &$value) use ($dir) {
+        $value = rtrim($dir, '/') . '/' . $value;
+    });
+    return array_values($filter ? array_filter($files, $filter) : $files);
+}
+
+function generateClient(string $proto_dir): void
+{
+    $source_dirs = scan_dir($proto_dir, function (string $f) {
+        return is_dir($f);
+    });
+    $php_files = [];
+    foreach ($source_dirs as $source_dir) {
+        $php_files[] = scan_dir($source_dir, function (string $f) {
+            return substr($f, -4, 4) === '.php';
+        });
+    }
+    $php_files = array_merge(...$php_files);
+    foreach ($php_files as $php_file) {
+        $file_content = file_get_contents($php_file);
+        $extends_keyword = ' extends \Swoole\Grpc\BaseStub';
+        if (strpos($file_content, $extends_keyword) !== false) {
+            // use swoole construct
+            $file_content = str_replace(
+                '__construct($hostname, $opts, $channel',
+                '__construct($hostname, $opts',
+                $file_content
+            );
+            // fit swoole arguments
+            $file_content = str_replace('$opts = null', '$opts = []', $file_content);
+            // use correct return value
+            $file_content = preg_replace_callback(
+                '/(call options)(\n([ ]+?)\*\/\n[ ]+?public function[\s\S]+?(_\w+Request)[\s\S]+?\[\'([^\']+)\', ?\'\w+\'\],)/',
+                function (array $match) {
+                    switch ($match[4]) {
+                        case '_simpleRequest':
+                            return "{$match[1]}\n{$match[3]}* @return {$match[5]}[]|\\Swoole\\Grpc\\StringifyAble[]{$match[2]}";
+                        case '_bidiRequest':
+                            return "{$match[1]}\n{$match[3]}* @return bool|\\Swoole\\Grpc\\BidiStreamingCall{$match[2]}";
+                        case '_serverStreamRequest':
+                            return "{$match[1]}\n{$match[3]}* @return bool|\\Swoole\\Grpc\\ServerStreamingCall{$match[2]}";
+                        case '_clientStreamRequest':
+                            return "{$match[1]}\n{$match[3]}* @return bool|\\Swoole\\Grpc\\ClientStreamingCall{$match[2]}";
+                    }
+                    return $match[0];
+                },
+                $file_content
+            );
+
+            file_put_contents($php_file, $file_content);
+        }
+    }
+}
+
+function generateFromProto(string $proto_path, string $php_out, string $grpc_out, string $plugin, array $proto_list): void
+{
+    $plugin_file = explode('=', $plugin)[1] ?? null;
+    if (!$plugin_file) {
+        $plugin = "protoc-gen-grpc={$plugin}";
+    }
+    if (!file_exists($plugin_file)) {
+        exit("Can't find the plugin generator file [{$plugin_file}]");
+    }
+
+    $realGenerate = function (string $proto_path, string $php_out, string $grpc_out, string $plugin, array $proto_list) use (&$realGenerate): void {
+        foreach ($proto_list as $proto_file) {
+            if (is_dir($proto_file)) {
+                $proto_deep_list = scan_dir($proto_file, function (string $f) {
+                    return substr($f, -6, 6) === '.proto';
+                });
+                $realGenerate($proto_path, $php_out, $grpc_out, $plugin, $proto_deep_list);
+            } else {
+                // Quote every argument: paths here come straight from the command line.
+                $command = sprintf(
+                    'protoc --proto_path=%s --php_out=%s --grpc_out=%s --plugin=%s %s',
+                    escapeshellarg($proto_path),
+                    escapeshellarg($php_out),
+                    escapeshellarg($grpc_out),
+                    escapeshellarg($plugin),
+                    escapeshellarg($proto_file)
+                );
+                shell_exec($command);
+            }
+        }
+    };
+
+    $realGenerate($proto_path, $php_out, $grpc_out, $plugin, $proto_list);
+}
+
+function get_command(&$command, &$options, &$params): void
+{
+    global $argv;
+    $arguments = $argv;
+    $command = '';//命令
+    $options = [];//选项
+    $params = []; //参数
+
+    array_shift($arguments);
+    if (isset($arguments[0]) && substr($arguments[0], 0, 1) !== '-') {
+        $command = array_shift($arguments); //指定第一个参数为命令
+    }
+
+    foreach ($arguments as $v) {
+        if (empty($v)) {
+            continue;
+        } elseif (substr($v, 0, 2) === '--') {
+            $now = substr($v, 2);
+            $now = explode('=', $now);
+            $options[trim(array_shift($now))] = trim(implode('=', $now));
+        } else {
+            $params[] = $v;
+        }
+    }
+}
+
+(function () {
+    get_command($command, $options, $params);
+    if (empty($command)) {
+        $needle_params = [
+            'proto_path' => null,
+            'php_out' => null,
+            'grpc_out' => null,
+            // Override with --plugin; the value is the path to grpc_php_plugin.
+            'plugin' => __DIR__ . '/../../grpc/bins/opt/grpc_php_plugin',
+        ];
+        $proto_path = $php_out = $grpc_out = $plugin = '';
+        foreach ($needle_params as $param_name => $param_default_value) {
+            if (empty($options[$param_name])) {
+                if ($param_default_value === null) {
+                    exit("{$param_name} is missing!");
+                }
+                $options[$param_name] = $param_default_value;
+            } elseif ($param_name === 'php_out') {
+                $needle_params['grpc_out'] = $options[$param_name];
+            }
+            $$param_name = $options[$param_name];
+        }
+        generateFromProto($proto_path, $php_out, $grpc_out, $plugin, $params);
+        generateClient($php_out);
+    }
+})();

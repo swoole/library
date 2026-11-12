@@ -1,0 +1,185 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Author: Twosee <twose@qq.com>
+ * Date: 2018/8/9 下午5:08
+ *
+ * Regenerates src/core/Grpc/VirtualClient.php from the public API of Swoole\Grpc\Client.
+ * Run from this directory: ./VirtualClientGenerator
+ */
+
+require dirname(__DIR__, 3) . '/vendor/autoload.php';
+
+define('FOUR_SPACE', '    ');
+
+function createSourceOfClass(
+    string $className,
+    array $skip_methods = [],
+    bool $show_properties = false,
+    bool $skip_extends = false
+) {
+    $class = new \ReflectionClass($className);
+    $table = [];
+
+    if ($show_properties) {
+        $properties = $class->getProperties();
+        $default_properties = $class->getDefaultProperties();
+        foreach ($properties as $property) {
+            if ($property->isPrivate()) {
+                continue;
+            }
+            $property_intro = 'public $' . ($method_name = $property->getName());
+            $def_val = $default_properties[$method_name];
+            if ($def_val === null) {
+                $def_val = 'null';
+            } else {
+                $def_val = var_export($def_val, true);
+            }
+            $def_val = preg_replace('/array \(([^\)]*?)\n\)/', '[$1]', $def_val);
+            $property_intro .= (' = ' . $def_val) . ';';
+            $table[] = $property_intro;
+        }
+    }
+
+    $methods = $class->getMethods(\ReflectionMethod::IS_PUBLIC);
+    foreach ($methods as $method) {
+        if ($method->isInternal()) {
+            continue;
+        }
+        if ($skip_extends && $method->getDeclaringClass()->name !== $className) {
+            continue;
+        }
+        $method_name = $method->getName();
+        if ($skip_methods && in_array($method_name, $skip_methods)) {
+            continue;
+        }
+        if (strpos($method_name, '__') === 0) {
+            if ($method_name === '__construct' || $method_name === '__destruct') {
+                continue;
+            }
+        }
+        $method_head = 'public ' . ($method->isStatic() ? 'static ' : '') . 'function ' . $method->getName();
+        $method_intro = '(';
+        $parameters = $method->getParameters();
+        foreach ($parameters as $parameter) {
+            $type = $parameter->getType();
+            $type = $type ? (string) $type : '';
+            if ($type !== '' && (class_exists($type) || interface_exists($type))) {
+                $type = '\\' . ltrim($type, '\\');
+            }
+            if ($type !== '' && $parameter->allowsNull() && strpos($type, '?') !== 0) {
+                $type = '?' . $type;
+            }
+            try {
+                $default_value = $parameter->getDefaultValue();
+                if ($default_value === []) {
+                    $default_value = '[]';
+                } elseif ($default_value === null) {
+                    $default_value = 'null';
+                } elseif (is_bool($default_value)) {
+                    $default_value = $default_value ? 'true' : 'false';
+                } else {
+                    $default_value = var_export($default_value, true);
+                }
+            } catch (\Throwable $e) {
+                $default_value = null;
+            }
+            $method_intro .= ($type !== '' ? "$type " : '') . '$' . $parameter->getName() . ($default_value ? " = {$default_value}" : '') . ', ';
+        }
+        $method_intro = rtrim($method_intro, ', ');
+        $method_intro .= ')';
+
+        // return type
+        $return_type = $method->getReturnType();
+        $return_type = $return_type ? (string) $return_type : '';
+        if ($return_type !== '' && (class_exists($return_type) || interface_exists($return_type))) {
+            $return_type = '\\' . ltrim($return_type, '\\');
+        }
+
+        // body
+        $call_info = FOUR_SPACE . "// {$method_name} " . ($method->isStatic() ? 'static' : 'non-static') . " method body hook\n";
+        $call_info .= FOUR_SPACE .
+            ($return_type === 'void' ? '' : 'return ') .
+            ($method->isStatic() ? '\\' . $className . '::' : '$this->client()->') . $method_name . '(';
+        foreach ($parameters as $parameter) {
+            $call_info .= '$' . $parameter->getName() . ', ';
+        }
+        $call_info = rtrim($call_info, ', ');
+        $call_info .= ');';
+        $method_body = "\n{\n{$call_info}\n}";
+
+        // all
+        $table[] = $method_head . $method_intro . ($return_type !== '' ? ": $return_type" : '') . $method_body;
+    }
+
+    $ret = implode("\n\n", $table);
+    $ret = explode("\n", $ret);
+    foreach ($ret as &$line) {
+        $line = "    {$line}";
+    }
+    $ret = implode("\n", $ret);
+
+    return $ret;
+}
+
+$VirtualClient = <<<'PHP'
+<?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
+
+namespace Swoole\Grpc;
+
+// THIS FILE IS GENERATED BY SCRIPT, DON'T EDIT IT!
+
+class VirtualClient
+{
+    private ?Client $client = null;
+
+    public function __construct(string $hostname, array $opts = [])
+    {
+        if (!empty($opts['use'])) {
+            if (!($opts['use'] instanceof Client)) {
+                throw new \InvalidArgumentException('parameter use must be instanceof Swoole\Grpc\Client');
+            }
+            $this->use($opts['use']);
+        } else {
+            $this->client = new Client($hostname, $opts);
+        }
+    }
+
+    public function getGrpcClient(): ?Client
+    {
+        return $this->client;
+    }
+
+    public function use(Client $client): void
+    {
+        $this->client = $client;
+    }
+
+    /**
+     * @throws \RuntimeException when no underlying client has been set
+     */
+    private function client(): Client
+    {
+        if ($this->client === null) {
+            throw new \RuntimeException('VirtualClient has no underlying Client');
+        }
+
+        return $this->client;
+    }
+
+---generate-hook---
+
+}
+PHP;
+
+$VirtualClient = str_replace('---generate-hook---', createSourceOfClass(\Swoole\Grpc\Client::class, ['start']), $VirtualClient);
+file_put_contents(dirname(__DIR__, 3) . '/src/core/Grpc/VirtualClient.php', $VirtualClient);
