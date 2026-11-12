@@ -23,23 +23,35 @@ use Swoole\Tests\TestCase;
  */
 class FunctionTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        self::trace('TEST START ' . $this->getName());
+    }
+
+    protected function tearDown(): void
+    {
+        self::trace('TEST END ' . $this->getName());
+    }
+
     public function testBatchTimeout(): void
     {
         self::coRun(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
-            $start   = microtime(true);
+            $start = microtime(true);
+            self::trace('testBatchTimeout: before batch(), hook=' . Runtime::getHookFlags());
             $results = batch([
-                'gethostbyname'     => fn () => gethostbyname('localhost'),
-                'file_get_contents' => fn () => file_get_contents(__FILE__),
-                'sleep'             => function () {
+                'gethostbyname'     => self::traced('gethostbyname', static fn () => gethostbyname('localhost')),
+                'file_get_contents' => self::traced('file_get_contents', static fn () => file_get_contents(__FILE__)),
+                'sleep'             => self::traced('sleep', static function () {
                     sleep(1);
                     return true;
-                },
-                'usleep' => function () {
+                }),
+                'usleep' => self::traced('usleep', static function () {
                     usleep(1000);
                     return true;
-                },
+                }),
             ], 0.1);
+            self::trace('testBatchTimeout: after batch(), results=' . json_encode(array_map('get_debug_type', $results)));
             Runtime::setHookFlags(0);
             self::assertThat(
                 microtime(true),
@@ -59,21 +71,23 @@ class FunctionTest extends TestCase
     {
         self::coRun(function () {
             Runtime::setHookFlags(SWOOLE_HOOK_ALL);
-            $start   = microtime(true);
+            $start = microtime(true);
             // batch() waits indefinitely by default. Bound the wait so a task that never finishes
             // fails with its name instead of hanging the runner until the step's 5-minute timeout.
+            self::trace('testBatch: before batch(), hook=' . Runtime::getHookFlags());
             $results = batch([
-                'gethostbyname'     => fn () => gethostbyname('localhost'),
-                'file_get_contents' => fn () => file_get_contents(__FILE__),
-                'sleep'             => function () {
+                'gethostbyname'     => self::traced('gethostbyname', static fn () => gethostbyname('localhost')),
+                'file_get_contents' => self::traced('file_get_contents', static fn () => file_get_contents(__FILE__)),
+                'sleep'             => self::traced('sleep', static function () {
                     sleep(1);
                     return true;
-                },
-                'usleep' => function () {
+                }),
+                'usleep' => self::traced('usleep', static function () {
                     usleep(1000);
                     return true;
-                },
+                }),
             ], 5.0);
+            self::trace('testBatch: after batch(), results=' . json_encode(array_map('get_debug_type', $results)));
             Runtime::setHookFlags(0);
             $end = microtime(true);
             $this->assertEquals(count($results), 4);
@@ -142,5 +156,36 @@ class FunctionTest extends TestCase
             $this->assertSameSize($results, $list);
             $this->assertSame([2, 4, 6, 8], $results);
         });
+    }
+
+    /**
+     * Append one trace line immediately, so a runner killed by the step timeout still leaves a
+     * complete record of which task started and which one never finished. The path can be pointed
+     * at a CI artifact directory with SWOOLE_TEST_TRACE.
+     */
+    private static function trace(string $message): void
+    {
+        $file = getenv('SWOOLE_TEST_TRACE') ?: sys_get_temp_dir() . '/swoole-function-test.trace';
+        file_put_contents(
+            $file,
+            sprintf("%.6f cid=%d %s\n", microtime(true), \Swoole\Coroutine::getCid(), $message),
+            FILE_APPEND | LOCK_EX
+        );
+    }
+
+    private static function traced(string $name, callable $fn): callable
+    {
+        return static function () use ($name, $fn) {
+            self::trace($name . ': start');
+            $start = microtime(true);
+            try {
+                $result = $fn();
+                self::trace(sprintf('%s: done %.6fs (%s)', $name, microtime(true) - $start, get_debug_type($result)));
+                return $result;
+            } catch (\Throwable $e) {
+                self::trace($name . ': threw ' . $e::class . ': ' . $e->getMessage());
+                throw $e;
+            }
+        };
     }
 }

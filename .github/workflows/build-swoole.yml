@@ -116,3 +116,11 @@ jobs:
         run: |
           docker compose -f docker-compose.yml -f docker-compose.host.yml ps --all
           docker compose -f docker-compose.yml -f docker-compose.host.yml logs --no-color --tail 200
+
+      - name: Upload test trace
+        if: always() && (matrix.php == '8.2' || matrix.php == '8.5')
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-trace-${{ matrix.php }}
+          path: /tmp/swoole-function-test.trace
+          if-no-files-found: ignore
