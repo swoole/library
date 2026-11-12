@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Tests\Unit\Grpc;
 
+use Etcdserverpb\Compare;
 use Etcdserverpb\KVClient;
 use Etcdserverpb\PutRequest;
 use Etcdserverpb\RangeRequest;
@@ -22,6 +23,8 @@ use Helloworld\HelloRequest;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 use Swoole\Grpc\Client;
+use Swoole\Grpc\Example\Etcd\Client as EtcdFacade;
+use Swoole\Grpc\Example\Etcd\Txn;
 use Swoole\Grpc\Parser;
 use Swoole\Grpc\Request;
 use Swoole\Tests\TestCase;
@@ -218,6 +221,70 @@ class IntegrationTest extends TestCase
             $this->assertSame(0, $status);
             $this->assertTrue($kv->isConnected());
             $shared->close();
+        });
+    }
+
+    public function testEtcdFacadePutGetDelete(): void
+    {
+        self::requireEndpoint(self::etcdHost(), 2379);
+        self::coRun(function (): void {
+            $etcd = new EtcdFacade('127.0.0.1:2379');
+            $key  = 'grpc_facade_' . bin2hex(random_bytes(4));
+
+            $put = $etcd->put($key, 'v1');
+            $this->assertTrue($put->isOk());
+
+            $get = $etcd->get($key);
+            $this->assertTrue($get->isOk());
+            $this->assertCount(1, $get->getReply()->getKvs());
+            $this->assertSame('v1', $get->getReply()->getKvs()[0]->getValue());
+
+            $del = $etcd->delete($key);
+            $this->assertTrue($del->isOk());
+            $this->assertCount(0, $etcd->get($key)->getReply()->getKvs());
+            $etcd->close();
+        });
+    }
+
+    public function testEtcdFacadeTxnCreateIfAbsent(): void
+    {
+        self::requireEndpoint(self::etcdHost(), 2379);
+        self::coRun(function (): void {
+            $etcd = new EtcdFacade('127.0.0.1:2379');
+            $key  = 'grpc_txn_' . bin2hex(random_bytes(4));
+
+            // Succeeds first time (version 0), fails on the second (key now exists).
+            $first = $etcd->txn()
+                ->If(Compare\CompareTarget::VERSION, Compare\CompareResult::EQUAL, $key, 0)
+                ->Then(Txn::put($key, 'created'))
+                ->commit()
+            ;
+            $this->assertTrue($first->isOk());
+            $this->assertTrue($first->getReply()->getSucceeded());
+
+            $second = $etcd->txn()
+                ->If(Compare\CompareTarget::VERSION, Compare\CompareResult::EQUAL, $key, 0)
+                ->Then(Txn::put($key, 'overwrite'))
+                ->commit()
+            ;
+            $this->assertTrue($second->isOk());
+            $this->assertFalse($second->getReply()->getSucceeded());
+            $etcd->close();
+        });
+    }
+
+    public function testEtcdFacadeLeaseGrantAndRevoke(): void
+    {
+        self::requireEndpoint(self::etcdHost(), 2379);
+        self::coRun(function (): void {
+            $etcd  = new EtcdFacade('127.0.0.1:2379');
+            $lease = $etcd->lease();
+            $grant = $lease->grant(30);
+            $this->assertTrue($grant->isOk());
+            $id = (int) $grant->getReply()->getID();
+            $this->assertGreaterThan(0, $id);
+            $this->assertTrue($lease->revoke($id)->isOk());
+            $etcd->close();
         });
     }
 

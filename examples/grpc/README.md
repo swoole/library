@@ -76,6 +76,34 @@
   ]);
   ```
 
+## etcd 高层封装（示例层）
+
+`examples/grpc/Etcd/` 提供 jetcd/clientv3 风格的便捷封装（**依赖生成桩与 `google/protobuf`，属示例层，不进生产包**），所有方法返回 `Result`：
+
+- `Swoole\Grpc\Example\Etcd\Client`：`put/get/getPrefix/delete`，三个生成桩共享一个底层连接；`txn()` / `watcher()` / `lease()` 返回子对象。
+- `Txn`：`If(...)->Then(...)->Else(...)->commit()`，配 `Txn::put/get/delete` 构造操作与 `Compare` 枚举。
+- `Watcher`：Watch 自动重连、从 `lastRevision + 1` 续传、progress notify、`compactRevision` 处理，产出 `WatchEvent`。
+- `Lease`：`grant/revoke` 与后台协程 `keepAlive()` 自动续约。
+
+```php
+use Swoole\Grpc\Example\Etcd\Client as Etcd;
+use Swoole\Grpc\Example\Etcd\Txn;
+use Etcdserverpb\Compare;
+
+\Swoole\Coroutine\run(function () {
+    $etcd = new Etcd('127.0.0.1:2379');
+    $etcd->put('key', 'value');
+    $reply = $etcd->get('key')->getReply();
+
+    $etcd->txn()
+        ->If(Compare\CompareTarget::VERSION, Compare\CompareResult::EQUAL, 'lock', 0)
+        ->Then(Txn::put('lock', 'owner'))
+        ->commit();
+
+    $etcd->close();
+});
+```
+
 <br>
 
 ## Usage

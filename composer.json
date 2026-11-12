@@ -56,7 +56,8 @@
             "tests/TestCase.php",
             "tests/DatabaseTestCase.php",
             "tests/HookFlagsTrait.php",
-            "examples/grpc/generated"
+            "examples/grpc/generated",
+            "examples/grpc/Etcd"
         ]
     },
     "config": {
