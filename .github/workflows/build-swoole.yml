@@ -77,7 +77,7 @@ jobs:
       # classes the extension already provides -- so composer-embedded.json installs the test tooling
       # (PHPUnit, mongodb/mongodb, google/protobuf, the test helper classmap and the gRPC example
       # classmap) without the library's own autoload rules. Composer-only namespaces that are not in the
-      # embedded copy, Swoole\Grpc and Swoole\Debugger, are autoloaded from this repository.
+      # embedded copy, Swoole\Grpc, Swoole\Debugger and Swoole\Proxy, are autoloaded from this repository.
       #
       # Tests run on the runner itself, not in the app container: the backing services come from
       # docker-compose.yml with docker-compose.host.yml publishing their ports on the host, and /etc/hosts

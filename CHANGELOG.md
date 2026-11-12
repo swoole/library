@@ -33,6 +33,7 @@ Added:
 * `\Swoole\Coroutine\FastCGI\Proxy::withConnectionPool()` keeps connections to the FastCGI server open for reuse. Off by default. A request that finds its connection closed by the server is sent again only when its method is idempotent, e.g. GET but not POST.
 * `\Swoole\Coroutine\FastCGI\Client::isConnected()` tells whether the client holds a connection kept open by an earlier request.
 * `\Swoole\Debugger\RemoteShell` is the remote shell previously published as `swoole/debugger`. `RemoteShell::listen($server)` opens it on `127.0.0.1:9599`. It is a Composer-only component and is not packed into the Swoole extension. Bind it to a local address. `exec` evaluates PHP in the selected worker, prints an expression's value, and keeps the variables it assigns there until `reset`. `print` reads those, then globals.
+* `\Swoole\Proxy` is the reverse proxy previously published as the proxy-server scripts. It is a Composer-only component and is not packed into the Swoole extension. `TcpProxy` and `HttpProxy` are the coroutine proxies, and `AsyncTcpProxy` is the event-driven TCP proxy on `\Swoole\Async\Client`. The listening servers are started by the scripts in `examples/proxy`. Bind them to a local address. A backend that cannot be reached is closed, or answered with 502 for HTTP, and the TCP proxies do not write an error string into the byte stream.
 
 Changed:
 
