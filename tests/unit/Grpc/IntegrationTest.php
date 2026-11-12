@@ -78,6 +78,37 @@ class IntegrationTest extends TestCase
         });
     }
 
+    public function testLargeMessageAcrossDataFrames(): void
+    {
+        self::requireEndpoint(self::greeterHost(), 50051);
+        self::coRun(function (): void {
+            $client  = new GreeterClient('127.0.0.1:50051');
+            $request = new HelloRequest();
+            $request->setName('LARGE:');
+            // A 64 KiB reply is split across several HTTP/2 DATA frames; the client must hand
+            // back the complete payload.
+            [$reply, $status] = $client->SayHello($request);
+            $this->assertSame(0, $status);
+            $this->assertStringStartsWith('LARGE:', $reply->getMessage());
+            $this->assertSame(6 + 64 * 1024, strlen($reply->getMessage()));
+            $client->close();
+        });
+    }
+
+    public function testLargeMessageViaInvokeUnaryResult(): void
+    {
+        self::requireEndpoint(self::greeterHost(), 50051);
+        self::coRun(function (): void {
+            $client  = new GreeterClient('127.0.0.1:50051');
+            $request = new HelloRequest();
+            $request->setName('LARGE:');
+            $result = $client->invokeUnary('/helloworld.Greeter/SayHello', $request, [\Helloworld\HelloReply::class, 'decode']);
+            $this->assertTrue($result->isOk());
+            $this->assertSame(6 + 64 * 1024, strlen($result->getReply()->getMessage()));
+            $client->close();
+        });
+    }
+
     public function testConcurrentUnaryCallsShareOneConnection(): void
     {
         self::requireEndpoint(self::greeterHost(), 50051);

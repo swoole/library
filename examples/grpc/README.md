@@ -57,6 +57,13 @@
   ```
 - **trailers**：`Swoole\Grpc\Status\Status::fromResponse($response)` 读取 gRPC status 与 trailing metadata；当 Swoole 扩展提供 `Response::$trailers` 时优先使用，否则从 `headers` 兜底（兼容任意 Swoole 版本）。
 - **TLS/mTLS**：构造 `Client` 时透传 `ssl_cafile` / `ssl_cert_file` / `ssl_key_file` / `ssl_verify_peer` / `ssl_host_name`。
+- **流式跨帧与迭代**：`StreamingCall`（`Watch` / `LeaseKeepAlive` 等）新增 `getIterator()` 按消息迭代（自动跨 HTTP/2 DATA 片段拆包）、`getStatus()` / `getTrailers()` / `isEnded()` / `recvResult()`，以及 `cancel()` 本地取消（底层无单流 RST_STREAM，仅本地丢弃）。原有 `push()` / `recv()` / `end()` 用法不变：
+  ```php
+  $call = $watchClient->Watch();
+  $call->push($watchRequest);
+  foreach ($call as $reply) { /* 每条完整消息 */ }
+  if (!$call->getStatus()->ok()) { /* 终态状态 */ }
+  ```
 
 <br>
 

@@ -11,7 +11,15 @@ import helloworld_pb2_grpc
 
 
 class Greeter(helloworld_pb2_grpc.GreeterServicer):
+    # Any name starting with this marker requests a payload large enough to span several
+    # HTTP/2 DATA frames, used to exercise the client's cross-frame reassembly.
+    LARGE_MARKER = "LARGE:"
+    LARGE_SIZE = 64 * 1024
+
     def SayHello(self, request, context):
+        if request.name.startswith(self.LARGE_MARKER):
+            body = self.LARGE_MARKER + ("x" * self.LARGE_SIZE)
+            return helloworld_pb2.HelloReply(message=body)
         return helloworld_pb2.HelloReply(message="Hello " + request.name)
 
 

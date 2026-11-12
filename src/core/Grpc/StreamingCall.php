@@ -11,11 +11,36 @@ declare(strict_types=1);
 
 namespace Swoole\Grpc;
 
+use Swoole\Grpc\Internal\FrameReassembler;
+use Swoole\Grpc\Internal\Trailers;
+use Swoole\Grpc\Status\Status;
+use Swoole\Grpc\Status\StatusCode;
+
 /**
  * An active call whose messages are exchanged over one HTTP/2 stream.
+ *
+ * The original send()/push()/recv()/end() contract is unchanged: recv() still returns the
+ * [reply, status, response] triple for one HTTP/2 response. On top of it, this class offers
+ * status/trailers introspection, a cross-DATA-frame message iterator and local cancellation.
  */
-class StreamingCall extends BaseCall
+class StreamingCall extends BaseCall implements \IteratorAggregate
 {
+    private Status $status;
+
+    /** @var array<string, string> */
+    private array $trailers = [];
+
+    private bool $ended = false;
+
+    private bool $cancelled = false;
+
+    private ?FrameReassembler $reassembler = null;
+
+    public function __construct()
+    {
+        $this->status = new Status();
+    }
+
     /**
      * Open the stream with a single (optional) first message.
      *
@@ -58,17 +83,28 @@ class StreamingCall extends BaseCall
      */
     public function recv(float $timeout = Client::DEFAULT_TIMEOUT): array
     {
-        if ($this->streamId <= 0) {
+        if ($this->cancelled || $this->streamId <= 0) {
             $response = false;
         } else {
             $response = $this->client->recv($this->streamId, $timeout);
             if (!$this->client->isStreamExist($this->streamId)) {
                 // The final response (or a timeout) unregistered the stream.
                 $this->streamId = 0;
+                $this->ended    = true;
             }
         }
 
+        $this->observe($response);
+
         return Parser::parseToResultArray($response, $this->deserialize);
+    }
+
+    /**
+     * Idiomatic single-read entry point returning a Result instead of the legacy triple.
+     */
+    public function recvResult(float $timeout = Client::DEFAULT_TIMEOUT): Result
+    {
+        return Result::fromTriple($this->recv($timeout));
     }
 
     /**
@@ -81,5 +117,90 @@ class StreamingCall extends BaseCall
         }
 
         return $this->client->write($this->streamId, null, true);
+    }
+
+    /**
+     * Iterate complete messages, reassembling them across HTTP/2 DATA fragments. Each yielded
+     * value is a deserialized reply (or null on end-of-stream status). This is the idiomatic
+     * streaming API; callers who need per-response control can keep using recv() directly.
+     *
+     * @return \Traversable<int, mixed>
+     */
+    public function getIterator(): \Traversable
+    {
+        $reassembler = $this->reassembler ?? ($this->reassembler = new FrameReassembler());
+
+        while (!$this->ended && !$this->cancelled) {
+            if ($this->streamId <= 0) {
+                $this->observe(false);
+                $this->ended = true;
+                break;
+            }
+
+            $response = $this->client->recv($this->streamId, Client::DEFAULT_TIMEOUT);
+            if (!$this->client->isStreamExist($this->streamId)) {
+                $this->streamId = 0;
+            }
+
+            $pushed = $reassembler->push($response);
+            foreach ($pushed['frames'] as $frame) {
+                yield Parser::deserializeMessage($this->deserialize, $frame);
+            }
+
+            if ($pushed['done']) {
+                $this->observe($pushed['response']);
+                $this->ended = true;
+            }
+        }
+    }
+
+    public function getStatus(): Status
+    {
+        return $this->status;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getTrailers(): array
+    {
+        return $this->trailers;
+    }
+
+    public function isEnded(): bool
+    {
+        return $this->ended;
+    }
+
+    /**
+     * Locally cancel the call: stop reading and mark it ended with CANCELLED.
+     *
+     * The underlying Swoole Coroutine\Http2\Client has no per-stream RST_STREAM API (goaway is
+     * connection-wide), so this discards pending reads locally rather than signalling the peer.
+     */
+    public function cancel(): void
+    {
+        if ($this->cancelled) {
+            return;
+        }
+        $this->cancelled = true;
+        $this->ended     = true;
+        $this->status    = new Status(StatusCode::CANCELLED, 'cancelled locally');
+        $this->streamId  = 0;
+    }
+
+    /**
+     * @param \Swoole\Http2\Response|false|null $response
+     */
+    private function observe($response): void
+    {
+        $this->trailers = Trailers::fromResponse($response);
+        if (!$this->cancelled) {
+            $status = Status::fromResponse($response);
+            // A missing response mid-stream is a transport-level failure, not a gRPC status.
+            $this->status = !$response && !$this->ended
+                ? new Status(StatusCode::UNAVAILABLE, 'No response')
+                : $status;
+        }
     }
 }

@@ -148,6 +148,100 @@ class StreamingCallTest extends TestCase
         $call->recv();
     }
 
+    public function testInitialStateAndRecvResult(): void
+    {
+        $client               = new StreamingFakeClient();
+        $response             = new Response();
+        $response->statusCode = 200;
+        $response->headers    = ['grpc-status' => '0'];
+        $response->data       = Parser::pack('the-reply');
+        $client->recvResult   = $response;
+
+        $call = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+        $this->assertTrue($call->getStatus()->ok());
+        $this->assertSame([], $call->getTrailers());
+        $this->assertFalse($call->isEnded());
+
+        $result = $call->recvResult();
+        $this->assertInstanceOf(\Swoole\Grpc\Result::class, $result);
+        $this->assertTrue($result->isOk());
+        $this->assertSame(['grpc-status' => '0'], $call->getTrailers());
+    }
+
+    public function testIteratorReassemblesMessagesAcrossFragments(): void
+    {
+        $client = new StreamingFakeClient();
+        $frame1 = Parser::pack('one');
+        $frame2 = Parser::pack('two');
+
+        // Fragment 1: first frame complete + half of second frame header.
+        // Fragment 2: rest of second frame, then a terminal response (pipeline=false).
+        $split                = $frame1 . substr($frame2, 0, 3);
+        $client->recvSequence = [
+            self::makeResponse($split, true, []),
+            self::makeResponse(substr($frame2, 3), false, ['grpc-status' => '0']),
+        ];
+
+        $call = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+
+        $values = [];
+        foreach ($call as $reply) {
+            $this->assertInstanceOf(StreamingReply::class, $reply);
+            $values[] = $reply->decoded;
+        }
+        $this->assertSame(['one', 'two'], $values);
+        $this->assertTrue($call->isEnded());
+        $this->assertTrue($call->getStatus()->ok());
+    }
+
+    public function testIteratorStopsOnTrailersOnly(): void
+    {
+        $client               = new StreamingFakeClient();
+        $client->recvSequence = [
+            self::makeResponse('', false, ['grpc-status' => '5', 'grpc-message' => 'missing']),
+        ];
+        $call = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+
+        $values = iterator_to_array($call->getIterator());
+        $this->assertSame([], $values);
+        $this->assertTrue($call->isEnded());
+        $this->assertSame(5, $call->getStatus()->getCode());
+    }
+
+    public function testCancelMarksEndedWithCancelledStatus(): void
+    {
+        $client = new StreamingFakeClient();
+        $call   = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+
+        $call->cancel();
+        $this->assertTrue($call->isEnded());
+        $this->assertSame(\Swoole\Grpc\Status\StatusCode::CANCELLED, $call->getStatus()->getCode());
+        // recv() after cancel returns the no-response triple without touching the network.
+        [$reply, $status] = $call->recv();
+        $this->assertSame('No response', $reply);
+        $this->assertSame(Parser::ERROR_NO_RESPONSE, $status);
+        // cancel() is idempotent.
+        $call->cancel();
+        $this->assertSame(\Swoole\Grpc\Status\StatusCode::CANCELLED, $call->getStatus()->getCode());
+    }
+
+    /**
+     * @param array<string, string> $headers
+     */
+    private static function makeResponse(string $data, bool $pipeline, array $headers): Response
+    {
+        $r             = new Response();
+        $r->statusCode = 200;
+        $r->pipeline   = $pipeline;
+        $r->headers    = $headers;
+        $r->data       = $data;
+        return $r;
+    }
+
     private static function newCall(string $class, StreamingFakeClient $client): StreamingCall
     {
         $call = new $class();
@@ -195,6 +289,9 @@ class StreamingFakeClient
 
     public $recvResult = false;
 
+    /** @var array<int, mixed> queued responses consumed by recv() one at a time */
+    public array $recvSequence = [];
+
     public function openStream(
         string $path,
         ?string $data = '',
@@ -214,6 +311,9 @@ class StreamingFakeClient
 
     public function recv(int $streamId, ?float $timeout = null)
     {
+        if ($this->recvSequence !== []) {
+            return array_shift($this->recvSequence);
+        }
         return $this->recvResult;
     }
 
