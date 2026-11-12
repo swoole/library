@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole\Grpc;
 
 use Swoole\Grpc\Internal\FrameReassembler;
+use Swoole\Grpc\Internal\ResponseCopy;
 use Swoole\Grpc\Internal\Trailers;
 use Swoole\Grpc\Status\Status;
 use Swoole\Grpc\Status\StatusCode;
@@ -252,7 +253,7 @@ class StreamingCall extends BaseCall implements \IteratorAggregate
             $this->ended = true;
             return Parser::parseToResultArray(false, $this->deserialize);
         }
-        $response = self::withFrame($item['response'], $item['frame']);
+        $response = ResponseCopy::withFrame($item['response'], $item['frame']);
         if ($item['done']) {
             $this->streamId = 0;
             $this->ended    = true;
@@ -260,30 +261,6 @@ class StreamingCall extends BaseCall implements \IteratorAggregate
         }
 
         return Parser::parseToResultArray($response, $this->deserialize);
-    }
-
-    /**
-     * Http2\Response cannot be cloned. A chunk may carry several gRPC messages, and each one is
-     * parsed from its own copy so later messages keep the original buffer.
-     */
-    private static function withFrame(\Swoole\Http2\Response $response, string $frame): \Swoole\Http2\Response
-    {
-        $copy                     = new \Swoole\Http2\Response();
-        $copy->streamId           = $response->streamId;
-        $copy->errCode            = $response->errCode;
-        $copy->statusCode         = $response->statusCode;
-        $copy->pipeline           = $response->pipeline;
-        $copy->headers            = $response->headers;
-        $copy->set_cookie_headers = $response->set_cookie_headers;
-        $copy->cookies            = $response->cookies;
-        // Only Swoole builds with the trailers enhancement expose this property (see Internal\Trailers).
-        if (property_exists($response, 'trailers') && property_exists($copy, 'trailers')) {
-            $trailers       = $response->trailers;
-            $copy->trailers = $trailers;
-        }
-        $copy->data               = $frame;
-
-        return $copy;
     }
 
     /**

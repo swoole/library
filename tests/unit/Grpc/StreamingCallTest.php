@@ -258,6 +258,42 @@ class StreamingCallTest extends TestCase
         $this->assertTrue($call->isEnded());
     }
 
+    public function testRecvGivesEachMessageItsOwnResponse(): void
+    {
+        $client          = new StreamingFakeClient();
+        $frame1          = Parser::pack('one');
+        $frame2          = Parser::pack('two');
+        $chunk           = self::makeResponse($frame1 . $frame2, false, ['grpc-status' => '0']);
+        $chunk->streamId = 5;
+        if (property_exists($chunk, 'trailers')) {
+            $chunk->trailers = ['grpc-status' => '0', 'x-user' => 'ada'];
+        }
+        $client->recvSequence = [$chunk];
+        $call                 = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+
+        [$firstReply, $firstStatus, $firstResponse]    = $call->recv();
+        [$secondReply, $secondStatus, $secondResponse] = $call->recv();
+
+        $this->assertSame('one', $firstReply->decoded);
+        $this->assertSame('two', $secondReply->decoded);
+        $this->assertSame(0, $firstStatus);
+        $this->assertSame(0, $secondStatus);
+        $this->assertNotSame($chunk, $firstResponse);
+        $this->assertNotSame($firstResponse, $secondResponse);
+        $this->assertSame($frame1, $firstResponse->data);
+        $this->assertSame($frame2, $secondResponse->data);
+        $this->assertSame($frame1 . $frame2, $chunk->data);
+        $this->assertSame(5, $firstResponse->streamId);
+        $this->assertSame(200, $firstResponse->statusCode);
+        if (property_exists($chunk, 'trailers')) {
+            $this->assertSame(['grpc-status' => '0', 'x-user' => 'ada'], $firstResponse->trailers);
+            $this->assertSame($firstResponse->trailers, $secondResponse->trailers);
+        } else {
+            $this->assertFalse(property_exists($firstResponse, 'trailers'));
+        }
+    }
+
     public function testRecvTimeoutIsDeadlineExceeded(): void
     {
         $client               = new StreamingFakeClient();

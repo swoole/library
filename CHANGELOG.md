@@ -16,7 +16,8 @@ Backward-incompatible changes:
 * Return values of functions that replace native ones when they are hooked now match the native functions:
   * `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle, and `\Swoole\Curl\Handler::reset()` returns `true` on success while `swoole_curl_reset()` returns nothing.
   * `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing, and `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
-  * `swoole_exec()` returns `''` instead of `false` for a command without output and replaces an `$output` that is not an array, and `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
+  * `swoole_exec()` returns `''` instead of `false` for a command without output, keeps spaces at the end of a line, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
+* `\Swoole\Coroutine\FastCGI\Proxy` no longer sends PHP source, backup copies or hidden files as static files. `file.PHP` is passed to PHP-FPM, and backup or hidden files are rejected with 403.
 
 Added:
 
@@ -57,10 +58,9 @@ Fixed:
 * A gRPC message larger than 4MB is rejected.
 * `\Swoole\Grpc\Client` is closed when the last reference to it is dropped. A `\Swoole\Grpc\VirtualClient` that borrowed its connection does not close that connection on destruction.
 * An illegal address in `\Swoole\Grpc\Client`'s `endpoints` option is rejected.
+* The gRPC retry interceptor caps the delay between attempts and stops once the call's deadline has passed.
 * `\Swoole\Database\MysqliProxy` restores `autocommit(false)` after a reconnect.
 * `\Swoole\Database\PDOProxy` and `\Swoole\Database\PDOStatementProxy` reconnect after a lost connection when the error mode is not the exception mode.
-* `\Swoole\Coroutine\FastCGI\Proxy` no longer sends PHP source, backup copies or hidden files as static files. `file.PHP` is passed to PHP-FPM.
-* `swoole_exec()` keeps spaces at the end of a line.
 
 ## 6.2.5 (2026-11-07)
 
