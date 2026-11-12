@@ -1,6 +1,6 @@
 {
     "name": "swoole/library-embedded-tests",
-    "description": "Installs the test tooling for running the test suite against the library embedded in the Swoole extension (swoole.enable_library=On). The main composer.json cannot be used there: its autoload rules would redeclare the functions and classes the extension already provides. Swoole\\Grpc is the exception: it is a Composer-only component that is not packed into the extension, so it needs its own PSR-4 rule here as well. Used by the Build Swoole workflow as: COMPOSER=composer-embedded.json composer update",
+    "description": "Installs the test tooling for running the test suite against the library embedded in the Swoole extension (swoole.enable_library=On). The main composer.json cannot be used there: its autoload rules would redeclare the functions and classes the extension already provides. Composer-only components are not packed into the extension, so Swoole\\Grpc and Swoole\\Debugger need their own PSR-4 rules here. The gRPC example tests also load examples/grpc/generated and examples/grpc/Etcd, which need google/protobuf. Used by the Build Swoole workflow as: COMPOSER=composer-embedded.json composer update",
     "license": "Apache-2.0",
     "require": {
         "php": ">=8.2",
@@ -12,16 +12,20 @@
         "ext-sockets": "*",
         "mongodb/mongodb": "^2.1",
         "nikic/php-parser": "^5.2",
-        "deminy/counit": "~0.3"
+        "deminy/counit": "~0.3",
+        "google/protobuf": "^4.0"
     },
     "autoload": {
         "classmap": [
             "tests/TestCase.php",
             "tests/DatabaseTestCase.php",
-            "tests/HookFlagsTrait.php"
+            "tests/HookFlagsTrait.php",
+            "examples/grpc/generated",
+            "examples/grpc/Etcd"
         ],
         "psr-4": {
-            "Swoole\\Grpc\\": "src/core/Grpc"
+            "Swoole\\Grpc\\": "src/core/Grpc",
+            "Swoole\\Debugger\\": "src/core/Debugger"
         }
     }
 }

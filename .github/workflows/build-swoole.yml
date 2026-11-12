@@ -75,7 +75,9 @@ jobs:
       # the copy of the library embedded in the extension just built (swoole.enable_library=On, the default).
       # The main Composer autoloader cannot be loaded in that setup -- it would redeclare the functions and
       # classes the extension already provides -- so composer-embedded.json installs the test tooling
-      # (PHPUnit, mongodb/mongodb and the test helper classmap) without the library's own autoload rules.
+      # (PHPUnit, mongodb/mongodb, google/protobuf, the test helper classmap and the gRPC example
+      # classmap) without the library's own autoload rules. Composer-only namespaces that are not in the
+      # embedded copy, Swoole\Grpc and Swoole\Debugger, are autoloaded from this repository.
       #
       # Tests run on the runner itself, not in the app container: the backing services come from
       # docker-compose.yml with docker-compose.host.yml publishing their ports on the host, and /etc/hosts
