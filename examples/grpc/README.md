@@ -64,6 +64,17 @@
   foreach ($call as $reply) { /* 每条完整消息 */ }
   if (!$call->getStatus()->ok()) { /* 终态状态 */ }
   ```
+- **连接韧性**（构造 `Client` 时的 `$opts`，全部可选、默认不启用）：
+  - `keepalive_time => 10.0`：空闲时定期发送 HTTP/2 PING（在发送循环内串行执行，安全）。
+  - `reconnect_attempts => 5`、`reconnect_backoff_initial => 0.1`、`reconnect_backoff_max => 5.0`：断线后按指数退避重连，每次重建底层连接。
+  - `endpoints => ['host2:port', ...]`：多地址的连接级故障转移（断线重连时轮换，仍复用单连接模型，非逐请求负载均衡）。
+  ```php
+  $client = new \Swoole\Grpc\Client('127.0.0.1:2379', [
+      'keepalive_time'     => 10.0,
+      'reconnect_attempts' => 5,
+      'endpoints'          => ['10.0.0.2:2379'],
+  ]);
+  ```
 
 <br>
 

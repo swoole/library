@@ -14,6 +14,7 @@ namespace Swoole\Grpc;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Http2\Client as Http2Client;
+use Swoole\Grpc\Internal\Backoff;
 use Swoole\Http2\Response as Http2Response;
 
 /**
@@ -24,6 +25,14 @@ class Client
 {
     /** Default recv() timeout; -1 waits indefinitely. */
     public const DEFAULT_TIMEOUT = -1.0;
+
+    private const CONTROL_KEYS = [
+        'endpoints'                  => true,
+        'keepalive_time'             => true,
+        'reconnect_attempts'         => true,
+        'reconnect_backoff_initial'  => true,
+        'reconnect_backoff_max'      => true,
+    ];
 
     /** @var array{constructed_num: int, destructed_num: int} */
     protected static array $numStats = [
@@ -63,24 +72,33 @@ class Client
     /** @var array<string, mixed> */
     protected array $opts;
 
+    /** Options forwarded to the underlying Http2 client (our own control keys removed). */
+    protected array $clientOpts;
+
+    /** Ordered candidate endpoints for connection-level failover; the first is the primary host. */
+    protected array $endpoints = [];
+
+    protected int $endpointIndex = 0;
+
+    protected float $keepaliveTime = 0.0;
+
+    protected int $reconnectAttempts = 1;
+
+    protected Backoff $backoff;
+
     protected Http2Client $client;
 
     protected float $timeout = self::DEFAULT_TIMEOUT;
 
     public function __construct(string $hostname, array $opts = [])
     {
-        if (stripos($hostname, 'unix:/') === 0) {
-            $parts = ['host' => $hostname, 'port' => 0];
-        } else {
-            $parts = parse_url($hostname);
-        }
-
-        if (!$parts || !isset($parts['host']) || !isset($parts['port'])) {
+        $parts = self::parseEndpoint($hostname);
+        if ($parts === null) {
             throw new \InvalidArgumentException("The hostname {$hostname} is illegal!");
         }
 
-        $this->host = (string) $parts['host'];
-        $this->port = (int) $parts['port'];
+        $this->host = $parts['host'];
+        $this->port = $parts['port'];
 
         $defaultOpts = [
             'timeout'       => self::DEFAULT_TIMEOUT,
@@ -92,8 +110,31 @@ class Client
         $this->ssl         = (bool) $this->opts['ssl'] || (bool) $this->opts['ssl_host_name'];
         $this->opts['ssl'] = $this->ssl;
 
+        // Connection resilience knobs (all opt-in; defaults reproduce the original behaviour).
+        $this->keepaliveTime     = max(0.0, (float) ($this->opts['keepalive_time'] ?? 0));
+        $this->reconnectAttempts = max(1, (int) ($this->opts['reconnect_attempts'] ?? 1));
+        $this->backoff           = new Backoff(
+            (float) ($this->opts['reconnect_backoff_initial'] ?? 0.1),
+            2.0,
+            (float) ($this->opts['reconnect_backoff_max'] ?? 5.0)
+        );
+
+        $this->endpoints[] = $parts;
+        $extra             = $this->opts['endpoints'] ?? [];
+        if (is_array($extra)) {
+            foreach ($extra as $endpoint) {
+                $parsed = is_string($endpoint) ? self::parseEndpoint($endpoint) : null;
+                if ($parsed !== null) {
+                    $this->endpoints[] = $parsed;
+                }
+            }
+        }
+
+        // Only transport-level settings reach Http2Client::set().
+        $this->clientOpts = array_diff_key($this->opts, self::CONTROL_KEYS);
+
         $this->client = new Http2Client($this->host, $this->port, $this->ssl);
-        $this->client->set($this->opts);
+        $this->client->set($this->clientOpts);
         static::$numStats['constructed_num']++;
 
         $this->start();
@@ -318,18 +359,17 @@ class Client
                 }
 
                 if ($this->isClosed()) {
-                    $needBreak = true;
-                } else {
-                    // A dropped connection leaves the in-flight streams hanging: wake their
-                    // waiters before trying to reconnect.
-                    foreach ($this->recvChannelMap as $index => $channel) {
-                        unset($this->recvChannelMap[$index]);
-                        $channel->close();
-                    }
-                    $needBreak = !$this->client->connect();
+                    break;
                 }
 
-                if ($needBreak) {
+                // A dropped connection leaves the in-flight streams hanging: wake their waiters
+                // before reconnecting, then retry with backoff (and endpoint failover when
+                // configured). A successful reconnect continues the loop; a failed one ends it.
+                foreach ($this->recvChannelMap as $index => $channel) {
+                    unset($this->recvChannelMap[$index]);
+                    $channel->close();
+                }
+                if (!$this->reconnect()) {
                     break;
                 }
             }
@@ -347,8 +387,20 @@ class Client
         Coroutine::create(function () use ($sendChannel, $sendRetChannel): void {
             $this->sendCid = Coroutine::getuid();
             while (true) {
-                $sendData = $sendChannel->pop(-1);
+                // With keepalive enabled, an idle pop timeout means it is time to ping. Pinging
+                // here (in the send loop) keeps it serialized with send()/write() on the same
+                // connection, which is required for safety.
+                $sendData = $this->keepaliveTime > 0
+                    ? $sendChannel->pop($this->keepaliveTime)
+                    : $sendChannel->pop(-1);
                 if ($sendData === false) {
+                    if ($this->keepaliveTime > 0
+                        && $sendChannel->errCode === -1 // timeout (not closed)
+                        && !$this->isClosed()
+                    ) {
+                        $this->client->ping();
+                        continue;
+                    }
                     break;
                 }
                 if ($sendData instanceof Request) {
@@ -365,6 +417,72 @@ class Client
             $sendRetChannel->close();
             $this->sendCid = 0;
         });
+    }
+
+    /**
+     * @return array{host: string, port: int}|null
+     */
+    private static function parseEndpoint(string $endpoint): ?array
+    {
+        if (stripos($endpoint, 'unix:/') === 0) {
+            return ['host' => $endpoint, 'port' => 0];
+        }
+        $parts = parse_url($endpoint);
+        if (!$parts || !isset($parts['host']) || !isset($parts['port'])) {
+            return null;
+        }
+
+        return ['host' => (string) $parts['host'], 'port' => (int) $parts['port']];
+    }
+
+    /**
+     * Reconnect after a dropped connection. Each attempt rebuilds the underlying transport
+     * (like grpc-go's resetTransport): a dropped Http2Client cannot reliably re-connect in
+     * place because its internal state still reports "connected" over a dead socket. Retries
+     * follow exponential backoff, rotating through configured endpoints for failover. The
+     * default (one attempt, single endpoint) mirrors the original single connect() call.
+     */
+    private function reconnect(): bool
+    {
+        $this->backoff->reset();
+        $count = count($this->endpoints);
+        for ($attempt = 0; $attempt < $this->reconnectAttempts; $attempt++) {
+            // Checked at the top of every iteration: close() may run in another coroutine while
+            // backoff->sleep() yields, so this must be re-evaluated after each sleep.
+            if ($this->isClosed()) {
+                return false;
+            }
+            if ($attempt > 0 && $count > 1) {
+                $this->endpointIndex = ($this->endpointIndex + 1) % $count;
+            }
+
+            $this->resetConnection();
+            if ($this->client->connect()) {
+                return true;
+            }
+
+            if ($attempt + 1 < $this->reconnectAttempts) {
+                $this->backoff->sleep();
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Close the dead transport and build a fresh Http2Client against the current endpoint.
+     * All in-flight streams have already been woken up by the caller; the single connection
+     * model (and recvChannelMap) is preserved.
+     */
+    private function resetConnection(): void
+    {
+        $this->client->close();
+        $endpoint   = $this->endpoints[$this->endpointIndex];
+        $this->host = $endpoint['host'];
+        $this->port = $endpoint['port'];
+
+        $this->client = new Http2Client($this->host, $this->port, $this->ssl);
+        $this->client->set($this->clientOpts);
     }
 
     /**
