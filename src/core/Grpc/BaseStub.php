@@ -120,6 +120,7 @@ class BaseStub extends VirtualClient
         $call->setMethod($method);
         $call->setDeserialize($deserialize);
         $call->setHeaders(self::buildHeaders($metadata, $options));
+        self::applyTimeout($call, $metadata, $options);
 
         return $call;
     }
@@ -142,6 +143,7 @@ class BaseStub extends VirtualClient
         $call->setMethod($method);
         $call->setDeserialize($deserialize);
         $call->setHeaders(self::buildHeaders($metadata, $options));
+        self::applyTimeout($call, $metadata, $options);
         // Unlike client/bidi streaming, the server-streaming RPC has exactly one request message:
         // send it while opening the stream, otherwise the call never reaches the server.
         $call->send($argument);
@@ -165,6 +167,7 @@ class BaseStub extends VirtualClient
         $call->setMethod($method);
         $call->setDeserialize($deserialize);
         $call->setHeaders(self::buildHeaders($metadata, $options));
+        self::applyTimeout($call, $metadata, $options);
 
         return $call;
     }
@@ -188,7 +191,13 @@ class BaseStub extends VirtualClient
             $request->headers = array_merge($request->headers, $callOptions->buildHeaders());
 
             $streamId = $this->send($request);
-            $response = self::decodeResponse($this->recv($streamId), $callOptions->getCompression());
+            $response = self::decodeResponse(
+                $this->recv($streamId, $callOptions->getTimeout()),
+                $callOptions->getCompression()
+            );
+            if ($this->consumeRecvFailure($streamId) === Client::RECV_TIMEOUT) {
+                return Result::fromTriple(['Deadline exceeded', Status\StatusCode::DEADLINE_EXCEEDED, $response]);
+            }
 
             return Result::fromTriple(Parser::parseToResultArray($response, $deserialize));
         };
@@ -249,5 +258,14 @@ class BaseStub extends VirtualClient
     private static function buildHeaders(array $metadata, array $options): array
     {
         return CallOptions::parse($metadata, $options)->buildHeaders();
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @param array<string, mixed> $options
+     */
+    private static function applyTimeout(StreamingCall $call, array $metadata, array $options): void
+    {
+        $call->setTimeout(CallOptions::parse($metadata, $options)->getTimeout());
     }
 }

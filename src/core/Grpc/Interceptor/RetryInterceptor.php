@@ -12,7 +12,10 @@ declare(strict_types=1);
 namespace Swoole\Grpc\Interceptor;
 
 use Swoole\Coroutine;
+use Swoole\Grpc\CallOptions;
+use Swoole\Grpc\Internal\Backoff;
 use Swoole\Grpc\Result;
+use Swoole\Grpc\Status\StatusCode;
 
 /**
  * A transparent retry interceptor for unary calls, modeled on etcd clientv3's retry interceptor
@@ -54,8 +57,11 @@ final class RetryInterceptor implements Interceptor
             return $next($context);
         }
 
-        $attempt = 0;
-        $backoff = $this->initialBackoff;
+        // A negative timeout (e.g. -1) means "wait forever", not a deadline already in the past.
+        $timeout  = CallOptions::parse($context->getMetadata(), $context->getOptions())->getTimeout();
+        $deadline = ($timeout === null || $timeout < 0) ? null : microtime(true) + $timeout;
+        $backoff  = new Backoff($this->initialBackoff, 2.0, max($this->initialBackoff, 5.0));
+        $attempt  = 0;
         while (true) {
             $attempt++;
             $result = $next($context);
@@ -63,9 +69,15 @@ final class RetryInterceptor implements Interceptor
             if (!$result instanceof Result || !$result->getStatus()->isRetryable() || $attempt >= $this->maxAttempts) {
                 return $result;
             }
+            if ($deadline !== null && microtime(true) >= $deadline) {
+                return new Result(null, StatusCode::DEADLINE_EXCEEDED, null);
+            }
 
-            ($this->sleeper)($backoff);
-            $backoff *= 2;
+            $delay = $backoff->delayFor($attempt - 1);
+            if ($deadline !== null) {
+                $delay = min($delay, max(0.0, $deadline - microtime(true)));
+            }
+            ($this->sleeper)($delay);
         }
     }
 }

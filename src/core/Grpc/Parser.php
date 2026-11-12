@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole\Grpc;
 
+use Swoole\Grpc\Internal\Frame;
 use Swoole\Http2\Response;
 
 /**
@@ -44,7 +45,13 @@ class Parser
             throw new \InvalidArgumentException('Invalid gRPC frame: shorter than the 5-byte header');
         }
         $header = unpack('Ccompression/Nlength', substr($data, 0, self::HEADER_LENGTH));
-        if ($header === false || $header['length'] !== $length - self::HEADER_LENGTH) {
+        if ($header === false) {
+            throw new \InvalidArgumentException('Invalid gRPC frame: unable to read the 5-byte header');
+        }
+        if ($header['length'] > Frame::DEFAULT_MAX_MESSAGE_BYTES) {
+            throw new \InvalidArgumentException('gRPC message exceeds ' . Frame::DEFAULT_MAX_MESSAGE_BYTES . ' bytes');
+        }
+        if ($header['length'] !== $length - self::HEADER_LENGTH) {
             throw new \InvalidArgumentException('Invalid gRPC frame: length prefix does not match the payload');
         }
 

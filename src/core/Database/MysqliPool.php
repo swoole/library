@@ -107,6 +107,9 @@ class MysqliPool extends ConnectionPool
                 return false;
             }
             $connection->reset();
+            // reset() forgets the transaction flags. The mode has to be recorded after that, or the
+            // next reconnect would replay the autocommit(false) the previous borrower left behind.
+            $connection->rememberAutocommit(true);
         }
 
         return true;

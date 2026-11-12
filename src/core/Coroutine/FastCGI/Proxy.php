@@ -237,23 +237,40 @@ class Proxy
     /**
      * Send content of a static file to the client, if the file is accessible and is not a PHP file.
      *
-     * @return bool True if the file doesn't have an extension of 'php', false otherwise. Note that the file may not be
-     *              accessible even the return value is true.
+     * @return bool True when the request was answered here (the file was sent, or rejected), false when it is a
+     *              PHP script and the caller should pass it to the FastCGI server. A file can be answered with 404
+     *              or 403 and still return true.
      */
     public function staticFileFiltrate(HttpRequest $request, SwooleHttpResponse $userResponse): bool
     {
-        $extension = pathinfo((string) $request->getScriptFilename(), PATHINFO_EXTENSION);
-        if ($extension !== 'php') {
-            $realPath = realpath((string) $request->getScriptFilename());
-            $root     = realpath($this->documentRoot);
-            if (!$realPath || !$root || !str_starts_with($realPath, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR) || !is_file($realPath)) {
-                $userResponse->status(Http\Status::NOT_FOUND);
-            } else {
-                $userResponse->sendfile($realPath);
-            }
+        $filename  = (string) $request->getScriptFilename();
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        // These are executed by PHP-FPM. The comparison is case-insensitive: "file.PHP" is still a script,
+        // and sending it with sendfile would publish the source.
+        if (in_array($extension, ['php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml'], true)) {
+            return false;
+        }
+        $base = basename($filename);
+        // Backup copies and hidden files are not static assets. A denylist, not an allowlist: an
+        // extensionless file such as LICENSE is still served, which is what a static front end does.
+        $hidden = str_starts_with($base, '.')
+            || in_array($extension, [
+                'bak', 'conf', 'config', 'dist', 'env', 'inc', 'ini', 'log', 'old', 'orig', 'save',
+                'sql', 'swp', 'yml', 'yaml',
+            ], true);
+        if ($hidden) {
+            $userResponse->status(Http\Status::FORBIDDEN);
+            $userResponse->end();
             return true;
         }
-        return false;
+        $realPath = realpath($filename);
+        $root     = realpath($this->documentRoot);
+        if (!$realPath || !$root || !str_starts_with($realPath, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR) || !is_file($realPath)) {
+            $userResponse->status(Http\Status::NOT_FOUND);
+        } else {
+            $userResponse->sendfile($realPath);
+        }
+        return true;
     }
 
     protected function createClient(): Client

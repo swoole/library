@@ -22,6 +22,9 @@ class VirtualClient
 {
     private ?Client $client = null;
 
+    /** False when the client was supplied with ['use' => ...] or use(); that caller closes it. */
+    private bool $ownsClient = true;
+
     public function __construct(string $hostname, array $opts = [])
     {
         if (!empty($opts['use'])) {
@@ -31,6 +34,15 @@ class VirtualClient
             $this->use($opts['use']);
         } else {
             $this->client = new Client($hostname, $opts);
+        }
+    }
+
+    public function __destruct()
+    {
+        // A stub that opened the connection closes it. One that borrowed a client must not: other
+        // stubs may still be using it. close() itself still forwards, which is the explicit call.
+        if ($this->ownsClient && $this->client !== null) {
+            $this->client->close();
         }
     }
 
@@ -46,7 +58,11 @@ class VirtualClient
 
     public function use(Client $client): void
     {
-        $this->client = $client;
+        if ($this->ownsClient && $this->client !== null && $this->client !== $client) {
+            $this->client->close();
+        }
+        $this->ownsClient = false;
+        $this->client     = $client;
     }
 
     public static function numStats(): array
@@ -127,6 +143,16 @@ class VirtualClient
     public function recv(int $streamId, ?float $timeout = null)
     {
         return $this->client()->recv($streamId, $timeout);
+    }
+
+    public function consumeRecvFailure(int $streamId): int
+    {
+        return $this->client()->consumeRecvFailure($streamId);
+    }
+
+    public function abandon(int $streamId): void
+    {
+        $this->client()->abandon($streamId);
     }
 
     public function close(): void

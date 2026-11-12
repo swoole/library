@@ -22,7 +22,7 @@ Added:
 
 * `\Swoole\Grpc` provides a coroutine gRPC client, with Etcd and Helloworld examples and generated clients under `examples/grpc`. It is a Composer-only component and is not packed into the Swoole extension.
 * `\Swoole\Grpc` gains a standard status model (`Status\StatusCode`, `Status`, `RpcException`), an idiomatic `Result`/`invokeUnary()` entry point, `CallOptions` for deadlines (`grpc-timeout`), gzip compression and `-bin` metadata, client interceptors (including a retry interceptor), and feature-detecting trailers extraction. All additions are opt-in; generated stubs keep returning `[reply, status, response]`.
-* `\Swoole\Grpc\StreamingCall` gains cross-DATA-frame message reassembly, a message `Iterator`, status/trailers introspection, `recvResult()` and local `cancel()`. The original `send()`/`push()`/`recv()`/`end()` behaviour is unchanged.
+* `\Swoole\Grpc\StreamingCall` gains cross-DATA-frame message reassembly, a message `Iterator`, status/trailers introspection, `recvResult()` and local `cancel()`. `recv()` returns one reassembled gRPC message; `send()`, `push()` and `end()` are unchanged.
 * `\Swoole\Grpc\Client` gains opt-in connection resilience: idle keepalive PINGs, exponential-backoff reconnect (rebuilding the transport), and multi-endpoint connection-level failover. All off by default, so existing clients keep their original single-connect behaviour.
 * `examples/grpc/Etcd` adds an example-level etcd v3 facade (jetcd/clientv3 style): a shared-connection `Client`, fluent `Txn`, a reconnecting `Watcher` with revision resumption, and background-lease `Lease` keepalive. It requires the generated stubs and google/protobuf and is not part of the production package.
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
@@ -48,6 +48,19 @@ Deprecated:
 Removed:
 
 * The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
+
+Fixed:
+
+* `\Swoole\Grpc\Client` keeps a response that arrives while `send()` is still writing, and drops a stream id from a connection that has since been replaced.
+* `\Swoole\Grpc\StreamingCall::cancel()` removes the stream from the shared connection, and `push()` no longer writes when the stream failed to open.
+* A per-call `timeout` limits the local wait. A wait that runs out is `DEADLINE_EXCEEDED`.
+* A gRPC message larger than 4MB is rejected.
+* `\Swoole\Grpc\Client` is closed when the last reference to it is dropped. A `\Swoole\Grpc\VirtualClient` that borrowed its connection does not close that connection on destruction.
+* An illegal address in `\Swoole\Grpc\Client`'s `endpoints` option is rejected.
+* `\Swoole\Database\MysqliProxy` restores `autocommit(false)` after a reconnect.
+* `\Swoole\Database\PDOProxy` and `\Swoole\Database\PDOStatementProxy` reconnect after a lost connection when the error mode is not the exception mode.
+* `\Swoole\Coroutine\FastCGI\Proxy` no longer sends PHP source, backup copies or hidden files as static files. `file.PHP` is passed to PHP-FPM.
+* `swoole_exec()` keeps spaces at the end of a line.
 
 ## 6.2.5 (2026-11-07)
 

@@ -108,6 +108,57 @@ class InterceptorTest extends TestCase
         $this->assertSame(1, $attempt);
     }
 
+    public function testRetryDelaysStayWithinTheBackoffCap(): void
+    {
+        $delays = [];
+        $retry  = new RetryInterceptor(4, 4.0, static function (float $seconds) use (&$delays): void {
+            $delays[] = $seconds;
+        });
+        $retry->intercept(new CallContext('/m'), static fn () => new Result(null, StatusCode::UNAVAILABLE, null));
+
+        // Four attempts, three sleeps. The uncapped series would be 4, 8, 16; the cap is 5s before jitter.
+        $this->assertCount(3, $delays);
+        foreach ($delays as $delay) {
+            $this->assertLessThanOrEqual(6.0, $delay);
+        }
+    }
+
+    public function testRetryStopsWhenTheCallDeadlineHasPassed(): void
+    {
+        $retry   = new RetryInterceptor(5, 0.0, static function (): void {
+        });
+        $attempt = 0;
+        $result  = $retry->intercept(
+            new CallContext('/m', CallContext::UNARY, [], ['timeout' => 0.0]),
+            static function () use (&$attempt) {
+                $attempt++;
+                return new Result(null, StatusCode::UNAVAILABLE, null);
+            }
+        );
+
+        $this->assertSame(1, $attempt);
+        $this->assertSame(StatusCode::DEADLINE_EXCEEDED, $result->getStatusCode());
+    }
+
+    public function testNegativeTimeoutMeansWaitForever(): void
+    {
+        $retry   = new RetryInterceptor(3, 0.0, static function (): void {
+        });
+        $attempt = 0;
+        $result  = $retry->intercept(
+            new CallContext('/m', CallContext::UNARY, [], ['timeout' => -1.0]),
+            static function () use (&$attempt) {
+                $attempt++;
+                return $attempt < 3
+                    ? new Result(null, StatusCode::UNAVAILABLE, null)
+                    : new Result(null, StatusCode::OK, null);
+            }
+        );
+
+        $this->assertSame(3, $attempt);
+        $this->assertSame(StatusCode::OK, $result->getStatusCode());
+    }
+
     public function testRetryInterceptorSkipsStreaming(): void
     {
         $retry = new RetryInterceptor(3, 0.0, static function (): void {

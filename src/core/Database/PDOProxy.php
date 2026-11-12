@@ -81,6 +81,16 @@ class PDOProxy extends ObjectProxy
             $this->reconnect();
             $ret = $this->__object->{$name}(...$arguments);
         }
+        // ERRMODE_SILENT and ERRMODE_WARNING report a lost connection as false plus errorInfo(), not as an exception.
+        // A false that is a lost connection is retried the same way; any other false is the caller's error.
+        if ($ret === false && !$this->lost && self::errorInfoIsLostConnection($this->__object->errorInfo())) {
+            if ($this->openTransaction) {
+                $this->markAsLost();
+                return false;
+            }
+            $this->reconnect();
+            $ret = $this->__object->{$name}(...$arguments);
+        }
         if ($changesTransaction) {
             $this->openTransaction = $this->__object->inTransaction();
         }
@@ -182,5 +192,18 @@ class PDOProxy extends ObjectProxy
     {
         $this->lost            = true;
         $this->openTransaction = false;
+    }
+
+    /**
+     * @param array{0?: string, 1?: int|string|null, 2?: string|null}|array $info PDO::errorInfo()
+     */
+    private static function errorInfoIsLostConnection(array $info): bool
+    {
+        $message = (string) ($info[2] ?? '');
+        if ($message === '') {
+            return false;
+        }
+
+        return DetectsLostConnections::causedByLostConnection(new \PDOException($message, (int) ($info[1] ?? 0)));
     }
 }

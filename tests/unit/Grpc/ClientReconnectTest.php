@@ -50,14 +50,12 @@ class ClientReconnectTest extends TestCase
         $this->assertSame(['host' => 'unix:///tmp/grpc.sock', 'port' => 0], $endpoints[3]);
     }
 
-    public function testInvalidEndpointsAreIgnored(): void
+    public function testInvalidEndpointsAreRejected(): void
     {
-        $client = new NoStartClient('127.0.0.1:50051', [
+        $this->expectException(\InvalidArgumentException::class);
+        new NoStartClient('127.0.0.1:50051', [
             'endpoints' => ['bad-host-without-port', '10.0.0.1:2379'],
         ]);
-        $endpoints = self::prop($client, 'endpoints');
-        $this->assertCount(2, $endpoints);
-        $this->assertSame(['host' => '10.0.0.1', 'port' => 2379], $endpoints[1]);
     }
 
     public function testResilienceKnobs(): void

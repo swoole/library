@@ -14,6 +14,7 @@ namespace Swoole\Tests\Unit\Grpc;
 use Swoole\Coroutine\Http2\Client as Http2Client;
 use Swoole\Grpc\Client;
 use Swoole\Grpc\Request;
+use Swoole\Http2\Response;
 use Swoole\Tests\TestCase;
 
 /**
@@ -135,6 +136,66 @@ class ClientTest extends TestCase
         $this->assertTrue($opts['ssl_verify_peer']);
     }
 
+    public function testResponseArrivingBeforeRegistrationIsBuffered(): void
+    {
+        self::coRun(function (): void {
+            $client   = new DeliverClient();
+            $response = self::response(1, false, 'payload');
+            self::deliver($client, $response);
+
+            $this->assertTrue($client->isStreamExist(1));
+            $got = $client->recv(1, 0.1);
+            $this->assertInstanceOf(Response::class, $got);
+            $this->assertSame('payload', $got->data);
+            $this->assertFalse($client->isStreamExist(1));
+        });
+    }
+
+    public function testAbandonedStreamDropsLateFrames(): void
+    {
+        self::coRun(function (): void {
+            $client = new DeliverClient();
+            self::deliver($client, self::response(1, true, 'first'));
+            $client->abandon(1);
+            self::deliver($client, self::response(1, true, 'second'));
+
+            $this->assertFalse($client->recv(1, 0.01));
+            $this->assertSame(Client::RECV_CLOSED, $client->consumeRecvFailure(1));
+        });
+    }
+
+    public function testAFullStreamIsDroppedInsteadOfBlockingTheCaller(): void
+    {
+        self::coRun(function (): void {
+            $client = new DeliverClient();
+            $size   = (new \ReflectionClassConstant(Client::class, 'STREAM_CHANNEL_SIZE'))->getValue();
+            for ($i = 0; $i < $size + 1; $i++) {
+                self::deliver($client, self::response(1, true, "frame{$i}"));
+            }
+
+            $this->assertFalse($client->isStreamExist(1));
+            $this->assertFalse($client->recv(1, 0.01));
+            $this->assertSame(Client::RECV_OVERFLOW, $client->consumeRecvFailure(1));
+        });
+    }
+
+    private static function deliver(Client $client, Response $response): void
+    {
+        $deliver = new \ReflectionMethod(Client::class, 'deliver');
+        $deliver->invoke($client, $response);
+    }
+
+    private static function response(int $streamId, bool $pipeline, string $data): Response
+    {
+        $response             = new Response();
+        $response->streamId   = $streamId;
+        $response->pipeline   = $pipeline;
+        $response->statusCode = 200;
+        $response->data       = $data;
+
+        return $response;
+    }
+
     private static function newUnstartedClient(): Client
     {
         return (new \ReflectionClass(Client::class))->newInstanceWithoutConstructor();
@@ -158,6 +219,15 @@ class RecordingClient extends Client
     {
         $this->lastRequest = $request;
         return 7;
+    }
+}
+
+/** A Client with an Http2 client object and no running loops, so deliver() can be called directly. */
+class DeliverClient extends Client
+{
+    public function __construct()
+    {
+        $this->client = new Http2Client('127.0.0.1', 1, false);
     }
 }
 

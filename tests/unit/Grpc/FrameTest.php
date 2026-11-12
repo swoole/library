@@ -34,6 +34,12 @@ class FrameTest extends TestCase
         $this->assertSame([0, 5, 10], Frame::header($frame));
     }
 
+    public function testHeaderRejectsAnOversizedMessage(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        Frame::header(pack('CN', 0, Frame::DEFAULT_MAX_MESSAGE_BYTES + 1));
+    }
+
     public function testHeaderTooShort(): void
     {
         $this->expectException(\InvalidArgumentException::class);

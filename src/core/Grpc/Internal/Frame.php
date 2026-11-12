@@ -25,6 +25,9 @@ final class Frame
 {
     public const HEADER_LENGTH = 5;
 
+    /** Default maximum message size, matching grpc-go's default receive limit. */
+    public const DEFAULT_MAX_MESSAGE_BYTES = 4 * 1024 * 1024;
+
     /**
      * Encode one message into a frame, optionally compressing it.
      *
@@ -52,6 +55,10 @@ final class Frame
         $header = unpack('Ccompression/Nlength', substr($buffer, 0, self::HEADER_LENGTH));
         if ($header === false) {
             throw new \InvalidArgumentException('Invalid gRPC frame header');
+        }
+
+        if ($header['length'] > self::DEFAULT_MAX_MESSAGE_BYTES) {
+            throw new \InvalidArgumentException('gRPC message exceeds ' . self::DEFAULT_MAX_MESSAGE_BYTES . ' bytes');
         }
 
         return [$header['compression'], $header['length'], self::HEADER_LENGTH + $header['length']];

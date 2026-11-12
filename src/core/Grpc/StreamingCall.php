@@ -19,9 +19,9 @@ use Swoole\Grpc\Status\StatusCode;
 /**
  * An active call whose messages are exchanged over one HTTP/2 stream.
  *
- * The original send()/push()/recv()/end() contract is unchanged: recv() still returns the
- * [reply, status, response] triple for one HTTP/2 response. On top of it, this class offers
- * status/trailers introspection, a cross-DATA-frame message iterator and local cancellation.
+ * send(), push() and end() keep their original contract. recv() returns one reassembled gRPC
+ * message as the [reply, status, response] triple. The class also offers status and trailer
+ * introspection, a message iterator and local cancellation.
  */
 class StreamingCall extends BaseCall implements \IteratorAggregate
 {
@@ -35,6 +35,17 @@ class StreamingCall extends BaseCall implements \IteratorAggregate
     private bool $cancelled = false;
 
     private ?FrameReassembler $reassembler = null;
+
+    /**
+     * Complete messages already decoded from a chunk that held more than one, or a partial
+     * message still waiting for the rest of its bytes lives in the reassembler.
+     *
+     * @var list<array{frame: string, response: \Swoole\Http2\Response, done: bool}>
+     */
+    private array $pendingFrames = [];
+
+    /** Per-call deadline in seconds. Null uses the underlying client's timeout. */
+    private ?float $timeout = null;
 
     public function __construct()
     {
@@ -73,36 +84,90 @@ class StreamingCall extends BaseCall implements \IteratorAggregate
         if ($this->streamId === 0) {
             // gRPC always uses POST; an empty first frame still has to be a POST request.
             $this->streamId = $this->client->openStream($this->method, '', 'POST', true, $this->headers);
+            if ($this->streamId <= 0) {
+                $this->streamId = 0;
+                return false;
+            }
         }
 
         return $this->client->write($this->streamId, Parser::serializeMessage($message), false);
     }
 
+    public function setTimeout(?float $timeout): void
+    {
+        $this->timeout = $timeout;
+    }
+
     /**
+     * Read one gRPC message. A message split across HTTP/2 DATA frames is reassembled first.
+     * Several messages packed into one chunk are returned one per call.
+     *
+     * Omit $timeout to use the per-call timeout when one was set, and otherwise the client timeout.
+     * An explicit value, including -1, is used as given.
+     *
      * @return array{0: mixed, 1: int, 2: mixed}
      */
-    public function recv(float $timeout = Client::DEFAULT_TIMEOUT): array
+    public function recv(?float $timeout = null): array
     {
-        if ($this->cancelled || $this->streamId <= 0) {
-            $response = false;
-        } else {
-            $response = $this->client->recv($this->streamId, $timeout);
-            if (!$this->client->isStreamExist($this->streamId)) {
-                // The final response (or a timeout) unregistered the stream.
+        if ($this->cancelled || ($this->streamId <= 0 && $this->pendingFrames === [])) {
+            $this->observe(false, Client::RECV_MISSING);
+            return Parser::parseToResultArray(false, $this->deserialize);
+        }
+
+        $effective   = $timeout ?? $this->timeout;
+        $reassembler = $this->reassembler ??= new FrameReassembler();
+
+        while ($this->pendingFrames === []) {
+            if ($this->streamId <= 0) {
+                $this->ended = true;
+                $this->observe(false, Client::RECV_MISSING);
+                return Parser::parseToResultArray(false, $this->deserialize);
+            }
+
+            $streamId = $this->streamId;
+            $response = $this->client->recv($streamId, $effective);
+            $failure  = $this->client->consumeRecvFailure($streamId);
+            if (!$this->client->isStreamExist($streamId)) {
+                $this->streamId = 0;
+            }
+            if ($failure === Client::RECV_TIMEOUT) {
+                $this->ended = true;
+                $this->observe(false, $failure);
+                return ['Deadline exceeded', StatusCode::DEADLINE_EXCEEDED, $response];
+            }
+            if (!$response instanceof \Swoole\Http2\Response) {
+                $this->ended = true;
+                $this->observe(false, $failure);
+                return Parser::parseToResultArray(false, $this->deserialize);
+            }
+
+            $pushed = $reassembler->push($response);
+            $last   = count($pushed['frames']) - 1;
+            foreach ($pushed['frames'] as $index => $frame) {
+                $this->pendingFrames[] = [
+                    'frame'    => $frame,
+                    'response' => $response,
+                    'done'     => $pushed['done'] && $index === $last,
+                ];
+            }
+            if ($this->pendingFrames !== []) {
+                break;
+            }
+            if ($pushed['done']) {
                 $this->streamId = 0;
                 $this->ended    = true;
+                $this->observe($response, Client::RECV_OK);
+                return Parser::parseToResultArray($response, $this->deserialize);
             }
         }
 
-        $this->observe($response);
-
-        return Parser::parseToResultArray($response, $this->deserialize);
+        return $this->emitPending();
     }
 
     /**
      * Idiomatic single-read entry point returning a Result instead of the legacy triple.
      */
-    public function recvResult(float $timeout = Client::DEFAULT_TIMEOUT): Result
+    public function recvResult(?float $timeout = null): Result
     {
         return Result::fromTriple($this->recv($timeout));
     }
@@ -121,36 +186,19 @@ class StreamingCall extends BaseCall implements \IteratorAggregate
 
     /**
      * Iterate complete messages, reassembling them across HTTP/2 DATA fragments. Each yielded
-     * value is a deserialized reply (or null on end-of-stream status). This is the idiomatic
-     * streaming API; callers who need per-response control can keep using recv() directly.
+     * value is a deserialized reply. The iteration stops when the stream ends. Callers who
+     * need per-response control can keep using recv() directly.
      *
      * @return \Traversable<int, mixed>
      */
     public function getIterator(): \Traversable
     {
-        $reassembler = $this->reassembler ?? ($this->reassembler = new FrameReassembler());
-
         while (!$this->ended && !$this->cancelled) {
-            if ($this->streamId <= 0) {
-                $this->observe(false);
-                $this->ended = true;
+            [$reply] = $this->recv($this->timeout);
+            if (!is_object($reply)) {
                 break;
             }
-
-            $response = $this->client->recv($this->streamId, Client::DEFAULT_TIMEOUT);
-            if (!$this->client->isStreamExist($this->streamId)) {
-                $this->streamId = 0;
-            }
-
-            $pushed = $reassembler->push($response);
-            foreach ($pushed['frames'] as $frame) {
-                yield Parser::deserializeMessage($this->deserialize, $frame);
-            }
-
-            if ($pushed['done']) {
-                $this->observe($pushed['response']);
-                $this->ended = true;
-            }
+            yield $reply;
         }
     }
 
@@ -183,24 +231,79 @@ class StreamingCall extends BaseCall implements \IteratorAggregate
         if ($this->cancelled) {
             return;
         }
-        $this->cancelled = true;
-        $this->ended     = true;
-        $this->status    = new Status(StatusCode::CANCELLED, 'cancelled locally');
-        $this->streamId  = 0;
+        $streamId            = $this->streamId;
+        $this->cancelled     = true;
+        $this->ended         = true;
+        $this->status        = new Status(StatusCode::CANCELLED, 'cancelled locally');
+        $this->streamId      = 0;
+        $this->pendingFrames = [];
+        if ($streamId > 0) {
+            $this->client->abandon($streamId);
+        }
+    }
+
+    /**
+     * @return array{0: mixed, 1: int, 2: mixed}
+     */
+    private function emitPending(): array
+    {
+        $item = array_shift($this->pendingFrames);
+        if ($item === null) {
+            $this->ended = true;
+            return Parser::parseToResultArray(false, $this->deserialize);
+        }
+        $response = self::withFrame($item['response'], $item['frame']);
+        if ($item['done']) {
+            $this->streamId = 0;
+            $this->ended    = true;
+            $this->observe($response, Client::RECV_OK);
+        }
+
+        return Parser::parseToResultArray($response, $this->deserialize);
+    }
+
+    /**
+     * Http2\Response cannot be cloned. A chunk may carry several gRPC messages, and each one is
+     * parsed from its own copy so later messages keep the original buffer.
+     */
+    private static function withFrame(\Swoole\Http2\Response $response, string $frame): \Swoole\Http2\Response
+    {
+        $copy                     = new \Swoole\Http2\Response();
+        $copy->streamId           = $response->streamId;
+        $copy->errCode            = $response->errCode;
+        $copy->statusCode         = $response->statusCode;
+        $copy->pipeline           = $response->pipeline;
+        $copy->headers            = $response->headers;
+        $copy->set_cookie_headers = $response->set_cookie_headers;
+        $copy->cookies            = $response->cookies;
+        // Only Swoole builds with the trailers enhancement expose this property (see Internal\Trailers).
+        if (property_exists($response, 'trailers') && property_exists($copy, 'trailers')) {
+            $trailers       = $response->trailers;
+            $copy->trailers = $trailers;
+        }
+        $copy->data               = $frame;
+
+        return $copy;
     }
 
     /**
      * @param \Swoole\Http2\Response|false|null $response
      */
-    private function observe($response): void
+    private function observe($response, int $failure = Client::RECV_OK): void
     {
         $this->trailers = Trailers::fromResponse($response);
-        if (!$this->cancelled) {
-            $status = Status::fromResponse($response);
-            // A missing response mid-stream is a transport-level failure, not a gRPC status.
-            $this->status = !$response && !$this->ended
-                ? new Status(StatusCode::UNAVAILABLE, 'No response')
-                : $status;
+        if ($this->cancelled) {
+            return;
         }
+        if ($failure === Client::RECV_TIMEOUT) {
+            $this->status = new Status(StatusCode::DEADLINE_EXCEEDED, 'Deadline exceeded');
+            return;
+        }
+        if (!$response && !$this->ended) {
+            // A missing response mid-stream is a transport-level failure, not a gRPC status.
+            $this->status = new Status(StatusCode::UNAVAILABLE, 'No response');
+            return;
+        }
+        $this->status = Status::fromResponse($response);
     }
 }

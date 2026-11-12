@@ -21,7 +21,7 @@ class ClientStreamingCall extends StreamingCall
     /**
      * @return array{0: mixed, 1: int, 2: mixed}
      */
-    public function recv(float $timeout = Client::DEFAULT_TIMEOUT): array
+    public function recv(?float $timeout = null): array
     {
         if ($this->received) {
             throw new \LogicException('ClientStreamingCall can only recv once');

@@ -38,6 +38,33 @@ class PDOProxyTest extends DatabaseTestCase
     }
 
     /**
+     * Silent mode reports a lost connection as false rather than a PDOException. The proxy still replaces the
+     * connection and runs the statement again. A statement error that is not a lost connection stays false.
+     */
+    public function testSilentErrorModeReconnectsAfterALostConnection(): void
+    {
+        self::coRun(function () {
+            $pool = self::getPdoMysqlPool(1);
+            $pdo  = $pool->get();
+            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
+            $statement = $pdo->prepare('SELECT 1');
+            self::assertInstanceOf(PDOStatementProxy::class, $statement);
+
+            self::killPdoConnection($pdo);
+            self::assertInstanceOf(PDOStatementProxy::class, $pdo->query('SELECT 1'));
+            self::assertSame(1, $pdo->getRound());
+            self::assertTrue($statement->execute());
+            self::assertSame(1, $statement->fetchColumn());
+
+            self::assertFalse($pdo->query('SELECT * FROM no_such_table'));
+            self::assertSame(1, $pdo->getRound());
+
+            $pool->put($pdo);
+            $pool->close();
+        });
+    }
+
+    /**
      * inTransaction() follows beginTransaction(), commit() and rollBack(), and a connection handed out by the pool
      * starts anew.
      */

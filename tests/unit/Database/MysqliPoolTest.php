@@ -259,6 +259,34 @@ class MysqliPoolTest extends DatabaseTestCase
     }
 
     /**
+     * autocommit(false) is a session setting. After the lost connection is reported, the replacement connection
+     * is put back into the same mode instead of MySQL's default, which would commit every following statement.
+     */
+    public function testAutocommitOffIsRestoredAfterReconnect(): void
+    {
+        self::coRun(function () {
+            $pool   = self::getMysqliPool(1);
+            $mysqli = $pool->get();
+
+            $mysqli->autocommit(false);
+            self::killMysqliConnection($mysqli);
+            try {
+                $mysqli->query('SELECT 1');
+                self::fail('The lost connection is reported.');
+            } catch (\mysqli_sql_exception) {
+            }
+
+            self::assertSame('1', $mysqli->query('SELECT 1')->fetch_row()[0]);
+            self::assertEquals(0, $mysqli->query('SELECT @@autocommit')->fetch_row()[0]);
+            self::assertTrue($mysqli->inTransaction());
+            self::assertSame(1, $mysqli->getRound());
+
+            $pool->put($mysqli);
+            $pool->close();
+        });
+    }
+
+    /**
      * A connection put back with a transaction still open is rolled back before it is reused.
      */
     public function testPutRollsBackAnOpenTransaction(): void

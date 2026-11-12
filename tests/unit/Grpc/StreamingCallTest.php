@@ -227,6 +227,49 @@ class StreamingCallTest extends TestCase
         // cancel() is idempotent.
         $call->cancel();
         $this->assertSame(\Swoole\Grpc\Status\StatusCode::CANCELLED, $call->getStatus()->getCode());
+        $this->assertSame([5], $client->abandoned);
+    }
+
+    public function testPushDoesNotWriteWhenTheStreamFailsToOpen(): void
+    {
+        $client               = new StreamingFakeClient();
+        $client->nextStreamId = 0;
+        $call                 = self::newCall(StreamingCall::class, $client);
+
+        $this->assertFalse($call->push(new StreamingMessage('one')));
+        $this->assertSame([], $client->writes);
+        $this->assertSame(0, $call->getStreamId());
+    }
+
+    public function testRecvReassemblesASplitMessage(): void
+    {
+        $client               = new StreamingFakeClient();
+        $frame                = Parser::pack('whole');
+        $client->recvSequence = [
+            self::makeResponse(substr($frame, 0, 3), true, []),
+            self::makeResponse(substr($frame, 3), false, ['grpc-status' => '0']),
+        ];
+        $call = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+
+        [$reply, $status] = $call->recv();
+        $this->assertSame('whole', $reply->decoded);
+        $this->assertSame(0, $status);
+        $this->assertTrue($call->isEnded());
+    }
+
+    public function testRecvTimeoutIsDeadlineExceeded(): void
+    {
+        $client               = new StreamingFakeClient();
+        $client->recvFailure  = \Swoole\Grpc\Client::RECV_TIMEOUT;
+        $call                 = self::newCall(StreamingCall::class, $client);
+        $call->setStreamId(5);
+
+        [$reply, $status] = $call->recv(0.01);
+        $this->assertSame('Deadline exceeded', $reply);
+        $this->assertSame(\Swoole\Grpc\Status\StatusCode::DEADLINE_EXCEEDED, $status);
+        $this->assertSame(\Swoole\Grpc\Status\StatusCode::DEADLINE_EXCEEDED, $call->getStatus()->getCode());
+        $this->assertSame(0.01, $client->lastTimeout);
     }
 
     /**
@@ -292,6 +335,12 @@ class StreamingFakeClient
     /** @var array<int, mixed> queued responses consumed by recv() one at a time */
     public array $recvSequence = [];
 
+    public array $abandoned = [];
+
+    public int $recvFailure = \Swoole\Grpc\Client::RECV_OK;
+
+    public ?float $lastTimeout = null;
+
     public function openStream(
         string $path,
         ?string $data = '',
@@ -311,10 +360,21 @@ class StreamingFakeClient
 
     public function recv(int $streamId, ?float $timeout = null)
     {
+        $this->lastTimeout = $timeout;
         if ($this->recvSequence !== []) {
             return array_shift($this->recvSequence);
         }
         return $this->recvResult;
+    }
+
+    public function consumeRecvFailure(int $streamId): int
+    {
+        return $this->recvFailure;
+    }
+
+    public function abandon(int $streamId): void
+    {
+        $this->abandoned[] = $streamId;
     }
 
     public function isStreamExist(int $streamId): bool

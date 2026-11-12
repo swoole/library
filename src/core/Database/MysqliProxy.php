@@ -50,6 +50,12 @@ class MysqliProxy extends ObjectProxy
      */
     protected bool $autocommitDisabled = false;
 
+    /**
+     * The last autocommit() that succeeded. Reconnect restores it. Null until autocommit() is called,
+     * so a connection that never changed the server default is left on that default.
+     */
+    protected ?bool $autocommitMode = null;
+
     public function __construct(callable $constructor)
     {
         parent::__construct($constructor());
@@ -115,7 +121,9 @@ class MysqliProxy extends ObjectProxy
                 $this->inTransaction = false;
             } elseif (strcasecmp($name, 'autocommit') === 0) {
                 // By position or by name: mysqli::autocommit(bool $enable).
-                $this->autocommitDisabled = !($arguments[0] ?? $arguments['enable'] ?? true);
+                $enable                   = (bool) ($arguments[0] ?? $arguments['enable'] ?? true);
+                $this->autocommitDisabled = !$enable;
+                $this->autocommitMode     = $enable;
             }
             break;
         }
@@ -143,6 +151,22 @@ class MysqliProxy extends ObjectProxy
         if (!empty($this->changeUserContext)) {
             $this->__object->change_user(...$this->changeUserContext);
         }
+        if ($this->autocommitMode !== null) {
+            $this->__object->autocommit($this->autocommitMode);
+            $this->autocommitDisabled = !$this->autocommitMode;
+        }
+    }
+
+    /**
+     * Records the autocommit mode without sending it. The pool calls this after it has turned autocommit
+     * back on while cleaning a returned connection, so a later reconnect does not turn it off again.
+     *
+     * @internal
+     */
+    public function rememberAutocommit(bool $enable): void
+    {
+        $this->autocommitMode     = $enable;
+        $this->autocommitDisabled = !$enable;
     }
 
     /**

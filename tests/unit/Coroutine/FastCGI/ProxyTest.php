@@ -136,6 +136,53 @@ class ProxyTest extends TestCase
         }
     }
 
+    public function testStaticFilterDoesNotPublishPhpSourceOrHiddenFiles(): void
+    {
+        $directory = sys_get_temp_dir() . '/swoole-fastcgi-' . bin2hex(random_bytes(8));
+        mkdir($directory);
+        file_put_contents($directory . '/Script.PHP', '<?php echo 1;');
+        file_put_contents($directory . '/config.php.bak', '<?php secret');
+        file_put_contents($directory . '/.env', 'SECRET');
+        file_put_contents($directory . '/LICENSE', 'license');
+        try {
+            $proxy    = new Proxy('tcp://php-fpm:9000', $directory);
+            $response = self::captureResponse();
+            self::assertFalse($proxy->staticFileFiltrate(
+                (new HttpRequest())->withScriptFilename($directory . '/Script.PHP'),
+                $response
+            ));
+
+            $response = self::captureResponse();
+            self::assertTrue($proxy->staticFileFiltrate(
+                (new HttpRequest())->withScriptFilename($directory . '/config.php.bak'),
+                $response
+            ));
+            self::assertSame(403, $response->code);
+            self::assertNull($response->file);
+
+            $response = self::captureResponse();
+            self::assertTrue($proxy->staticFileFiltrate(
+                (new HttpRequest())->withScriptFilename($directory . '/.env'),
+                $response
+            ));
+            self::assertSame(403, $response->code);
+
+            $response = self::captureResponse();
+            self::assertTrue($proxy->staticFileFiltrate(
+                (new HttpRequest())->withScriptFilename($directory . '/LICENSE'),
+                $response
+            ));
+            self::assertSame(200, $response->code);
+            self::assertSame(realpath($directory . '/LICENSE'), $response->file);
+        } finally {
+            unlink($directory . '/Script.PHP');
+            unlink($directory . '/config.php.bak');
+            unlink($directory . '/.env');
+            unlink($directory . '/LICENSE');
+            rmdir($directory);
+        }
+    }
+
     public function testTranslationPreservesRepeatedResponseHeaders(): void
     {
         $response = self::captureResponse();

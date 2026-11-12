@@ -17,7 +17,11 @@ function swoole_exec(string $command, mixed &$output = null, mixed &$returnVar =
     if ($result) {
         $outputList = explode(PHP_EOL, $result['output']);
         foreach ($outputList as &$value) {
-            $value = rtrim($value);
+            // explode() already removed PHP_EOL. A trailing CR remains when the command used CRLF
+            // and PHP_EOL is LF. Spaces at the end of a line are part of the output, as with exec().
+            if (str_ends_with($value, "\r")) {
+                $value = substr($value, 0, -1);
+            }
         }
         if (($endLine = end($outputList)) === '') {
             array_pop($outputList);

@@ -46,54 +46,43 @@ class PDOStatementProxy extends ObjectProxy
         // the one the parent recorded, which includes a transaction started by hand. A connection known to be lost is
         // in no transaction any more: that one went down with it, and was reported.
         $inTransaction = $this->parent->hasOpenTransaction();
+        $failed        = null;
         try {
             $ret = $this->__object->{$name}(...$arguments);
         } catch (\PDOException $e) {
-            if ($inTransaction && DetectsLostConnections::causedByLostConnection($e)) {
+            $failed = $e;
+            $ret    = false;
+        }
+        $lost = $failed !== null
+            ? DetectsLostConnections::causedByLostConnection($failed)
+            : ($ret === false && self::errorInfoIsLostConnection($this->__object->errorInfo(), $this->parent->__getObject()->errorInfo()));
+        if ($ret === false && $lost) {
+            if ($inTransaction) {
                 // The transaction died with the connection. The caller is told, and the next call reconnects.
                 if ($this->parent->getRound() === $this->parentRound) {
                     $this->parent->markAsLost();
                 }
-                throw $e;
+                if ($failed !== null) {
+                    throw $failed;
+                }
+                return false;
             }
             // Only execute() is retried on a fresh connection, since it runs the statement from the start. The
             // other methods (fetch*(), rowCount(), ...) read the result of an execute() that went down with the
             // connection; re-preparing the statement and calling one of them on it without executing it first
-            // returns no rows and no error, so a lost connection there surfaces as the exception it is.
-            if (strcasecmp($name, 'execute') === 0 && DetectsLostConnections::causedByLostConnection($e)) {
-                // A parent of another round has reconnected already, unless that reconnect failed and left it lost.
-                if ($this->parent->getRound() === $this->parentRound || $this->parent->isLost()) {
-                    $this->parent->reconnect();
+            // returns no rows and no error, so a lost connection there surfaces as the failure it is.
+            if (strcasecmp($name, 'execute') !== 0) {
+                if ($failed !== null) {
+                    throw $failed;
                 }
-                // Record the parent's round, or the next lost connection on this statement looks like one the parent
-                // has already recovered from, and the statement is prepared again on the dead connection instead.
-                $this->parentRound = $this->parent->getRound();
-                $parent            = $this->parent->__getObject();
-                $statement         = $parent->prepare($this->__object->queryString);
-                if ($statement === false) {
-                    throw $e;
-                }
-                $this->__object = $statement;
-
-                foreach ($this->setAttributeContext as $attribute => $value) {
-                    $this->__object->setAttribute($attribute, $value);
-                }
-                if (!empty($this->setFetchModeContext)) {
-                    $this->__object->setFetchMode(...$this->setFetchModeContext);
-                }
-                foreach ($this->bindParamContext as $param => $item) {
-                    $this->__object->bindParam($param, ...$item);
-                }
-                foreach ($this->bindColumnContext as $column => $item) {
-                    $this->__object->bindColumn($column, ...$item);
-                }
-                foreach ($this->bindValueContext as $parameter => $item) {
-                    $this->__object->bindValue($parameter, ...$item);
-                }
-                $ret = $this->__object->{$name}(...$arguments);
-            } else {
-                throw $e;
+                return false;
             }
+            $ret = $this->reexecute($arguments);
+            if ($ret === false && $failed !== null) {
+                throw $failed;
+            }
+        } elseif ($failed !== null) {
+            throw $failed;
         }
 
         // The statement may have started or ended a transaction, e.g. prepare('BEGIN') or a statement that commits
@@ -144,6 +133,61 @@ class PDOStatementProxy extends ObjectProxy
         unset($this->bindParamContext[$key]);
         $this->bindValueContext[$key] = [$value, $type];
         return $this->__object->bindValue($param, $value, $type);
+    }
+
+    /**
+     * Prepare the statement again on the current connection and run execute() with the original arguments.
+     *
+     * @param array<int|string, mixed> $arguments
+     */
+    private function reexecute(array $arguments): mixed
+    {
+        // A parent of another round has reconnected already, unless that reconnect failed and left it lost.
+        if ($this->parent->getRound() === $this->parentRound || $this->parent->isLost()) {
+            $this->parent->reconnect();
+        }
+        // Record the parent's round, or the next lost connection on this statement looks like one the parent
+        // has already recovered from, and the statement is prepared again on the dead connection instead.
+        $this->parentRound = $this->parent->getRound();
+        $statement         = $this->parent->__getObject()->prepare($this->__object->queryString);
+        if ($statement === false) {
+            return false;
+        }
+        $this->__object = $statement;
+
+        foreach ($this->setAttributeContext as $attribute => $value) {
+            $this->__object->setAttribute($attribute, $value);
+        }
+        if (!empty($this->setFetchModeContext)) {
+            $this->__object->setFetchMode(...$this->setFetchModeContext);
+        }
+        foreach ($this->bindParamContext as $param => $item) {
+            $this->__object->bindParam($param, ...$item);
+        }
+        foreach ($this->bindColumnContext as $column => $item) {
+            $this->__object->bindColumn($column, ...$item);
+        }
+        foreach ($this->bindValueContext as $parameter => $item) {
+            $this->__object->bindValue($parameter, ...$item);
+        }
+
+        return $this->__object->execute(...$arguments);
+    }
+
+    /**
+     * @param array{0?: string, 1?: int|string|null, 2?: string|null} $statementInfo
+     * @param array{0?: string, 1?: int|string|null, 2?: string|null} $connectionInfo
+     */
+    private static function errorInfoIsLostConnection(array $statementInfo, array $connectionInfo): bool
+    {
+        foreach ([$statementInfo, $connectionInfo] as $info) {
+            $message = (string) ($info[2] ?? '');
+            if ($message !== '' && DetectsLostConnections::causedByLostConnection(new \PDOException($message, (int) ($info[1] ?? 0)))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

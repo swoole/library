@@ -120,6 +120,8 @@ class BaseStubTest extends TestCase
         $stub = new RecordingStub();
         $stub->simple('/m', new StubMessage('req'), [], ['timeout' => 1.5]);
         $this->assertSame('1500m', $stub->lastRequest->headers['grpc-timeout']);
+        // The same value bounds the local wait, not only the grpc-timeout header.
+        $this->assertSame(1.5, $stub->lastRecvTimeout);
     }
 
     public function testCompressionHeaderAndRequestBody(): void
@@ -240,6 +242,10 @@ class RecordingStub extends BaseStub
 
     public $recvResult = false;
 
+    public ?float $lastRecvTimeout = null;
+
+    public int $recvFailure = \Swoole\Grpc\Client::RECV_OK;
+
     private array $defaultHeaders = [];
 
     public function __construct()
@@ -288,7 +294,13 @@ class RecordingStub extends BaseStub
 
     public function recv(int $streamId, ?float $timeout = null)
     {
+        $this->lastRecvTimeout = $timeout;
         return $this->recvResult;
+    }
+
+    public function consumeRecvFailure(int $streamId): int
+    {
+        return $this->recvFailure;
     }
 
     public function openStream(
