@@ -13,6 +13,14 @@ return [
     'checkFileChange' => !getenv('SWOOLE_LIBRARY_DEV'),
     'output'          => getenv('SWOOLE_DIR') . '/ext-src/php_swoole_library.h',
     'stripComments'   => false,
+    /*
+     * Composer-only modules: loaded via the "Swoole\\" PSR-4 autoload rule, NOT compiled into the
+     * extension header. make-library skips these paths in its "Some files are not loaded" check
+     * (see swoole/make-library). Do not add them to "files" below; they must keep being autoloaded.
+     */
+    'ignore' => [
+        'core/Grpc',
+    ],
     /* Notice: Sort by dependency */
     'files' => [
         # <basic> #
