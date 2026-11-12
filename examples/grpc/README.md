@@ -36,6 +36,30 @@
 
 <br>
 
+## 通用 gRPC 客户端能力（Swoole\Grpc 运行时）
+
+生成桩仍返回 `[reply, status, response]`，`$status === 0` 表示成功；以下能力均为**增量、默认关闭**，不改变现有行为。
+
+- **状态模型**：`Swoole\Grpc\Status\StatusCode`（17 个标准码）、`Status`、`RpcException`。任意一元调用可用 `Result` 查看状态：
+  ```php
+  $result = $client->invokeUnary('/helloworld.Greeter/SayHello', $request, [HelloReply::class, 'decode']);
+  if (!$result->isOk()) {
+      echo $result->getStatus()->getName();      // NOT_FOUND ...
+      echo $result->getStatus()->getMessage();
+      // throw $result->toException();
+  }
+  ```
+  也可在任意生成桩方法上通过 `$options['grpc.throw_on_error'] = true` 让非 OK 状态直接抛 `RpcException`。
+- **CallOptions / metadata**：`$metadata` 键自动小写、键值 `-bin` 自动 base64；`$options['timeout' => 1.5]` 生成 `grpc-timeout: 1500m`；`$options['compression' => 'gzip']` 启用请求压缩与响应解压；`$options['headers']` 仍可用。
+- **拦截器**：`withInterceptor()` 注册认证/重试/日志/追踪。内置 `RetryInterceptor` 对 `UNAVAILABLE`/`RESOURCE_EXHAUSTED`/`DEADLINE_EXCEEDED` 做指数退避重试：
+  ```php
+  $client->withInterceptor(new \Swoole\Grpc\Interceptor\RetryInterceptor(3));
+  ```
+- **trailers**：`Swoole\Grpc\Status\Status::fromResponse($response)` 读取 gRPC status 与 trailing metadata；当 Swoole 扩展提供 `Response::$trailers` 时优先使用，否则从 `headers` 兜底（兼容任意 Swoole 版本）。
+- **TLS/mTLS**：构造 `Client` 时透传 `ssl_cafile` / `ssl_cert_file` / `ssl_key_file` / `ssl_verify_peer` / `ssl_host_name`。
+
+<br>
+
 ## Usage
 
 仓库已提供Etcd的生成代码, 如要自己根据proto文件生成代码, 请使用`tools`目录下的生成工具`generator`, 使用方法和`protoc`命令完全一样, 增强了支持以目录作为参数, 自动查找目录下的proto文件生成, 如: 该目录下已提供的`grpc`生成代码脚本:

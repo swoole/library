@@ -114,6 +114,91 @@ class BaseStubTest extends TestCase
         $this->assertCount(1, $stub->opened);
         $this->assertSame('tok', $stub->opened[0]['headers']['x-token']);
     }
+
+    public function testGrpcTimeoutHeaderFromOptions(): void
+    {
+        $stub = new RecordingStub();
+        $stub->simple('/m', new StubMessage('req'), [], ['timeout' => 1.5]);
+        $this->assertSame('1500m', $stub->lastRequest->headers['grpc-timeout']);
+    }
+
+    public function testCompressionHeaderAndRequestBody(): void
+    {
+        if (!function_exists('gzencode')) {
+            $this->markTestSkipped('ext-zlib required');
+        }
+        $stub = new RecordingStub();
+        $stub->simple('/m', new StubMessage('req'), [], ['compression' => 'gzip']);
+        $this->assertSame('gzip', $stub->lastRequest->headers['grpc-encoding']);
+        // Request body is a compressed frame (flag 1) rather than the identity frame.
+        $header = \Swoole\Grpc\Internal\Frame::header($stub->lastRequest->data);
+        $this->assertSame(1, $header[0]);
+    }
+
+    public function testCompressedResponseIsDecoded(): void
+    {
+        if (!function_exists('gzencode')) {
+            $this->markTestSkipped('ext-zlib required');
+        }
+        $gzip                 = new \Swoole\Grpc\Compression\GzipCompressor();
+        $response             = new Response();
+        $response->statusCode = 200;
+        $response->headers    = ['grpc-status' => '0'];
+        $response->data       = \Swoole\Grpc\Internal\Frame::encode('the-reply', $gzip);
+        $stub                 = new RecordingStub();
+        $stub->recvResult     = $response;
+
+        [$reply, $status] = $stub->simple('/m', new StubMessage('req'), [], ['compression' => 'gzip']);
+        $this->assertInstanceOf(StubReply::class, $reply);
+        $this->assertSame('the-reply', $reply->decoded);
+        $this->assertSame(0, $status);
+    }
+
+    public function testInvokeUnaryReturnsResult(): void
+    {
+        $response             = new Response();
+        $response->statusCode = 200;
+        $response->headers    = ['grpc-status' => '5', 'grpc-message' => 'missing'];
+        $stub                 = new RecordingStub();
+        $stub->recvResult     = $response;
+
+        $result = $stub->unary('/m', new StubMessage('req'));
+        $this->assertFalse($result->isOk());
+        $this->assertSame(5, $result->getStatusCode());
+        $this->assertSame('missing', $result->getStatus()->getMessage());
+    }
+
+    public function testThrowOnErrorOptIn(): void
+    {
+        $response             = new Response();
+        $response->statusCode = 200;
+        $response->headers    = ['grpc-status' => '14'];
+        $stub                 = new RecordingStub();
+        $stub->recvResult     = $response;
+
+        // Default: returns the triple, no exception.
+        [, $status] = $stub->simple('/m', new StubMessage('req'));
+        $this->assertSame(14, $status);
+
+        // Opt-in: throws RpcException.
+        $this->expectException(\Swoole\Grpc\Status\RpcException::class);
+        $stub->simple('/m', new StubMessage('req'), [], ['grpc.throw_on_error' => true]);
+    }
+
+    public function testUnaryInterceptorIsApplied(): void
+    {
+        $interceptor = new class implements \Swoole\Grpc\Interceptor\Interceptor {
+            public function intercept(\Swoole\Grpc\Interceptor\CallContext $context, callable $next)
+            {
+                return $next($context->withMetadata(['x-intercepted' => 'yes']));
+            }
+        };
+        $stub = new RecordingStub();
+        $stub->withInterceptor($interceptor);
+        $stub->simple('/m', new StubMessage('req'), [], []);
+        // withMetadata reaches buildHeaders via the reconstructed CallContext.
+        $this->assertSame('yes', $stub->lastRequest->headers['x-intercepted']);
+    }
 }
 
 /** @internal */
@@ -170,6 +255,11 @@ class RecordingStub extends BaseStub
     public function simple(string $method, $argument, array $metadata = [], array $options = []): array
     {
         return $this->_simpleRequest($method, $argument, [StubReply::class, 'mergeFromString'], $metadata, $options);
+    }
+
+    public function unary(string $method, $argument, array $metadata = [], array $options = []): \Swoole\Grpc\Result
+    {
+        return $this->invokeUnary($method, $argument, [StubReply::class, 'mergeFromString'], $metadata, $options);
     }
 
     public function serverStream(string $method, $argument, array $metadata = [], array $options = []): ServerStreamingCall

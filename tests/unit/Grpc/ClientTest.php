@@ -113,6 +113,28 @@ class ClientTest extends TestCase
         $this->assertFalse((bool) ($client->lastRequest->usePipelineRead ?? false));
     }
 
+    public function testTlsOptionsArePassedThrough(): void
+    {
+        // Full TLS/mTLS options are simply forwarded to the underlying Http2 client via set().
+        $client = new TlsClient('127.0.0.1:50051', [
+            'ssl'             => true,
+            'ssl_host_name'   => 'example.com',
+            'ssl_cafile'      => '/ca.pem',
+            'ssl_cert_file'   => '/cert.pem',
+            'ssl_key_file'    => '/key.pem',
+            'ssl_verify_peer' => true,
+        ]);
+
+        $property = new \ReflectionProperty(Client::class, 'opts');
+        $opts     = $property->getValue($client);
+        $this->assertTrue($opts['ssl']);
+        $this->assertSame('example.com', $opts['ssl_host_name']);
+        $this->assertSame('/ca.pem', $opts['ssl_cafile']);
+        $this->assertSame('/cert.pem', $opts['ssl_cert_file']);
+        $this->assertSame('/key.pem', $opts['ssl_key_file']);
+        $this->assertTrue($opts['ssl_verify_peer']);
+    }
+
     private static function newUnstartedClient(): Client
     {
         return (new \ReflectionClass(Client::class))->newInstanceWithoutConstructor();
@@ -136,5 +158,14 @@ class RecordingClient extends Client
     {
         $this->lastRequest = $request;
         return 7;
+    }
+}
+
+/** A Client that runs the real constructor (to capture opts) but skips the network start(). */
+class TlsClient extends Client
+{
+    protected function start(): void
+    {
+        // Intentionally empty: do not connect in a unit test.
     }
 }

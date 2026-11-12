@@ -21,6 +21,7 @@ Backward-incompatible changes:
 Added:
 
 * `\Swoole\Grpc` provides a coroutine gRPC client, with Etcd and Helloworld examples and generated clients under `examples/grpc`. It is a Composer-only component and is not packed into the Swoole extension.
+* `\Swoole\Grpc` gains a standard status model (`Status\StatusCode`, `Status`, `RpcException`), an idiomatic `Result`/`invokeUnary()` entry point, `CallOptions` for deadlines (`grpc-timeout`), gzip compression and `-bin` metadata, client interceptors (including a retry interceptor), and feature-detecting trailers extraction. All additions are opt-in; generated stubs keep returning `[reply, status, response]`.
 * `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
 * The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
 * The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only. A `CURLOPT_PREREQFUNCTION` callback runs once for each address tried.
