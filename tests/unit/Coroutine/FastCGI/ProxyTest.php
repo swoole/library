@@ -350,23 +350,34 @@ class ProxyTest extends TestCase
             });
             Coroutine::create(static fn () => $server->start());
 
-            $proxy  = self::getProxy("tcp://127.0.0.1:{$server->port}")->withConnectionPool(1)->withTimeout(0.2);
-            $errors = [];
+            $proxy     = self::getProxy("tcp://127.0.0.1:{$server->port}")->withConnectionPool(1)->withTimeout(0.2);
+            $errors    = [];
+            $waitGroup = new WaitGroup();
+            $waitGroup->add(2);
             for ($i = 0; $i < 2; $i++) {
-                Coroutine::create(static function () use ($proxy, &$errors): void {
+                Coroutine::create(static function () use ($proxy, &$errors, $waitGroup): void {
                     try {
                         $proxy->pass(self::getRequest(), new Response());
                     } catch (Client\Exception|\RuntimeException $e) {
                         $errors[] = $e::class . ': ' . $e->getMessage();
+                    } finally {
+                        $waitGroup->done();
                     }
                 });
             }
-            Coroutine::sleep(0.5);
+            // Wait for both requests rather than a fixed sleep: on a loaded runner a coroutine can
+            // be scheduled late, and the deadline that matters is the proxy's own 0.2s timeout.
+            $waitGroup->wait(5.0);
             $server->shutdown();
 
             // One request has the connection and times out; the other one finds no connection free in time.
+            // Match only the stable part of the pool message: the timeout is interpolated from a float,
+            // whose string form depends on the precision ini setting of the runner.
             self::assertCount(2, $errors);
-            self::assertContains('RuntimeException: No connection is available from the pool within 0.2 seconds', $errors);
+            self::assertNotEmpty(
+                array_filter($errors, static fn (string $error): bool => str_contains($error, 'No connection is available from the pool')),
+                'One request must fail waiting for a free connection: ' . implode(' | ', $errors)
+            );
         });
     }
 
