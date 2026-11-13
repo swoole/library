@@ -161,7 +161,7 @@ RUN --mount=type=bind,from=extensions,source=/out,target=/mnt/extensions \
     echo /usr/local/instantclient > /etc/ld.so.conf.d/oracle-instantclient.conf
     ldconfig
     cp /mnt/*/*.so "$(php-config --extension-dir)/"
-    docker-php-ext-enable mysqli pdo_pgsql gd pdo_oci mongodb swoole
+    docker-php-ext-enable bcmath mysqli pdo_pgsql gd pdo_oci mongodb swoole
     echo "swoole.enable_library=off" >> /usr/local/etc/php/conf.d/docker-php-ext-swoole.ini
     php -m
     php --ri swoole
