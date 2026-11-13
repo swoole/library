@@ -108,15 +108,25 @@ class OffsetManager
         $response = KafkaUtil::retry($client, $request, $retry, 0);
 
         $metadatas = $offsets = [];
+        $missing   = [];
         foreach ($response->getTopics() as $topic) {
             foreach ($topic->getPartitions() as $partition) {
                 $partitionIndex             = $partition->getPartitionIndex();
-                $offsets[$partitionIndex]   = max($partition->getCommittedOffset(), 0);
                 $metadatas[$partitionIndex] = $partition->getMetadata();
+                $committed                  = $partition->getCommittedOffset();
+                if ($committed < 0) {
+                    $missing[]                  = $partitionIndex;
+                    $offsets[$partitionIndex]   = 0;
+                } else {
+                    $offsets[$partitionIndex] = $committed;
+                }
             }
         }
         $this->offsets   = $offsets;
         $this->metadatas = $metadatas;
+        if ($missing !== []) {
+            $this->updateListOffsets($missing, $retry);
+        }
     }
 
     public function updateListOffsets(array $partitions, int $retry = 0): void
@@ -144,7 +154,7 @@ class OffsetManager
                         break;
                     }
                 }
-                $listOffsetPartition->setPartitionIndex($partition)->setTimestamp(-1);
+                $listOffsetPartition->setPartitionIndex($partition)->setTimestamp($this->resetTimestamp());
             }
             $request->setTopics([
                 (new ListOffsetTopic())->setName($topicName)->setPartitions($topicPartitions),
@@ -154,7 +164,7 @@ class OffsetManager
             $response = KafkaUtil::retry($client, $request, $retry, 0);
             foreach ($response->getTopics() as $topic) {
                 foreach ($topic->getPartitions() as $partition) {
-                    $this->offsets[$partition->getPartitionIndex()] = $partition->getOffset() - 1;
+                    $this->offsets[$partition->getPartitionIndex()] = $partition->getOffset();
                 }
             }
         }
@@ -256,5 +266,18 @@ class OffsetManager
     public function getGenerationId(): int
     {
         return $this->generationId;
+    }
+
+    /**
+     * ListOffsets timestamp. -2 is the start of the log, -1 is the high watermark.
+     */
+    private function resetTimestamp(): int
+    {
+        $config = $this->broker->getConfig();
+        if ($config instanceof ConsumerConfig && $config->getAutoOffsetReset() === 'latest') {
+            return -1;
+        }
+
+        return -2;
     }
 }

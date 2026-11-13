@@ -82,6 +82,131 @@ class BrokerTest extends TestCase
         });
     }
 
+    public function testOneFetchReadsSeveralRecords(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            for ($i = 0; $i < 5; $i++) {
+                $this->produce($topic, str_repeat('x', 1000) . $i, 0);
+            }
+
+            $config = $this->consumerConfig($topic);
+            $config->setGroupInstanceId(null);
+            $config->setMinBytes(3000);
+            $config->setMaxWait(5000);
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $started = microtime(true);
+                $message = $consumer->consume();
+                $this->assertLessThan(2.0, microtime(true) - $started);
+                $this->assertInstanceOf(ConsumeMessage::class, $message);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testLatestOffsetSkipsRecordsProducedBeforeStart(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'before');
+
+            $config = $this->consumerConfig($topic);
+            $config->setAutoOffsetReset('latest');
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $deadline = microtime(true) + 1;
+                while (microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    $this->assertTrue($message === null || $message->getValue() !== 'before');
+                }
+                $this->produce($topic, 'after');
+                $found    = null;
+                $deadline = microtime(true) + 20;
+                while ($found === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getValue() === 'after') {
+                        $found = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testAssignedPartitionReadsOnlyThatPartition(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'partition-zero', 0);
+            $this->produce($topic, 'partition-one', 1);
+
+            $config = $this->consumerConfig($topic);
+            $config->setAssignedPartitions([$topic => [0]]);
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $found    = null;
+                $deadline = microtime(true) + 20;
+                while ($found === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if (!$message instanceof ConsumeMessage) {
+                        continue;
+                    }
+                    $this->assertSame(0, $message->getPartition());
+                    $this->assertNotSame('partition-one', $message->getValue());
+                    if ($message->getValue() === 'partition-zero') {
+                        $found = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testTopicPatternReadsAMatchingTopic(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-pat-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'pattern-value');
+
+            $config = new ConsumerConfig();
+            $config->setBroker(KAFKA_SERVER_HOST . ':' . KAFKA_SERVER_PORT);
+            $config->setTopicPattern('#^library-pat-#');
+            $config->setGroupId($topic);
+            $config->setClientId('library-test');
+            $config->setInterval(0.05);
+            $config->setMaxWait(200);
+            $config->setConnectTimeout(5);
+            $config->setSendTimeout(5);
+            $config->setRecvTimeout(5);
+            $config->setGroupRetry(10);
+            $config->setGroupRetrySleep(0.2);
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $found    = null;
+                $deadline = microtime(true) + 20;
+                while ($found === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getTopic() === $topic && $message->getValue() === 'pattern-value') {
+                        $found = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
     private function assertRoundTrip(string $assignor): void
     {
         $topic = 'library-' . bin2hex(random_bytes(4));
@@ -126,7 +251,25 @@ class BrokerTest extends TestCase
         $this->assertSame('v', $headers[0]->getValue());
     }
 
-    private function produce(string $topic, string $value): void
+    private function consumerConfig(string $topic): ConsumerConfig
+    {
+        $config = new ConsumerConfig();
+        $config->setBroker(KAFKA_SERVER_HOST . ':' . KAFKA_SERVER_PORT);
+        $config->setTopic($topic);
+        $config->setGroupId($topic);
+        $config->setClientId('library-test');
+        $config->setInterval(0.05);
+        $config->setMaxWait(200);
+        $config->setConnectTimeout(5);
+        $config->setSendTimeout(5);
+        $config->setRecvTimeout(5);
+        $config->setGroupRetry(10);
+        $config->setGroupRetrySleep(0.2);
+
+        return $config;
+    }
+
+    private function produce(string $topic, string $value, int $partition = 0): void
     {
         $config = new ProducerConfig();
         $config->setBootstrapServer(KAFKA_SERVER_HOST . ':' . KAFKA_SERVER_PORT);
@@ -138,7 +281,7 @@ class BrokerTest extends TestCase
         $config->setRecvTimeout(5);
         $producer = new Producer($config);
         try {
-            $producer->send($topic, $value, 'key', ['h' => 'v'], 0);
+            $producer->send($topic, $value, 'key', ['h' => 'v'], $partition);
         } finally {
             $producer->close();
         }

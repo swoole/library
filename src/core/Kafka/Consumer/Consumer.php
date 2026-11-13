@@ -19,6 +19,7 @@ use Swoole\Kafka\Group\CoordinatorType;
 use Swoole\Kafka\Group\GroupManager;
 use Swoole\Kafka\Group\ProtocolType;
 use Swoole\Kafka\Group\Struct\ConsumerGroupMemberAssignment;
+use Swoole\Kafka\Group\Struct\ConsumerGroupTopic;
 use Swoole\Kafka\Protocol\ErrorCode;
 use Swoole\Kafka\Protocol\Fetch\FetchableTopic;
 use Swoole\Kafka\Protocol\Fetch\FetchPartition;
@@ -59,7 +60,7 @@ class Consumer
     /**
      * @var string
      */
-    protected $memberId;
+    protected $memberId = '';
 
     /**
      * @var int
@@ -80,6 +81,16 @@ class Consumer
      * @var TimerInterface
      */
     protected $timer;
+
+    /**
+     * @var bool
+     */
+    private $manualAssignment = false;
+
+    /**
+     * @var int
+     */
+    private $rejoinAttempts = 0;
 
     /**
      * @var bool
@@ -126,6 +137,17 @@ class Consumer
             $broker->setBrokers($config->getBroker());
         }
 
+        if ($config->getTopicPattern() !== '') {
+            $this->resolveTopicPattern();
+        }
+
+        if ($config->getAssignedPartitions() !== []) {
+            $this->manualAssignment = true;
+            $this->assignConfiguredPartitions();
+
+            return;
+        }
+
         $this->groupManager = $groupManager = new GroupManager($broker);
         $groupId            = $config->getGroupId();
 
@@ -156,8 +178,9 @@ class Consumer
                 (new JoinGroupRequestProtocol())->setName($protocolName)->setMetadata($metadataContent),
             ];
 
-            // joinGroup
-            $response           = $groupManager->joinGroup($groupId, $config->getMemberId(), ProtocolType::CONSUMER, $config->getGroupInstanceId(), $protocols, (int) ($config->getSessionTimeout() * 1000), (int) ($config->getRebalanceTimeout() * 1000), $config->getGroupRetry(), $config->getGroupRetrySleep());
+            // joinGroup. A static member must send the member id from the previous join, or the broker fences it.
+            $memberId           = $this->memberId !== '' ? $this->memberId : $config->getMemberId();
+            $response           = $groupManager->joinGroup($groupId, $memberId, ProtocolType::CONSUMER, $config->getGroupInstanceId(), $protocols, (int) ($config->getSessionTimeout() * 1000), (int) ($config->getRebalanceTimeout() * 1000), $config->getGroupRetry(), $config->getGroupRetrySleep());
             $this->memberId     = $response->getMemberId();
             $this->generationId = $response->getGenerationId();
 
@@ -185,10 +208,16 @@ class Consumer
                 $offsetManager->updateOffsets($config->getOffsetRetry());
             }
 
+            $this->rejoinAttempts = 0;
             $this->startHeartbeat();
         } catch (KafkaErrorException $ke) {
             switch ($ke->getCode()) {
                 case ErrorCode::REBALANCE_IN_PROGRESS:
+                case ErrorCode::UNKNOWN_MEMBER_ID:
+                case ErrorCode::FENCED_INSTANCE_ID:
+                    if (++$this->rejoinAttempts > $this->config->getGroupRetry()) {
+                        throw $ke;
+                    }
                     goto rejoinBegin;
                 default:
                     throw $ke;
@@ -198,9 +227,11 @@ class Consumer
 
     public function close(): void
     {
-        $config  = $this->config;
-        $groupId = $config->getGroupId();
-        $this->groupManager->leaveGroup($groupId, $this->memberId, $config->getGroupInstanceId(), $config->getGroupRetry(), $config->getGroupRetrySleep());
+        if (!$this->manualAssignment && $this->memberId !== '') {
+            $config  = $this->config;
+            $groupId = $config->getGroupId();
+            $this->groupManager->leaveGroup($groupId, $this->memberId, $config->getGroupInstanceId(), $config->getGroupRetry(), $config->getGroupRetrySleep());
+        }
         $this->broker->close();
         $this->stopHeartbeat();
     }
@@ -302,7 +333,14 @@ class Consumer
 
     protected function fetchMessages(): void
     {
-        $this->checkBeartbeat();
+        // A fetch during rejoin uses a member the coordinator has not accepted yet.
+        // A manually assigned consumer has no group generation and does not heartbeat.
+        if (!$this->manualAssignment) {
+            if ($this->heartbeatTimerId === null) {
+                return;
+            }
+            $this->checkBeartbeat();
+        }
 
         $config  = $this->config;
         $request = new FetchRequest();
@@ -329,7 +367,7 @@ class Consumer
         foreach ($currentList as $topic => $partitions) {
             $fetchPartitions = [];
             foreach ($partitions as $partition) {
-                $fetchPartitions[] = (new FetchPartition())->setPartitionIndex($partition)->setFetchOffset($this->getOffsetManager($topic)->getFetchOffset($partition));
+                $fetchPartitions[] = (new FetchPartition())->setPartitionIndex($partition)->setFetchOffset($this->getOffsetManager($topic)->getFetchOffset($partition))->setMaxBytes($config->getMaxBytes());
             }
             $topics[] = (new FetchableTopic())->setName($topic)->setFetchPartitions($fetchPartitions);
         }
@@ -360,6 +398,11 @@ class Consumer
                     case ErrorCode::LEADER_NOT_AVAILABLE:
                     case ErrorCode::NOT_LEADER_OR_FOLLOWER:
                     case ErrorCode::REPLICA_NOT_AVAILABLE:
+                    case ErrorCode::UNKNOWN_MEMBER_ID:
+                    case ErrorCode::FENCED_INSTANCE_ID:
+                        if ($this->manualAssignment) {
+                            ErrorCode::check($errorCode);
+                        }
                         $this->rejoin();
 
                         return;
@@ -383,7 +426,8 @@ class Consumer
 
     protected function startHeartbeat(): void
     {
-        $this->heartbeatTimerId = $this->timer->tick((int) ($this->config->getGroupHeartbeat() * 1000), function () {
+        $this->lastHeartbeatTime = microtime(true);
+        $this->heartbeatTimerId  = $this->timer->tick((int) ($this->config->getGroupHeartbeat() * 1000), function () {
             try {
                 $this->heartbeat();
             } catch (KafkaErrorException $e) {
@@ -411,6 +455,8 @@ class Consumer
         } catch (KafkaErrorException $kafkaErrorException) {
             switch ($kafkaErrorException->getCode()) {
                 case ErrorCode::REBALANCE_IN_PROGRESS:
+                case ErrorCode::UNKNOWN_MEMBER_ID:
+                case ErrorCode::FENCED_INSTANCE_ID:
                     $this->rejoin();
                     break;
                 default:
@@ -459,5 +505,76 @@ class Consumer
         }
 
         return $partitions;
+    }
+
+    private function resolveTopicPattern(): void
+    {
+        $pattern = $this->config->getTopicPattern();
+        set_error_handler(static function (): bool {
+            return true;
+        });
+        try {
+            $valid = preg_match($pattern, '') !== false;
+        } finally {
+            restore_error_handler();
+        }
+        if (!$valid) {
+            throw new \InvalidArgumentException(sprintf('Invalid topic pattern "%s"', $pattern));
+        }
+
+        $this->broker->updateMetadata();
+        $topics = [];
+        foreach ($this->broker->getTopicsMeta() as $topicMeta) {
+            if (preg_match($pattern, $topicMeta->getName()) === 1) {
+                $topics[] = $topicMeta->getName();
+            }
+        }
+        if ($topics === []) {
+            throw new \InvalidArgumentException(sprintf('No topic matches "%s"', $pattern));
+        }
+        $this->config->setTopic($topics);
+    }
+
+    private function assignConfiguredPartitions(): void
+    {
+        $config   = $this->config;
+        $topics   = [];
+        $byTopic  = [];
+        foreach ($config->getAssignedPartitions() as $topic => $partitions) {
+            $topic      = (string) $topic;
+            $topics[]   = $topic;
+            $indexes    = [];
+            foreach ($partitions as $partition) {
+                $indexes[] = (int) $partition;
+            }
+            $byTopic[$topic] = $indexes;
+        }
+        $config->setTopic($topics);
+        $this->broker->updateMetadata($topics);
+
+        $groupTopics = [];
+        foreach ($byTopic as $topic => $indexes) {
+            $groupTopics[] = (new ConsumerGroupTopic())->setTopicName($topic)->setPartitions($indexes);
+        }
+        $assignment = new ConsumerGroupMemberAssignment();
+        $assignment->setTopics($groupTopics);
+        $this->consumerGroupMemberAssignment = $assignment;
+        $this->initFetchOptions();
+
+        $groupId = $config->getGroupId();
+        $nodeId  = -1;
+        if ($groupId !== '') {
+            $this->groupManager = new GroupManager($this->broker);
+            $this->coordinator  = $this->groupManager->findCoordinator($groupId, CoordinatorType::GROUP, $config->getGroupRetry(), $config->getGroupRetrySleep());
+            $nodeId             = $this->coordinator->getNodeId();
+        }
+        foreach ($byTopic as $topic => $indexes) {
+            $this->offsetManagers[$topic] = $offsetManager = new OffsetManager($this->broker, $nodeId, $topic, $indexes, $groupId, null, '', -1);
+            if ($groupId !== '') {
+                $offsetManager->updateOffsets($config->getOffsetRetry());
+            } else {
+                $offsetManager->updateListOffsets($indexes);
+            }
+        }
     }
 }

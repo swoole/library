@@ -103,7 +103,7 @@ class GroupManager
         return KafkaUtil::retry($this->broker->getClient($this->findCoordinatorResponse->getNodeId()), $request, $retry, $sleep);
     }
 
-    public function syncGroup(string $groupId, string $groupInstanceId, string $memberId, int $generationId, string $protocolName, string $protocolType, array $assignments, int $retry = 0, float $sleep = 0.01): SyncGroupResponse
+    public function syncGroup(string $groupId, ?string $groupInstanceId, string $memberId, int $generationId, string $protocolName, string $protocolType, array $assignments, int $retry = 0, float $sleep = 0.01): SyncGroupResponse
     {
         $request = new SyncGroupRequest();
         $request->setGroupId($groupId);
@@ -118,7 +118,7 @@ class GroupManager
         return KafkaUtil::retry($this->broker->getClient($this->findCoordinatorResponse->getNodeId()), $request, $retry, $sleep);
     }
 
-    public function heartbeat(string $groupId, string $groupInstanceId, string $memberId, int $generationId, int $retry = 0, float $sleep = 0.01): HeartbeatResponse
+    public function heartbeat(string $groupId, ?string $groupInstanceId, string $memberId, int $generationId, int $retry = 0, float $sleep = 0.01): HeartbeatResponse
     {
         $request = new HeartbeatRequest();
         $request->setGroupId($groupId);

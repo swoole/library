@@ -42,7 +42,7 @@ class Broker
     /**
      * @var MetadataResponseTopic[]
      */
-    protected $topicsMeta;
+    protected $topicsMeta = [];
 
     /**
      * @var string[]
@@ -155,11 +155,12 @@ class Broker
                         ErrorCode::check($errorCode);
                 }
             }
-            if ($this->topicsMeta) {
-                $this->topicsMeta = array_values(array_merge($this->topicsMeta, $topicsMeta));
-            } else {
-                $this->topicsMeta = $topicsMeta;
+            // Replace a topic already stored. Appending every refresh kept a copy of each response and grew without bound.
+            $byName = [];
+            foreach (array_merge($this->topicsMeta, $topicsMeta) as $topicMeta) {
+                $byName[$topicMeta->getName()] = $topicMeta;
             }
+            $this->topicsMeta = array_values($byName);
             if ($ready !== []) {
                 $this->metaUpdatedTopics = array_values(array_unique(array_merge($this->metaUpdatedTopics, $ready)));
             }

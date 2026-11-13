@@ -35,6 +35,8 @@ Added:
 * `\Swoole\Debugger\RemoteShell` is the remote shell previously published as `swoole/debugger`. `RemoteShell::listen($server)` opens it on `127.0.0.1:9599`. It is a Composer-only component and is not packed into the Swoole extension. Bind it to a local address. `exec` evaluates PHP in the selected worker, prints an expression's value, and keeps the variables it assigns there until `reset`. `print` reads those, then globals.
 * `\Swoole\Proxy` is the reverse proxy previously published as the proxy-server scripts. It is a Composer-only component and is not packed into the Swoole extension. `TcpProxy` and `HttpProxy` are the coroutine proxies, and `AsyncTcpProxy` is the event-driven TCP proxy on `\Swoole\Async\Client`. The listening servers are started by the scripts in `examples/proxy`. Bind them to a local address. A backend that cannot be reached is closed, or answered with 502 for HTTP, and the TCP proxies do not write an error string into the byte stream.
 * `\Swoole\Kafka` is the Kafka client previously published as `longlang/phpkafka`. It is a Composer-only component and is not packed into the Swoole extension. `Producer` and `Consumer` cover producing and consuming; the protocol classes cover the Kafka APIs. The scripts in `examples/kafka` are the executables. LZ4 record batches need `exussum12/xxhash`, and `StickyAssignor` needs `chdemko/sorted-collections`.
+* `\Swoole\Kafka` SASL mechanisms authenticate themselves. `ScramSha512Sasl` connects with SCRAM-SHA-512. `AwsMskIamSasl` connects to Amazon MSK with IAM and needs `aws/aws-sdk-php`.
+* `\Swoole\Kafka\Consumer\ConsumerConfig::setAutoOffsetReset()` chooses `earliest` or `latest` when a group has no offset, or the committed offset is outside the log. The default is `earliest`. `setTopicPattern()` subscribes to topic names that match a regular expression. `setAssignedPartitions()` reads the given partitions without joining a group.
 
 Changed:
 
@@ -65,6 +67,7 @@ Fixed:
 * `\Swoole\Database\MysqliProxy` restores `autocommit(false)` after a reconnect.
 * `\Swoole\Database\PDOProxy` and `\Swoole\Database\PDOStatementProxy` reconnect after a lost connection when the error mode is not the exception mode.
 * `\Swoole\Kafka` retries a produce while the partition leader is still being elected, including a topic that was just created. With automatic topic creation off, a missing topic is reported instead of being requested again without end.
+* `\Swoole\Kafka` keeps a numeric topic name as a string when assigning partitions. A missing `groupInstanceId` is left unset, and a static member reuses its member id when it rejoins. A produce or fetch whose connection was closed by the broker is sent again on a new connection. An API version the broker rejects is requested again at the next lower version. A fetch uses the configured `maxBytes` for each partition, and a response that contains more than one record batch is read in full, so `minBytes` can gather more than one record. Metadata for a topic replaces the previous copy instead of being kept alongside it.
 
 ## 6.2.5 (2026-11-07)
 

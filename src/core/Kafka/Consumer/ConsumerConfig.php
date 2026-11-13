@@ -57,9 +57,11 @@ class ConsumerConfig extends CommonConfig
     protected $memberId = '';
 
     /**
+     * Null is a dynamic member. A string is a static member id, sent again on every join.
+     *
      * @var string|null
      */
-    protected $groupInstanceId = '';
+    protected $groupInstanceId;
 
     /**
      * @var float
@@ -135,6 +137,28 @@ class ConsumerConfig extends CommonConfig
      * @var int
      */
     protected $maxWait = 1;
+
+    /**
+     * Where to start when the group has no committed offset, or the committed offset is outside the log.
+     * earliest reads from the start of the retained log. latest reads only messages produced from now on.
+     *
+     * @var string
+     */
+    protected $autoOffsetReset = 'earliest';
+
+    /**
+     * PCRE pattern, including delimiters. When set, the consumer subscribes to the topic names that match.
+     *
+     * @var string
+     */
+    protected $topicPattern = '';
+
+    /**
+     * topic => partition indexes. When set, the consumer reads these partitions and does not join a group.
+     *
+     * @var array<string, int[]>
+     */
+    protected $assignedPartitions = [];
 
     public function getClient(): ?string
     {
@@ -442,6 +466,51 @@ class ConsumerConfig extends CommonConfig
     public function setMaxWait(int $maxWait): self
     {
         $this->maxWait = $maxWait;
+
+        return $this;
+    }
+
+    public function getAutoOffsetReset(): string
+    {
+        return $this->autoOffsetReset;
+    }
+
+    public function setAutoOffsetReset(string $autoOffsetReset): self
+    {
+        if ($autoOffsetReset !== 'earliest' && $autoOffsetReset !== 'latest') {
+            throw new \InvalidArgumentException('autoOffsetReset must be earliest or latest');
+        }
+        $this->autoOffsetReset = $autoOffsetReset;
+
+        return $this;
+    }
+
+    public function getTopicPattern(): string
+    {
+        return $this->topicPattern;
+    }
+
+    public function setTopicPattern(string $topicPattern): self
+    {
+        $this->topicPattern = $topicPattern;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, int[]>
+     */
+    public function getAssignedPartitions(): array
+    {
+        return $this->assignedPartitions;
+    }
+
+    /**
+     * @param array<string, int[]> $assignedPartitions
+     */
+    public function setAssignedPartitions(array $assignedPartitions): self
+    {
+        $this->assignedPartitions = $assignedPartitions;
 
         return $this;
     }
