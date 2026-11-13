@@ -59,11 +59,14 @@ class SwooleClient extends SyncClient
 
     public function close(): bool
     {
-        $this->connected = false;
-        foreach ($this->recvChannels as $channel) {
-            $channel->close();
+        $this->connected     = false;
+        $this->coRecvRunning = false;
+        $cid                 = $this->recvCoId;
+        $this->recvCoId      = false;
+        if (\is_int($cid) && $cid !== Coroutine::getCid() && Coroutine::exists($cid)) {
+            Coroutine::cancel($cid);
         }
-
+        $this->failWaiters(new SocketException('Connection closed'));
         $this->recvChannels = [];
 
         return $this->socket->close();
@@ -136,33 +139,49 @@ class SwooleClient extends SyncClient
     private function startRecvCo(): void
     {
         $this->coRecvRunning = true;
-        $this->recvCoId      = true;
         $this->recvCoId      = Coroutine::create(function () {
             while ($this->coRecvRunning) {
                 try {
                     $data = $this->socket->recv(4, -1);
-                    if ($data === '') {
+                    if ($data === '' || \strlen($data) !== 4) {
+                        $this->failWaiters(new SocketException('Connection closed'));
                         break;
                     }
-                    $length        = Int32::unpack($data);
-                    $data          = $this->socket->recv($length);
+                    $length = Int32::unpack($data);
+                    if ($length < 0 || $length > SwooleSocket::READ_MAX_LENGTH) {
+                        $this->failWaiters(new SocketException(sprintf('Invalid response length %d', $length)));
+                        break;
+                    }
+                    $data = $this->socket->recv($length);
+                    if ($data === '' || \strlen($data) !== $length) {
+                        $this->failWaiters(new SocketException('Connection closed'));
+                        break;
+                    }
                     $correlationId = Int32::unpack($data);
                     if (isset($this->recvChannels[$correlationId])) {
                         $this->recvChannels[$correlationId]->push($data);
                     }
                 } catch (\Exception $e) {
-                    if ($e instanceof SocketException && !$this->connected) {
-                        return;
+                    if (!($e instanceof SocketException && !$this->connected)) {
+                        $callback = $this->getConfig()->getExceptionCallback();
+                        if ($callback) {
+                            $callback($e);
+                        }
                     }
-
-                    $callback = $this->getConfig()->getExceptionCallback();
-                    if ($callback) {
-                        $callback($e);
-                    }
-
-                    $this->close();
+                    $this->failWaiters($e);
+                    break;
                 }
             }
+            $this->coRecvRunning = false;
+            $this->connected     = false;
+            $this->socket->close();
         });
+    }
+
+    private function failWaiters(\Throwable $e): void
+    {
+        foreach ($this->recvChannels as $channel) {
+            $channel->push($e);
+        }
     }
 }

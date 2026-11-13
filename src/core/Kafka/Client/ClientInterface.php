@@ -49,6 +49,11 @@ interface ClientInterface
     public function getRequestApiVersion(AbstractRequest $request): int;
 
     /**
+     * Lower the highest version this client will use for an API after the broker rejected it.
+     */
+    public function downgradeApiVersion(int $apiKey): bool;
+
+    /**
      * Send message to kafka server.
      *
      * If successful, return the correlationId

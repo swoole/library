@@ -11,37 +11,20 @@ declare(strict_types=1);
 
 namespace Swoole\Kafka\Sasl;
 
-use Swoole\Kafka\Config\CommonConfig;
 use Swoole\Kafka\Exception\KafkaErrorException;
 
-class PlainSasl implements SaslInterface
+class PlainSasl extends AbstractSasl
 {
-    /**
-     * @var CommonConfig
-     */
-    protected $config;
-
-    public function __construct(CommonConfig $config)
+    public function auth(): void
     {
-        $this->config = $config;
+        $this->sendHandshake('PLAIN');
+        $this->sendAuthenticate($this->getAuthBytes());
     }
 
-    /**
-     * 授权模式.
-     */
-    public function getName(): string
-    {
-        return 'PLAIN';
-    }
-
-    /**
-     * 获得加密串.
-     */
     public function getAuthBytes(): string
     {
         $config = $this->config->getSasl();
         if (empty($config['username']) || empty($config['password'])) {
-            // 不存在就报错
             throw new KafkaErrorException('sasl not found auth info');
         }
 

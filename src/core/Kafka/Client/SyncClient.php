@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Swoole\Kafka\Client;
 
 use Swoole\Kafka\Config\CommonConfig;
+use Swoole\Kafka\Exception\SocketException;
 use Swoole\Kafka\Exception\UnsupportedApiKeyException;
 use Swoole\Kafka\Exception\UnsupportedApiVersionException;
 use Swoole\Kafka\Protocol\AbstractRequest;
@@ -24,10 +25,6 @@ use Swoole\Kafka\Protocol\ErrorCode;
 use Swoole\Kafka\Protocol\KafkaRequest;
 use Swoole\Kafka\Protocol\RequestHeader\RequestHeader;
 use Swoole\Kafka\Protocol\ResponseHeader\ResponseHeader;
-use Swoole\Kafka\Protocol\SaslAuthenticate\SaslAuthenticateRequest;
-use Swoole\Kafka\Protocol\SaslAuthenticate\SaslAuthenticateResponse;
-use Swoole\Kafka\Protocol\SaslHandshake\SaslHandshakeRequest;
-use Swoole\Kafka\Protocol\SaslHandshake\SaslHandshakeResponse;
 use Swoole\Kafka\Protocol\Type\Int32;
 use Swoole\Kafka\Sasl\SaslInterface;
 use Swoole\Kafka\Socket\SocketInterface;
@@ -54,6 +51,11 @@ class SyncClient implements ClientInterface
      * @var int
      */
     protected $correlationIdIncrValue = 0;
+
+    /**
+     * @var bool
+     */
+    private $reconnecting = false;
 
     public function __construct(string $host, int $port, ?CommonConfig $config = null, string $socketClass = StreamSocket::class)
     {
@@ -136,6 +138,20 @@ class SyncClient implements ClientInterface
         return $apiKeyMaxVersion;
     }
 
+    public function downgradeApiVersion(int $apiKey): bool
+    {
+        if (!isset($this->apiKeys[$apiKey])) {
+            return false;
+        }
+        $apiKeyConfig = $this->apiKeys[$apiKey];
+        if ($apiKeyConfig->getMaxVersion() <= $apiKeyConfig->getMinVersion()) {
+            return false;
+        }
+        $apiKeyConfig->setMaxVersion($apiKeyConfig->getMaxVersion() - 1);
+
+        return true;
+    }
+
     /**
      * Send message to kafka server.
      *
@@ -172,9 +188,7 @@ class SyncClient implements ClientInterface
             throw new \InvalidArgumentException(sprintf('Invalid correlationId %s', $correlationId));
         }
         $mapData = $this->waitResponseMaps[$correlationId];
-        $data    = $this->socket->recv(4);
-        $length  = Int32::unpack($data);
-        $data    = $this->socket->recv($length);
+        $data    = $this->readFrame();
         $header  = new ResponseHeader();
         $header->unpack($data, $size, ResponseHeader::parseVersion($mapData['apiVersion'], $mapData['flexibleVersions']));
         $data = substr($data, $size);
@@ -187,9 +201,50 @@ class SyncClient implements ClientInterface
 
     public function sendRecv(AbstractRequest $request, ?RequestHeader $requestHeader = null, ?ResponseHeader &$responseHeader = null): AbstractResponse
     {
-        $correlationId = $this->send($request, $requestHeader);
+        try {
+            $correlationId = $this->send($request, $requestHeader);
 
-        return $this->recv($correlationId, $responseHeader);
+            return $this->recv($correlationId, $responseHeader);
+        } catch (SocketException $e) {
+            if ($this->reconnecting) {
+                throw $e;
+            }
+            // The broker drops an idle connection. Open another and send the request once more.
+            $this->reconnecting = true;
+            try {
+                $this->close();
+                $this->connect();
+                $correlationId = $this->send($request, $requestHeader);
+
+                return $this->recv($correlationId, $responseHeader);
+            } finally {
+                $this->reconnecting = false;
+            }
+        }
+    }
+
+    /**
+     * Read one response frame. A short or nonsense length is a dead connection, not a Kafka error code.
+     */
+    protected function readFrame(): string
+    {
+        $data = $this->socket->recv(4);
+        if (\strlen($data) !== 4) {
+            $this->close();
+            throw new SocketException('Connection closed while reading the response length');
+        }
+        $length = Int32::unpack($data);
+        if ($length < 0 || $length > StreamSocket::READ_MAX_LENGTH) {
+            $this->close();
+            throw new SocketException(sprintf('Invalid response length %d', $length));
+        }
+        $data = $this->socket->recv($length);
+        if (\strlen($data) !== $length) {
+            $this->close();
+            throw new SocketException('Connection closed while reading the response');
+        }
+
+        return $data;
     }
 
     protected function updateApiVersions(): void
@@ -208,22 +263,10 @@ class SyncClient implements ClientInterface
         if (!isset($config['type']) || empty($config['type'])) {
             return;
         }
-        $class = new $config['type']($this->getConfig());
+        $class = new $config['type']($this, $this->getConfig());
         if (!$class instanceof SaslInterface) {
             return;
         }
-        $handshakeRequest = new SaslHandshakeRequest();
-        $handshakeRequest->setMechanism($class->getName());
-        $correlationId = $this->send($handshakeRequest);
-        /** @var SaslHandshakeResponse $handshakeResponse */
-        $handshakeResponse = $this->recv($correlationId);
-        ErrorCode::check($handshakeResponse->getErrorCode());
-
-        $authenticateRequest = new SaslAuthenticateRequest();
-        $authenticateRequest->setAuthBytes($class->getAuthBytes());
-        $correlationId = $this->send($authenticateRequest);
-        /** @var SaslAuthenticateResponse $authenticateResponse */
-        $authenticateResponse = $this->recv($correlationId);
-        ErrorCode::check($authenticateResponse->getErrorCode());
+        $class->auth();
     }
 }
