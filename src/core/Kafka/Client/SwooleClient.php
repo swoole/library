@@ -52,6 +52,17 @@ class SwooleClient extends SyncClient
         parent::__construct($host, $port, $config, $socketClass);
     }
 
+    public function __destruct()
+    {
+        // A request that throws never reaches close(). The reader would otherwise stay
+        // blocked in recv(), and Coroutine::run() would not return.
+        try {
+            $this->close();
+        } catch (\Throwable) {
+            // Destructors must not hide the exception that abandoned the client.
+        }
+    }
+
     public function connect(): void
     {
         parent::connect();
@@ -132,7 +143,7 @@ class SwooleClient extends SyncClient
         }
 
         $header = new ResponseHeader();
-        $header->unpack($data, $size, ResponseHeader::parseVersion($mapData['apiVersion'], $mapData['flexibleVersions']));
+        $header->unpack($data, $size, ResponseHeader::parseVersion($mapData['apiVersion'], $mapData['flexibleVersions'], $mapData['apiKey']));
         $data = substr($data, $size);
 
         $result = ApiKeys::createResponse($mapData['apiKey'], $data, $mapData['apiVersion']);

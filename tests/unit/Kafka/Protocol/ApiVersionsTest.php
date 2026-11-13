@@ -11,9 +11,11 @@ declare(strict_types=1);
 
 namespace Swoole\Tests\Unit\Kafka\Protocol;
 
+use Swoole\Kafka\Protocol\ApiKeys;
 use Swoole\Kafka\Protocol\ApiVersions\ApiVersionsRequest;
 use Swoole\Kafka\Protocol\ApiVersions\ApiVersionsResponse;
 use Swoole\Kafka\Protocol\ApiVersions\ApiVersionsResponseKey;
+use Swoole\Kafka\Protocol\ResponseHeader\ResponseHeader;
 use Swoole\Tests\TestCase;
 
 /**
@@ -29,6 +31,12 @@ class ApiVersionsTest extends TestCase
     private const ENCODE_RESPONSE_RESULT_V1 = '007b0000000100120000006400002710';
 
     private const ENCODE_RESPONSE_RESULT_V3 = '007b02001200000064000000271000';
+
+    public function testResponseHeaderStaysAtVersionZero(): void
+    {
+        $this->assertSame(0, ResponseHeader::parseVersion(3, [3], ApiKeys::PROTOCOL_API_VERSIONS));
+        $this->assertSame(1, ResponseHeader::parseVersion(3, [3]));
+    }
 
     public function testPackRequest(): void
     {

@@ -198,7 +198,7 @@ class SyncClient implements ClientInterface
         $data = $this->readFrame();
         Trace::log(sprintf('recv done correlation=%s %s:%d', $correlationId, $this->getHost(), $this->getPort()));
         $header  = new ResponseHeader();
-        $header->unpack($data, $size, ResponseHeader::parseVersion($mapData['apiVersion'], $mapData['flexibleVersions']));
+        $header->unpack($data, $size, ResponseHeader::parseVersion($mapData['apiVersion'], $mapData['flexibleVersions'], $mapData['apiKey']));
         $data = substr($data, $size);
 
         $result = ApiKeys::createResponse($mapData['apiKey'], $data, $mapData['apiVersion']);
@@ -258,7 +258,12 @@ class SyncClient implements ClientInterface
 
     protected function updateApiVersions(): void
     {
-        $request       = new ApiVersionsRequest();
+        $request = new ApiVersionsRequest();
+        // Version 3 carries the client software name. Kafka rejects an empty one, or one that
+        // is not letters, digits, '.' and '-', as INVALID_REQUEST. The first connection sends
+        // version 1 and never hits that check; a reconnect sends the negotiated version.
+        $request->setClientSoftwareName('swoole');
+        $request->setClientSoftwareVersion(self::clientSoftwareVersion());
         $correlationId = $this->send($request);
         /** @var ApiVersionsResponse $response */
         $response = $this->recv($correlationId);
@@ -277,5 +282,18 @@ class SyncClient implements ClientInterface
             return;
         }
         $class->auth();
+    }
+
+    /**
+     * Kafka accepts a software version of letters, digits, '.' and '-' only.
+     */
+    private static function clientSoftwareVersion(): string
+    {
+        $version = phpversion('swoole');
+        if (\is_string($version) && preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/', $version) === 1) {
+            return $version;
+        }
+
+        return '0';
     }
 }

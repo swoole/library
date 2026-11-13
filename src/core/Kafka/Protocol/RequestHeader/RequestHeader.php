@@ -51,6 +51,8 @@ class RequestHeader extends AbstractRequestHeader
                 new ProtocolField('requestApiKey', 'int16', false, [0, 1, 2], [2], [], [], null),
                 new ProtocolField('requestApiVersion', 'int16', false, [0, 1, 2], [2], [], [], null),
                 new ProtocolField('correlationId', 'int32', false, [0, 1, 2], [2], [], [], null),
+                // Client id keeps the two-byte length even in header v2. Older brokers have to
+                // read an ApiVersions request before they know which versions are flexible.
                 new ProtocolField('clientId', 'string', false, [1, 2], [], [1, 2], [], null),
             ];
             self::$taggedFieldses[self::class] = [];
