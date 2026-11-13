@@ -18,8 +18,16 @@ if (isset($argv[1]) && $argv[1] === 'dev') {
 
 $root = getenv('SWOOLE_DIR');
 if (!$root) {
-    // __DIR__ is <root>/library/tools, so two levels up is the swoole-src root.
-    $root = realpath(__DIR__ . '/../..');
+    // __DIR__ resolves symlinks, so it points outside swoole-src when library/ is
+    // a symlink. Use the path this script was invoked with instead, which keeps
+    // the <root>/library/tools/build-library.php layout intact.
+    $script = ($_SERVER['SCRIPT_FILENAME'] ?? '') ?: $argv[0];
+    $scriptDir = dirname($script);
+    if (!str_starts_with($scriptDir, '/') && !preg_match('/^[A-Za-z]:/', $scriptDir)) {
+        // getcwd() resolves symlinks too; PWD keeps the logical path a shell cd'ed into.
+        $scriptDir = (getenv('PWD') ?: getcwd()) . '/' . $scriptDir;
+    }
+    $root = dirname($scriptDir, 2);
 }
 putenv('SWOOLE_DIR=' . $root);
 
