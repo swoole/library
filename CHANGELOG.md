@@ -34,6 +34,7 @@ Added:
 * `\Swoole\Coroutine\FastCGI\Client::isConnected()` tells whether the client holds a connection kept open by an earlier request.
 * `\Swoole\Debugger\RemoteShell` is the remote shell previously published as `swoole/debugger`. `RemoteShell::listen($server)` opens it on `127.0.0.1:9599`. It is a Composer-only component and is not packed into the Swoole extension. Bind it to a local address. `exec` evaluates PHP in the selected worker, prints an expression's value, and keeps the variables it assigns there until `reset`. `print` reads those, then globals.
 * `\Swoole\Proxy` is the reverse proxy previously published as the proxy-server scripts. It is a Composer-only component and is not packed into the Swoole extension. `TcpProxy` and `HttpProxy` are the coroutine proxies, and `AsyncTcpProxy` is the event-driven TCP proxy on `\Swoole\Async\Client`. The listening servers are started by the scripts in `examples/proxy`. Bind them to a local address. A backend that cannot be reached is closed, or answered with 502 for HTTP, and the TCP proxies do not write an error string into the byte stream.
+* `\Swoole\Kafka` is the Kafka client previously published as `longlang/phpkafka`. It is a Composer-only component and is not packed into the Swoole extension. `Producer` and `Consumer` cover producing and consuming; the protocol classes cover the Kafka APIs. The scripts in `examples/kafka` are the executables. LZ4 record batches need `exussum12/xxhash`, and `StickyAssignor` needs `chdemko/sorted-collections`.
 
 Changed:
 
@@ -63,6 +64,7 @@ Fixed:
 * The gRPC retry interceptor caps the delay between attempts and stops once the call's deadline has passed.
 * `\Swoole\Database\MysqliProxy` restores `autocommit(false)` after a reconnect.
 * `\Swoole\Database\PDOProxy` and `\Swoole\Database\PDOStatementProxy` reconnect after a lost connection when the error mode is not the exception mode.
+* `\Swoole\Kafka` retries a produce while the partition leader is still being elected, including a topic that was just created. With automatic topic creation off, a missing topic is reported instead of being requested again without end.
 
 ## 6.2.5 (2026-11-07)
 

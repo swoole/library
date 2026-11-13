@@ -18,6 +18,7 @@ services:
       - redis
       - wordpress
       - mongodb
+      - kafka
     environment:
       DISABLE_DEFAULT_SERVER: 1
       GITHUB_ACTIONS: "yes"
@@ -152,6 +153,40 @@ services:
       JVM_XMS: 256m
       JVM_XMX: 256m
       JVM_XMN: 128m
+
+  # Single-node KRaft broker. Clients bootstrap at kafka:9092, which is this service's name on the
+  # compose network and, for the Build Swoole workflow, the same name mapped to 127.0.0.1 in /etc/hosts.
+  # Advertised as that name so metadata redirects stay reachable from both places. Apache Kafka 3.9 still
+  # accepts the protocol versions this client implements; 4.0 drops several of them.
+  kafka:
+    image: apache/kafka:3.9.1
+    hostname: kafka
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 15s
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+    # Published here, like MongoDB, so a host run and examples/kafka reach 127.0.0.1:9092 without the host overlay.
+    ports:
+      - "9092:9092"
 
   consul:
     image: consul:1.15

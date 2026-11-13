@@ -1,11 +1,11 @@
 # Companion to docker-compose.yml for running the unit tests from the host instead of from the app container;
 # the `Build Swoole` workflow does this to test the copy of the library embedded in a freshly compiled
-# extension. It publishes each backing service's port on the host (mongodb already publishes its port in
+# extension. It publishes each backing service's port on the host (mongodb and kafka already publish theirs in
 # docker-compose.yml), and the workflow maps the service names onto 127.0.0.1 in /etc/hosts so the hostnames
 # baked into tests/bootstrap.php keep working. Usage:
 #
 #     docker compose -f docker-compose.yml -f docker-compose.host.yml up -d \
-#         consul httpbin mongodb mysql nacos oracle pgsql php-fpm redis
+#         consul httpbin kafka mongodb mysql nacos oracle pgsql php-fpm redis
 #
 # The app container publishes port 80 itself, so it must not be started together with the httpbin port
 # mapping below.

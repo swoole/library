@@ -31,7 +31,9 @@
         "swoole/ide-helper": "dev-master",
         "phpstan/phpstan": "^2.1",
         "friendsofphp/php-cs-fixer": "^3.0",
-        "google/protobuf": "^4.0"
+        "google/protobuf": "^4.0",
+        "exussum12/xxhash": "^1.0.0",
+        "chdemko/sorted-collections": "^1.0"
     },
     "suggest": {
         "ext-mysqli": "Required to use mysqli database",
@@ -41,7 +43,9 @@
         "ext-mongodb": "Required to use mongodb database",
         "ext-posix": "Required by the default remote object server, started by swoole_get_default_remote_object_client()",
         "nikic/php-parser": "Required by Swoole\\Thread\\Pool to check the file of the class to run, unless the file is set with withClassDefinitionFile()",
-        "google/protobuf": "Required to run the gRPC examples and their generated clients"
+        "google/protobuf": "Required to run the gRPC examples and their generated clients",
+        "exussum12/xxhash": "Required by Swoole\\Kafka to compress or decompress LZ4 record batches",
+        "chdemko/sorted-collections": "Required by Swoole\\Kafka\\Consumer\\Assignor\\StickyAssignor"
     },
     "autoload": {
         "files": [

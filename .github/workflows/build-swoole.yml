@@ -77,7 +77,7 @@ jobs:
       # classes the extension already provides -- so composer-embedded.json installs the test tooling
       # (PHPUnit, mongodb/mongodb, google/protobuf, the test helper classmap and the gRPC example
       # classmap) without the library's own autoload rules. Composer-only namespaces that are not in the
-      # embedded copy, Swoole\Grpc, Swoole\Debugger and Swoole\Proxy, are autoloaded from this repository.
+      # embedded copy, Swoole\Grpc, Swoole\Debugger, Swoole\Proxy and Swoole\Kafka, are autoloaded from this repository.
       #
       # Tests run on the runner itself, not in the app container: the backing services come from
       # docker-compose.yml with docker-compose.host.yml publishing their ports on the host, and /etc/hosts
@@ -90,9 +90,9 @@ jobs:
         run: |
           set -ex
 
-          echo '127.0.0.1 consul local.httpbin.org mongodb mysql nacos oracle pgsql php-fpm redis' | sudo tee -a /etc/hosts
+          echo '127.0.0.1 consul local.httpbin.org kafka mongodb mysql nacos oracle pgsql php-fpm redis' | sudo tee -a /etc/hosts
 
-          docker compose -f docker-compose.yml -f docker-compose.host.yml up --wait --wait-timeout 180 consul httpbin mongodb mysql nacos oracle pgsql php-fpm redis
+          docker compose -f docker-compose.yml -f docker-compose.host.yml up --wait --wait-timeout 180 consul httpbin kafka mongodb mysql nacos oracle pgsql php-fpm redis
 
           COMPOSER=composer-embedded.json composer update -n -q --no-progress
 

@@ -50,6 +50,16 @@ if (!defined('REDIS_SERVER_HOST')) {
     define('REDIS_SERVER_PORT', 6379);
 }
 
+// The kafka service of docker-compose.yml. Inside the app container the name resolves on the compose
+// network (GITHUB_ACTIONS is set there). The Build Swoole workflow maps the same name onto 127.0.0.1 and
+// publishes 9092. A host run outside GitHub Actions uses 127.0.0.1 and that published port.
+if (!defined('KAFKA_SERVER_PORT')) {
+    define('KAFKA_SERVER_PORT', 9092);
+}
+if (!defined('KAFKA_SERVER_HOST')) {
+    define('KAFKA_SERVER_HOST', getenv('GITHUB_ACTIONS') ? 'kafka' : '127.0.0.1');
+}
+
 if (getenv('GITHUB_ACTIONS')) {
     define('CONSUL_AGENT_URL', 'http://consul:8500');
     define('NACOS_SERVER_URL', 'http://nacos:8848');

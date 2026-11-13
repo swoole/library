@@ -1,0 +1,27 @@
+<?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
+
+namespace Swoole\Kafka\Timer;
+
+use Swoole\Timer;
+
+class SwooleTimer implements TimerInterface
+{
+    public function tick(int $interval, callable $callback): int
+    {
+        return Timer::tick($interval, $callback);
+    }
+
+    public function clear(int $timerId): void
+    {
+        Timer::clear($timerId);
+    }
+}

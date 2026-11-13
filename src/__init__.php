@@ -22,6 +22,7 @@ return [
         'core/Grpc',
         'core/Debugger',
         'core/Proxy',
+        'core/Kafka',
     ],
     /* Notice: Sort by dependency */
     'files' => [

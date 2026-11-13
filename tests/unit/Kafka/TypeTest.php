@@ -1,0 +1,258 @@
+<?php
+/**
+ * This file is part of Swoole.
+ *
+ * @link     https://www.swoole.com
+ * @contact  team@swoole.com
+ * @license  https://github.com/swoole/library/blob/master/LICENSE
+ */
+
+declare(strict_types=1);
+
+namespace Swoole\Tests\Unit\Kafka;
+
+use Swoole\Kafka\Protocol\Type\ArrayInt32;
+use Swoole\Kafka\Protocol\Type\Boolean;
+use Swoole\Kafka\Protocol\Type\CompactArray;
+use Swoole\Kafka\Protocol\Type\CompactNullableString;
+use Swoole\Kafka\Protocol\Type\CompactString;
+use Swoole\Kafka\Protocol\Type\Float64;
+use Swoole\Kafka\Protocol\Type\Int16;
+use Swoole\Kafka\Protocol\Type\Int32;
+use Swoole\Kafka\Protocol\Type\Int64;
+use Swoole\Kafka\Protocol\Type\Int8;
+use Swoole\Kafka\Protocol\Type\NullableString;
+use Swoole\Kafka\Protocol\Type\NullableString32;
+use Swoole\Kafka\Protocol\Type\String16;
+use Swoole\Kafka\Protocol\Type\String32;
+use Swoole\Kafka\Protocol\Type\UInt32;
+use Swoole\Kafka\Protocol\Type\UVarInt;
+use Swoole\Kafka\Protocol\Type\VarInt;
+use Swoole\Kafka\Protocol\Type\VarIntCompactArray;
+use Swoole\Tests\TestCase;
+
+/**
+ * @internal
+ * @coversNothing
+ */
+class TypeTest extends TestCase
+{
+    private const TEST_STRING = 'PHP is the best programming language in the world';
+
+    private const FLOAT_VALUE = 3.141592654;
+
+    public function testBoolean(): void
+    {
+        $encodeResult = Boolean::pack(true);
+        $this->assertEquals(\chr(1), $encodeResult);
+        $this->assertTrue(Boolean::unpack($encodeResult, $size));
+        $this->assertEquals(1, $size);
+
+        $encodeResult = Boolean::pack(false);
+        $this->assertEquals(\chr(0), $encodeResult);
+        $this->assertFalse(Boolean::unpack($encodeResult, $size));
+        $this->assertEquals(1, $size);
+    }
+
+    public function testCompactString(): void
+    {
+        $encodeResult = CompactString::pack(self::TEST_STRING);
+        $this->assertEquals('325048502069732074686520626573742070726f6772616d6d696e67206c616e677561676520696e2074686520776f726c64', bin2hex($encodeResult));
+        $this->assertEquals(self::TEST_STRING, CompactString::unpack($encodeResult, $size));
+        $this->assertEquals(1 + \strlen(self::TEST_STRING), $size);
+    }
+
+    public function testFloat64(): void
+    {
+        $encodeResult = Float64::pack(self::FLOAT_VALUE);
+        $this->assertEquals(8, \strlen($encodeResult));
+        $this->assertEquals(self::FLOAT_VALUE, Float64::unpack($encodeResult, $size));
+        $this->assertEquals(8, $size);
+    }
+
+    public function testInt8(): void
+    {
+        $encodeResult = Int8::pack(Int8::MIN_VALUE);
+        $this->assertEquals(1, \strlen($encodeResult));
+        $this->assertEquals(Int8::MIN_VALUE, Int8::unpack($encodeResult, $size));
+        $this->assertEquals(1, $size);
+
+        $encodeResult = Int8::pack(Int8::MAX_VALUE);
+        $this->assertEquals(1, \strlen($encodeResult));
+        $this->assertEquals(Int8::MAX_VALUE, Int8::unpack($encodeResult, $size));
+        $this->assertEquals(1, $size);
+    }
+
+    public function testInt16(): void
+    {
+        $encodeResult = Int16::pack(Int16::MIN_VALUE);
+        $this->assertEquals(2, \strlen($encodeResult));
+        $this->assertEquals(Int16::MIN_VALUE, Int16::unpack($encodeResult, $size));
+        $this->assertEquals(2, $size);
+
+        $encodeResult = Int16::pack(Int16::MAX_VALUE);
+        $this->assertEquals(2, \strlen($encodeResult));
+        $this->assertEquals(Int16::MAX_VALUE, Int16::unpack($encodeResult, $size));
+        $this->assertEquals(2, $size);
+    }
+
+    public function testInt32(): void
+    {
+        $encodeResult = Int32::pack(Int32::MIN_VALUE);
+        $this->assertEquals(4, \strlen($encodeResult));
+        $this->assertEquals(Int32::MIN_VALUE, Int32::unpack($encodeResult, $size));
+        $this->assertEquals(4, $size);
+
+        $encodeResult = Int32::pack(Int32::MAX_VALUE);
+        $this->assertEquals(4, \strlen($encodeResult));
+        $this->assertEquals(Int32::MAX_VALUE, Int32::unpack($encodeResult, $size));
+        $this->assertEquals(4, $size);
+    }
+
+    public function testInt64(): void
+    {
+        $encodeResult = Int64::pack(Int64::MIN_VALUE);
+        $this->assertEquals(8, \strlen($encodeResult));
+        $this->assertEquals(Int64::MIN_VALUE, Int64::unpack($encodeResult, $size));
+        $this->assertEquals(8, $size);
+
+        $encodeResult = Int64::pack(Int64::MAX_VALUE);
+        $this->assertEquals(8, \strlen($encodeResult));
+        $this->assertEquals(Int64::MAX_VALUE, Int64::unpack($encodeResult, $size));
+        $this->assertEquals(8, $size);
+    }
+
+    public function testNullableString(): void
+    {
+        $encodeResult = NullableString::pack(self::TEST_STRING);
+        $this->assertEquals('00315048502069732074686520626573742070726f6772616d6d696e67206c616e677561676520696e2074686520776f726c64', bin2hex($encodeResult));
+        $this->assertEquals(self::TEST_STRING, NullableString::unpack($encodeResult, $size));
+        $this->assertEquals(2 + \strlen(self::TEST_STRING), $size);
+
+        $encodeResult = NullableString::pack(null);
+        $this->assertEquals('ffff', bin2hex($encodeResult));
+        $this->assertNull(NullableString::unpack($encodeResult, $size));
+        $this->assertEquals(2, $size);
+    }
+
+    public function testNullableString32(): void
+    {
+        $encodeResult = NullableString32::pack(self::TEST_STRING);
+        $this->assertEquals('000000315048502069732074686520626573742070726f6772616d6d696e67206c616e677561676520696e2074686520776f726c64', bin2hex($encodeResult));
+        $this->assertEquals(self::TEST_STRING, NullableString32::unpack($encodeResult, $size));
+        $this->assertEquals(4 + \strlen(self::TEST_STRING), $size);
+
+        $encodeResult = NullableString32::pack(null);
+        $this->assertEquals('ffffffff', bin2hex($encodeResult));
+        $this->assertNull(NullableString32::unpack($encodeResult, $size));
+        $this->assertEquals(4, $size);
+    }
+
+    public function testCompactNullableString(): void
+    {
+        $encodeResult = CompactNullableString::pack(self::TEST_STRING);
+        $this->assertEquals('325048502069732074686520626573742070726f6772616d6d696e67206c616e677561676520696e2074686520776f726c64', bin2hex($encodeResult));
+        $this->assertEquals(self::TEST_STRING, CompactNullableString::unpack($encodeResult, $size));
+        $this->assertEquals(1 + \strlen(self::TEST_STRING), $size);
+
+        $encodeResult = CompactNullableString::pack(null);
+        $this->assertEquals('00', bin2hex($encodeResult));
+        $this->assertNull(CompactNullableString::unpack($encodeResult, $size));
+        $this->assertEquals(1, $size);
+    }
+
+    public function testString16(): void
+    {
+        $encodeResult = String16::pack(self::TEST_STRING);
+        $this->assertEquals('00315048502069732074686520626573742070726f6772616d6d696e67206c616e677561676520696e2074686520776f726c64', bin2hex($encodeResult));
+        $this->assertEquals(self::TEST_STRING, String16::unpack($encodeResult, $size));
+        $this->assertEquals(2 + \strlen(self::TEST_STRING), $size);
+    }
+
+    public function testString32(): void
+    {
+        $encodeResult = String32::pack(self::TEST_STRING);
+        $this->assertEquals('000000315048502069732074686520626573742070726f6772616d6d696e67206c616e677561676520696e2074686520776f726c64', bin2hex($encodeResult));
+        $this->assertEquals(self::TEST_STRING, String32::unpack($encodeResult, $size));
+        $this->assertEquals(4 + \strlen(self::TEST_STRING), $size);
+    }
+
+    public function testUInt32(): void
+    {
+        $encodeResult = UInt32::pack(UInt32::MIN_VALUE);
+        $this->assertEquals(4, \strlen($encodeResult));
+        $this->assertEquals(UInt32::MIN_VALUE, UInt32::unpack($encodeResult, $size));
+        $this->assertEquals(4, $size);
+
+        $encodeResult = UInt32::pack(UInt32::MAX_VALUE);
+        $this->assertEquals(4, \strlen($encodeResult));
+        $this->assertEquals(UInt32::MAX_VALUE, UInt32::unpack($encodeResult, $size));
+        $this->assertEquals(4, $size);
+    }
+
+    public function testUVarInt(): void
+    {
+        foreach ([
+            UVarInt::MIN_VALUE => 1,
+            UVarInt::MAX_VALUE => 5,
+            2                  => 1,
+            16383              => 2,
+            2097151            => 3,
+            268435455          => 4,
+        ] as $number => $exceptedSize) {
+            $encodeResult = UVarInt::pack($number);
+            $this->assertEquals($number, UVarInt::unpack($encodeResult, $size));
+            $this->assertEquals($exceptedSize, $size, 'number ' . $number);
+        }
+    }
+
+    public function testVarInt(): void
+    {
+        foreach ([
+            VarInt::MIN_VALUE => 5,
+            VarInt::MAX_VALUE => 5,
+            2                 => 1,
+            16383             => 3,
+            2097151           => 4,
+            268435455         => 5,
+        ] as $number => $exceptedSize) {
+            $encodeResult = VarInt::pack($number);
+            $this->assertEquals($exceptedSize, \strlen($encodeResult), 'number ' . $number);
+            $this->assertEquals($number, VarInt::unpack($encodeResult, $size));
+            $this->assertEquals($exceptedSize, $size, 'number ' . $number);
+        }
+    }
+
+    public function testArrayInt32(): void
+    {
+        $exceptedArray = [1, 2, 3];
+        $encodeResult  = ArrayInt32::pack($exceptedArray, Int32::class);
+        $this->assertEquals('00000003000000010000000200000003', bin2hex($encodeResult));
+        $this->assertEquals($exceptedArray, ArrayInt32::unpack($encodeResult, $size, Int32::class));
+        $this->assertEquals(16, $size);
+
+        $exceptedArray = null;
+        $encodeResult  = ArrayInt32::pack($exceptedArray, Int32::class);
+        $this->assertEquals('ffffffff', bin2hex($encodeResult));
+        $this->assertEquals($exceptedArray, ArrayInt32::unpack($encodeResult, $size, Int32::class));
+        $this->assertEquals(4, $size);
+    }
+
+    public function testCompactArray(): void
+    {
+        $exceptedArray = [1, 2, 3];
+        $encodeResult  = CompactArray::pack($exceptedArray, Int32::class);
+        $this->assertEquals('04000000010000000200000003', bin2hex($encodeResult));
+        $this->assertEquals($exceptedArray, CompactArray::unpack($encodeResult, $size, Int32::class));
+        $this->assertEquals(13, $size);
+    }
+
+    public function testVarIntCompactArray(): void
+    {
+        $exceptedArray = [1, 2, 3];
+        $encodeResult  = VarIntCompactArray::pack($exceptedArray, Int32::class);
+        $this->assertEquals('06000000010000000200000003', bin2hex($encodeResult));
+        $this->assertEquals($exceptedArray, VarIntCompactArray::unpack($encodeResult, $size, Int32::class));
+        $this->assertEquals(13, $size);
+    }
+}

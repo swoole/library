@@ -66,6 +66,8 @@ jobs:
         run: |
           docker compose pull
           docker compose build
+          # --wait blocks on every service healthcheck, including kafka. The serial suite's
+          # Kafka/BrokerTest produces and consumes against that broker.
           docker compose up --wait --wait-timeout 180
 
           docker compose exec -T app php -v
