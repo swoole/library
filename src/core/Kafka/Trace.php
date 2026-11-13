@@ -18,6 +18,8 @@ use Swoole\Coroutine;
  *
  * Off unless SWOOLE_KAFKA_TRACE names a file. Each line is written through before the
  * call that may not return, so a CI step killed by its timeout still shows the last one.
+ * The write is not locked: the request coroutine and the socket reader both log, and an
+ * exclusive lock on a coroutine file stream is a warning that PHPUnit turns into a failure.
  */
 final class Trace
 {
@@ -32,11 +34,16 @@ final class Trace
         if ($file === null) {
             return;
         }
-        file_put_contents(
-            $file,
-            sprintf("%.6f cid=%d %s\n", microtime(true), Coroutine::getCid(), $message),
-            FILE_APPEND | LOCK_EX
-        );
+        // A failed trace write must not become the request's exception. Short appends stay one line.
+        try {
+            file_put_contents(
+                $file,
+                sprintf("%.6f cid=%d %s\n", microtime(true), Coroutine::getCid(), $message),
+                FILE_APPEND
+            );
+        } catch (\Throwable) {
+            // The reader coroutine treats a thrown warning as a dead connection.
+        }
     }
 
     /**

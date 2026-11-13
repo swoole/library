@@ -131,7 +131,8 @@ class Consumer
         $timerClass  = KafkaUtil::getTimerClass($config->getTimer());
         $this->timer = new $timerClass();
 
-        Trace::log('consumer construct ' . implode(',', $config->getTopic()));
+        // Topic names are filled in by resolveTopicPattern() when only a pattern was configured.
+        Trace::log('consumer construct');
         $this->broker = $broker = new Broker($config);
         if ($config->getUpdateBrokers()) {
             Trace::log('consumer update brokers');
@@ -141,8 +142,9 @@ class Consumer
         }
 
         if ($config->getTopicPattern() !== '') {
-            Trace::log('consumer topic pattern');
+            Trace::log('consumer topic pattern ' . $config->getTopicPattern());
             $this->resolveTopicPattern();
+            Trace::log('consumer topics ' . implode(',', $config->getTopic()));
         }
 
         if ($config->getAssignedPartitions() !== []) {
