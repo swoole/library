@@ -89,7 +89,7 @@ class RoundRobinAssignor extends AbstractPartitionAssignor
                     $consumerGroupTopic = $consumerGroupTopics[$topic];
                 } else {
                     $consumerGroupTopic = $consumerGroupTopics[$topic] = new ConsumerGroupTopic();
-                    $consumerGroupTopic->setTopicName($topic);
+                    $consumerGroupTopic->setTopicName((string) $topic);
                 }
                 $partitions   = $consumerGroupTopic->getPartitions();
                 $partitions[] = $topicAndPartition->getPartition();

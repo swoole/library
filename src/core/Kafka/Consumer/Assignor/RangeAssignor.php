@@ -71,7 +71,8 @@ class RangeAssignor extends AbstractPartitionAssignor
                 /** @var ConsumerGroupMemberAssignment $consumerGroupMemberAssignment */
                 $consumerGroupMemberAssignment = $topicMembers[$topicName][$memberIds[$i]]['assignment'];
                 $consumerGroupTopic            = new ConsumerGroupTopic();
-                $consumerGroupTopic->setTopicName($topicName);
+                // A numeric topic name is stored as an int when it is used as an array key.
+                $consumerGroupTopic->setTopicName((string) $topicName);
                 $consumerGroupTopic->setPartitions(\array_slice($topicPartitions, $start, $length));
                 $topics   = $consumerGroupMemberAssignment->getTopics();
                 $topics[] = $consumerGroupTopic;

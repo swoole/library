@@ -61,7 +61,7 @@ class StickyAssignor extends AbstractPartitionAssignor
 
             $topics = [];
             foreach ($topicPartitions as $topic => $partitions) {
-                $topics[$topic] = (new ConsumerGroupTopic())->setTopicName($topic)->setPartitions($partitions);
+                $topics[$topic] = (new ConsumerGroupTopic())->setTopicName((string) $topic)->setPartitions($partitions);
             }
 
             $consumerGroupMemberAssignment->setTopics($topics);
@@ -499,7 +499,8 @@ class StickyAssignor extends AbstractPartitionAssignor
         foreach ($partitions as $topic => $partitionIndexs) {
             sort($partitionIndexs);
             foreach ($partitionIndexs as $index) {
-                $result[$topic . '-' . $index] = new TopicAndPartition($topic, $index);
+                $topicName                         = (string) $topic;
+                $result[$topicName . '-' . $index] = new TopicAndPartition($topicName, $index);
             }
         }
 
