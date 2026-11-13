@@ -97,9 +97,15 @@ $producer->sendBatch([
 
 |参数名|说明|默认值|
 | - | - | - |
-| type | SASL授权对应的类。PLAIN为``\Swoole\Kafka\Sasl\PlainSasl::class``| ''|
-| username | 账号 | '' |
-| password | 密码 | '' |
+| type | SASL 机制类。见下方 PLAIN、SCRAM-SHA-512、AWS MSK IAM | ''|
+| username | 账号。PLAIN 和 SCRAM-SHA-512 使用 | '' |
+| password | 密码。PLAIN 和 SCRAM-SHA-512 使用 | '' |
+| verify_final_signature | SCRAM-SHA-512 是否校验服务端最后一条签名 | `false` |
+| region | AWS MSK IAM 的区域，必填 | '' |
+| key | AWS MSK IAM 的 access key。省略时使用 AWS 默认凭证链 | '' |
+| secret | AWS MSK IAM 的 secret | '' |
+| token | AWS MSK IAM 的 session token | '' |
+| expiration | AWS MSK IAM 签名有效期，例如 `+5 minutes` | `+5 minutes` |
 
 **代码示例：**
 
@@ -116,6 +122,31 @@ $config->setSasl([
 $producer = new Producer($config);
 // ....  你的业务代码
 ```
+
+### SCRAM-SHA-512
+
+类名：`Swoole\Kafka\Sasl\ScramSha512Sasl`。账号和密码与 PLAIN 相同。`verify_final_signature` 为 `true` 时校验服务端最后一条签名。
+
+```php
+$config->setSasl([
+    'type' => \Swoole\Kafka\Sasl\ScramSha512Sasl::class,
+    'username' => 'admin',
+    'password' => 'admin-secret',
+]);
+```
+
+### AWS MSK IAM
+
+类名：`Swoole\Kafka\Sasl\AwsMskIamSasl`。需要安装 `aws/aws-sdk-php`。`region` 必填。示例：`examples/kafka/producer_msk.php`。
+
+```php
+$config->setSasl([
+    'type' => \Swoole\Kafka\Sasl\AwsMskIamSasl::class,
+    'region' => 'eu-west-1',
+]);
+```
+
+自定义机制实现 `Swoole\Kafka\Sasl\SaslInterface`，在 `auth()` 里完成握手和认证。`Swoole\Kafka\Sasl\AbstractSasl` 提供这两步请求。
 
 ## SSL支持
 

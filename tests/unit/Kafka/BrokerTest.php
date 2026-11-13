@@ -91,7 +91,6 @@ class BrokerTest extends TestCase
             }
 
             $config = $this->consumerConfig($topic);
-            $config->setGroupInstanceId(null);
             $config->setMinBytes(3000);
             $config->setMaxWait(5000);
             $consumer = new Consumer($config, static function (): void {
@@ -201,6 +200,133 @@ class BrokerTest extends TestCase
                     }
                 }
                 $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testEarliestOffsetReadsRecordsProducedBeforeStart(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'already-there');
+
+            $config = $this->consumerConfig($topic);
+            $config->setAutoOffsetReset('earliest');
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $found    = null;
+                $deadline = microtime(true) + 20;
+                while ($found === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getValue() === 'already-there') {
+                        $found = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testNullGroupInstanceIdJoinsTheGroup(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'dynamic-member');
+
+            $config = $this->consumerConfig($topic);
+            $config->setGroupInstanceId(null);
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $found    = null;
+                $deadline = microtime(true) + 20;
+                while ($found === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getValue() === 'dynamic-member') {
+                        $found = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testStaticMemberRejoinsWithTheStoredMemberId(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'static-value');
+
+            $config = $this->consumerConfig($topic);
+            $config->setGroupInstanceId('instance-' . $topic);
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                (new \ReflectionMethod(Consumer::class, 'rejoin'))->invoke($consumer);
+                $found    = null;
+                $deadline = microtime(true) + 20;
+                while ($found === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getValue() === 'static-value') {
+                        $found = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $found);
+            } finally {
+                $consumer->close();
+            }
+        });
+    }
+
+    public function testFetchIsSkippedWhileTheHeartbeatIsStopped(): void
+    {
+        $this->inCoroutine(function (): void {
+            $topic = 'library-' . bin2hex(random_bytes(4));
+            $this->produce($topic, 'first');
+
+            $config   = $this->consumerConfig($topic);
+            $consumer = new Consumer($config, static function (): void {
+            });
+            try {
+                $first    = null;
+                $deadline = microtime(true) + 20;
+                while ($first === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getValue() === 'first') {
+                        $first = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $first);
+
+                $this->produce($topic, 'second');
+                (new \ReflectionMethod(Consumer::class, 'stopHeartbeat'))->invoke($consumer);
+                $seen         = null;
+                $blockedUntil = microtime(true) + 1;
+                while ($seen === null && microtime(true) < $blockedUntil) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage) {
+                        $seen = $message->getValue();
+                    }
+                }
+                $this->assertNull($seen);
+
+                (new \ReflectionMethod(Consumer::class, 'startHeartbeat'))->invoke($consumer);
+                $second   = null;
+                $deadline = microtime(true) + 20;
+                while ($second === null && microtime(true) < $deadline) {
+                    $message = $consumer->consume();
+                    if ($message instanceof ConsumeMessage && $message->getValue() === 'second') {
+                        $second = $message;
+                    }
+                }
+                $this->assertInstanceOf(ConsumeMessage::class, $second);
             } finally {
                 $consumer->close();
             }

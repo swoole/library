@@ -97,9 +97,15 @@ $producer->sendBatch([
 
 | Key | Description | Default |
 | - | - | - |
-| type | SASL Authentication Type. PLAIN is ``\Swoole\Kafka\Sasl\PlainSasl::class``| ''|
-| username | username  | '' |
-| password | password  | '' |
+| type | SASL mechanism class. See PLAIN, SCRAM-SHA-512 and AWS MSK IAM below. | ''|
+| username | Username. Used by PLAIN and SCRAM-SHA-512. | '' |
+| password | Password. Used by PLAIN and SCRAM-SHA-512. | '' |
+| verify_final_signature | SCRAM-SHA-512: check the server's final signature. | `false` |
+| region | AWS MSK IAM region. Required. | '' |
+| key | AWS MSK IAM access key. Omitted values use the AWS default credential chain. | '' |
+| secret | AWS MSK IAM secret. | '' |
+| token | AWS MSK IAM session token. | '' |
+| expiration | AWS MSK IAM signature lifetime, for example `+5 minutes`. | `+5 minutes` |
 
 **Example**
 
@@ -117,6 +123,31 @@ $config->setSasl([
 $producer = new Producer($config);
 // ....  Your Business Code
 ```
+
+### SCRAM-SHA-512
+
+Class `Swoole\Kafka\Sasl\ScramSha512Sasl`. Username and password use the same fields as PLAIN. Set `verify_final_signature` to `true` to check the server's final signature.
+
+```php
+$config->setSasl([
+    'type' => \Swoole\Kafka\Sasl\ScramSha512Sasl::class,
+    'username' => 'admin',
+    'password' => 'admin-secret',
+]);
+```
+
+### AWS MSK IAM
+
+Class `Swoole\Kafka\Sasl\AwsMskIamSasl`. Install `aws/aws-sdk-php`. `region` is required. See `examples/kafka/producer_msk.php`.
+
+```php
+$config->setSasl([
+    'type' => \Swoole\Kafka\Sasl\AwsMskIamSasl::class,
+    'region' => 'eu-west-1',
+]);
+```
+
+A custom mechanism implements `Swoole\Kafka\Sasl\SaslInterface` and performs the handshake and authentication in `auth()`. `Swoole\Kafka\Sasl\AbstractSasl` sends those two requests.
 
 ## SSL Support
 

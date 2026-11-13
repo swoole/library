@@ -10,6 +10,10 @@ Run a script with the library loaded from this repository:
 php -d swoole.enable_library=Off examples/kafka/producer.php
 ```
 
-LZ4 record batches need `exussum12/xxhash`. The sticky assignor needs `chdemko/sorted-collections`. Record-batch CRC32C uses `hash('crc32c')`.
+`ConsumerConfig::setAutoOffsetReset()` is `earliest` (the default) or `latest`. `setTopicPattern('#^prefix-#')` subscribes to topic names that match a PCRE. `setAssignedPartitions(['topic' => [0]])` reads those partitions without joining a group. `setGroupInstanceId(null)` is a dynamic member; a non-empty id is static membership and is reused when that consumer rejoins.
+
+SASL mechanisms implement `auth()` themselves. Built-in classes are `PlainSasl`, `ScramSha512Sasl` (`verify_final_signature`) and `AwsMskIamSasl`. The IAM mechanism needs `aws/aws-sdk-php`; `producer_msk.php` and `consumer_msk.php` show the configuration. The consumer and producer pages in `docs/kafka/` list every option.
+
+LZ4 record batches need `exussum12/xxhash`. The sticky assignor needs `chdemko/sorted-collections`. AWS MSK IAM needs `aws/aws-sdk-php`. Record-batch CRC32C uses `hash('crc32c')`.
 
 `generate-message.php` regenerates the protocol classes from `src/core/Kafka/resources/message`. It needs `colinodell/json5`.

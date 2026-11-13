@@ -213,6 +213,14 @@ class TypeTest extends TestCase
         UVarInt::unpack('', $size);
     }
 
+    public function testNullableStringPacksNullAsAbsent(): void
+    {
+        $size = 0;
+        $this->assertNull(NullableString::unpack(NullableString::pack(null), $size));
+        $size = 0;
+        $this->assertNull(CompactNullableString::unpack(CompactNullableString::pack(null), $size));
+    }
+
     public function testVarInt(): void
     {
         foreach ([
