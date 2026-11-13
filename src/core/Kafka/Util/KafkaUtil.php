@@ -71,12 +71,19 @@ class KafkaUtil
         }
         $errorCode = $response->getErrorCode();
         if (!ErrorCode::success($errorCode)) {
+            // The broker rejected the version it advertised. Ask for the next one down and send the request again.
+            if ($errorCode === ErrorCode::UNSUPPORTED_VERSION && $client->downgradeApiVersion((int) $request->getRequestApiKey())) {
+                return self::retry($client, $request, $retry, $sleep, $callbacks);
+            }
             if ($retry > 0 && ErrorCode::canRetry($errorCode)) {
+                // The coordinator or the socket may be the one that failed. Open a new connection before the next attempt.
+                $client->close();
+                $client->connect();
                 if ($sleep > 0) {
                     usleep((int) ($sleep * 1000000));
                 }
 
-                return self::retry($client, $request, $retry - 1, $sleep);
+                return self::retry($client, $request, $retry - 1, $sleep, $callbacks);
             }
             if (isset($callbacks[$errorCode])) {
                 $result = $callbacks[$errorCode]($response);
