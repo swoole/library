@@ -28,6 +28,7 @@ use Swoole\Kafka\Protocol\Fetch\FetchResponse;
 use Swoole\Kafka\Protocol\FindCoordinator\FindCoordinatorResponse;
 use Swoole\Kafka\Protocol\JoinGroup\JoinGroupRequestProtocol;
 use Swoole\Kafka\Timer\TimerInterface;
+use Swoole\Kafka\Trace;
 use Swoole\Kafka\Util\KafkaUtil;
 
 class Consumer
@@ -130,20 +131,25 @@ class Consumer
         $timerClass  = KafkaUtil::getTimerClass($config->getTimer());
         $this->timer = new $timerClass();
 
+        Trace::log('consumer construct ' . implode(',', $config->getTopic()));
         $this->broker = $broker = new Broker($config);
         if ($config->getUpdateBrokers()) {
+            Trace::log('consumer update brokers');
             $broker->updateBrokers();
         } else {
             $broker->setBrokers($config->getBroker());
         }
 
         if ($config->getTopicPattern() !== '') {
+            Trace::log('consumer topic pattern');
             $this->resolveTopicPattern();
         }
 
         if ($config->getAssignedPartitions() !== []) {
             $this->manualAssignment = true;
+            Trace::log('consumer assign configured');
             $this->assignConfiguredPartitions();
+            Trace::log('consumer construct done assigned');
 
             return;
         }
@@ -151,18 +157,23 @@ class Consumer
         $this->groupManager = $groupManager = new GroupManager($broker);
         $groupId            = $config->getGroupId();
 
+        Trace::log('consumer metadata ' . implode(',', $config->getTopic()));
         $this->broker->updateMetadata($config->getTopic());
 
         // findCoordinator
+        Trace::log('consumer coordinator ' . $groupId);
         $this->coordinator = $groupManager->findCoordinator($groupId, CoordinatorType::GROUP, $config->getGroupRetry(), $config->getGroupRetrySleep());
 
+        Trace::log('consumer rejoin ' . $groupId);
         $this->rejoin();
+        Trace::log('consumer construct done ' . $groupId);
     }
 
     public function rejoin(): void
     {
         rejoinBegin:
         try {
+            Trace::log(sprintf('rejoin begin member=%s', $this->memberId));
             $this->stopHeartbeat();
 
             $config       = $this->config;
@@ -210,6 +221,7 @@ class Consumer
 
             $this->rejoinAttempts = 0;
             $this->startHeartbeat();
+            Trace::log(sprintf('rejoin done member=%s generation=%d', $this->memberId, $this->generationId));
         } catch (KafkaErrorException $ke) {
             switch ($ke->getCode()) {
                 case ErrorCode::REBALANCE_IN_PROGRESS:
@@ -218,6 +230,7 @@ class Consumer
                     if (++$this->rejoinAttempts > $this->config->getGroupRetry()) {
                         throw $ke;
                     }
+                    Trace::log(sprintf('rejoin retry code=%d attempt=%d', $ke->getCode(), $this->rejoinAttempts));
                     goto rejoinBegin;
                 default:
                     throw $ke;
@@ -227,6 +240,7 @@ class Consumer
 
     public function close(): void
     {
+        Trace::log('consumer close member=' . $this->memberId);
         if (!$this->manualAssignment && $this->memberId !== '') {
             $config  = $this->config;
             $groupId = $config->getGroupId();
@@ -234,6 +248,7 @@ class Consumer
         }
         $this->broker->close();
         $this->stopHeartbeat();
+        Trace::log('consumer close done');
     }
 
     public function start(): void
@@ -337,10 +352,12 @@ class Consumer
         // A manually assigned consumer has no group generation and does not heartbeat.
         if (!$this->manualAssignment) {
             if ($this->heartbeatTimerId === null) {
+                Trace::log('fetch skipped heartbeat stopped');
                 return;
             }
             $this->checkBeartbeat();
         }
+        Trace::log('fetch begin');
 
         $config  = $this->config;
         $request = new FetchRequest();
@@ -359,6 +376,7 @@ class Consumer
         next($this->fetchOptions);
         if (empty($this->fetchOptions)) {
             // avoid dead cycle.
+            Trace::log('fetch sleep empty options');
             sleep(1);
         }
         if (!$currentList) {

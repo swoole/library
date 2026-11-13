@@ -29,6 +29,7 @@ use Swoole\Kafka\Protocol\Type\Int32;
 use Swoole\Kafka\Sasl\SaslInterface;
 use Swoole\Kafka\Socket\SocketInterface;
 use Swoole\Kafka\Socket\StreamSocket;
+use Swoole\Kafka\Trace;
 
 class SyncClient implements ClientInterface
 {
@@ -106,10 +107,14 @@ class SyncClient implements ClientInterface
 
     public function connect(): void
     {
+        Trace::log(sprintf('connect %s:%d', $this->getHost(), $this->getPort()));
         $this->socket->connect();
         $this->waitResponseMaps = [];
+        Trace::log(sprintf('connect api-versions %s:%d', $this->getHost(), $this->getPort()));
         $this->updateApiVersions();
+        Trace::log(sprintf('connect auth %s:%d', $this->getHost(), $this->getPort()));
         $this->sendAuthInfo();
+        Trace::log(sprintf('connect ready %s:%d', $this->getHost(), $this->getPort()));
     }
 
     public function close(): bool
@@ -167,9 +172,10 @@ class SyncClient implements ClientInterface
             $header->setClientId($this->getConfig()->getClientId());
             $header->setCorrelationId(++$this->correlationIdIncrValue);
         }
-        $kafkaRequest = new KafkaRequest($request, $header);
-        $this->socket->send($kafkaRequest->pack());
+        $kafkaRequest  = new KafkaRequest($request, $header);
         $correlationId = $header->getCorrelationId();
+        Trace::log(sprintf('send %s correlation=%d %s:%d', $request->getApiKeyText(), $correlationId, $this->getHost(), $this->getPort()));
+        $this->socket->send($kafkaRequest->pack());
 
         if ($hasResponse) {
             $this->waitResponseMaps[$correlationId] = [
@@ -188,7 +194,9 @@ class SyncClient implements ClientInterface
             throw new \InvalidArgumentException(sprintf('Invalid correlationId %s', $correlationId));
         }
         $mapData = $this->waitResponseMaps[$correlationId];
-        $data    = $this->readFrame();
+        Trace::log(sprintf('recv correlation=%s %s:%d', $correlationId, $this->getHost(), $this->getPort()));
+        $data = $this->readFrame();
+        Trace::log(sprintf('recv done correlation=%s %s:%d', $correlationId, $this->getHost(), $this->getPort()));
         $header  = new ResponseHeader();
         $header->unpack($data, $size, ResponseHeader::parseVersion($mapData['apiVersion'], $mapData['flexibleVersions']));
         $data = substr($data, $size);
@@ -210,6 +218,7 @@ class SyncClient implements ClientInterface
                 throw $e;
             }
             // The broker drops an idle connection. Open another and send the request once more.
+            Trace::log(sprintf('sendRecv reconnect %s %s:%d %s', $request->getApiKeyText(), $this->getHost(), $this->getPort(), $e->getMessage()));
             $this->reconnecting = true;
             try {
                 $this->close();

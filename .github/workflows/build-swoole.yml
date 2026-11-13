@@ -100,6 +100,10 @@ jobs:
         timeout-minutes: 5
         if: matrix.php == '8.2' || matrix.php == '8.5'
         working-directory: ./swoole/library
+        env:
+          # Read by Swoole\Kafka\Trace. Each line is flushed before the call that may not return,
+          # so a step killed by the timeout above still shows the last Kafka operation.
+          SWOOLE_KAFKA_TRACE: /tmp/swoole-kafka-broker.trace
         run: |
           concurrent=0
           serial=0
@@ -116,11 +120,13 @@ jobs:
         run: |
           docker compose -f docker-compose.yml -f docker-compose.host.yml ps --all
           docker compose -f docker-compose.yml -f docker-compose.host.yml logs --no-color --tail 200
+          echo '--- kafka trace ---'
+          tail -n 200 /tmp/swoole-kafka-broker.trace || true
 
       - name: Upload test trace
         if: always() && (matrix.php == '8.2' || matrix.php == '8.5')
         uses: actions/upload-artifact@v4
         with:
           name: test-trace-${{ matrix.php }}
-          path: /tmp/swoole-function-test.trace
+          path: /tmp/swoole-*.trace
           if-no-files-found: ignore

@@ -15,6 +15,7 @@ use Swoole\Coroutine\Client;
 use Swoole\Kafka\Config\CommonConfig;
 use Swoole\Kafka\Exception\ConnectionException;
 use Swoole\Kafka\Exception\SocketException;
+use Swoole\Kafka\Trace;
 
 class SwooleSocket implements SocketInterface
 {
@@ -92,7 +93,9 @@ class SwooleSocket implements SocketInterface
         $config = $this->config;
         $client = new Client($this->getClientType());
         $client->set($this->getClientConfig());
+        Trace::log(sprintf('socket connect %s:%d timeout=%s', $this->host, $this->port, $config->getConnectTimeout()));
         if ($client->connect($this->host, $this->port, $config->getConnectTimeout())) {
+            Trace::log(sprintf('socket connect done %s:%d', $this->host, $this->port));
             $this->socket = $client;
         } else {
             throw new ConnectionException(sprintf('Could not connect to tcp://%s:%s (%s [%d])', $this->host, $this->port, $client->errMsg, $client->errCode));
@@ -127,6 +130,7 @@ class SwooleSocket implements SocketInterface
         if ($timeout === null) {
             $timeout = $this->config->getRecvTimeout();
         }
+        Trace::log(sprintf('socket recv %s:%d len=%d timeout=%s', $this->host, $this->port, $length, $timeout));
         $leftTime = $timeout;
         while ($this->socket && !isset($this->receivedBuffer[$length - 1]) && ($timeout == -1 || $leftTime > 0)) {
             $buffer = $this->socket->recv($timeout);
@@ -145,6 +149,7 @@ class SwooleSocket implements SocketInterface
         if (isset($this->receivedBuffer[$length - 1])) {
             $result               = substr($this->receivedBuffer, 0, $length);
             $this->receivedBuffer = substr($this->receivedBuffer, $length);
+            Trace::log(sprintf('socket recv done %s:%d len=%d', $this->host, $this->port, $length));
 
             return $result;
         }

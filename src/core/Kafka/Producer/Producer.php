@@ -21,6 +21,7 @@ use Swoole\Kafka\Protocol\Produce\TopicProduceData;
 use Swoole\Kafka\Protocol\RecordBatch\Record;
 use Swoole\Kafka\Protocol\RecordBatch\RecordBatch;
 use Swoole\Kafka\Protocol\RecordBatch\RecordHeader;
+use Swoole\Kafka\Trace;
 
 class Producer
 {
@@ -67,6 +68,7 @@ class Producer
      */
     public function sendBatch(array $messages): void
     {
+        Trace::log('produce begin count=' . \count($messages));
         $config  = $this->config;
         $broker  = $this->broker;
         $request = new ProduceRequest();
@@ -196,14 +198,18 @@ class Producer
                 if ($retryCount === $produceRetry) {
                     ErrorCode::check($lastError);
                 }
+                Trace::log(sprintf('produce retry broker=%s count=%d', $brokerId, $retryCount));
                 usleep((int) ($produceRetrySleep * 1000000));
             }
         }
+        Trace::log('produce end');
     }
 
     public function close(): void
     {
+        Trace::log('producer close');
         $this->broker->close();
+        Trace::log('producer close done');
     }
 
     public function getConfig(): ProducerConfig

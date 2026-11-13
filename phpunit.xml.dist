@@ -23,6 +23,7 @@
       <exclude>tests/unit/Process/ProcessManagerTest.php</exclude>
       <exclude>tests/unit/RemoteObject/DefaultServerTest.php</exclude>
       <exclude>tests/unit/Kafka/BrokerTest.php</exclude>
+      <exclude>tests/unit/Kafka/TraceTest.php</exclude>
     </testsuite>
     <!--
       Run with ./vendor/bin/phpunit. These tests cannot share a run with the ones above:
@@ -56,6 +57,8 @@
       - Kafka/BrokerTest produces and consumes on the shared Kafka broker, so two of them at once would
         read each other's records. It also calls Coroutine::run(), and counit has already started the
         scheduler, which refuses a second one.
+      - Kafka/TraceTest sets the process-wide SWOOLE_KAFKA_TRACE variable. A Kafka client running at the
+        same time would write its requests into that file, or stop writing the CI artifact.
     -->
     <testsuite name="serial">
       <file>tests/unit/NameResolver/ServerLifecycleTest.php</file>
@@ -67,6 +70,7 @@
       <file>tests/unit/Process/ProcessManagerTest.php</file>
       <file>tests/unit/RemoteObject/DefaultServerTest.php</file>
       <file>tests/unit/Kafka/BrokerTest.php</file>
+      <file>tests/unit/Kafka/TraceTest.php</file>
     </testsuite>
   </testsuites>
   <extensions>

@@ -93,7 +93,11 @@ jobs:
       - name: Run Unit Tests
         timeout-minutes: 5
         if: matrix.php == '8.2' || matrix.php == '8.5'
-        run: docker compose exec -T app composer test
+        env:
+          # The app container sees the checkout at /var/www. Swoole\Kafka\Trace appends there before
+          # each call that may not return, and the upload step below keeps the file.
+          SWOOLE_KAFKA_TRACE: /var/www/ci-trace/kafka-broker.trace
+        run: docker compose exec -T -e SWOOLE_KAFKA_TRACE app composer test
 
       - name: Dump Test Environment On Failure
         if: failure()
@@ -104,6 +108,16 @@ jobs:
         run: |
           docker compose ps --all
           docker compose logs --no-color --tail 200
+          echo '--- kafka trace ---'
+          tail -n 200 ci-trace/kafka-broker.trace || true
+
+      - name: Upload test trace
+        if: always() && (matrix.php == '8.2' || matrix.php == '8.5')
+        uses: actions/upload-artifact@v4
+        with:
+          name: kafka-trace-${{ matrix['image-tag-prefix'] }}php${{ matrix.php }}
+          path: ci-trace/
+          if-no-files-found: ignore
 
   # The Swoole\Thread classes only exist in a thread-safe (ZTS) build of PHP, which the app image is not, so the
   # tests of tests/unit/Thread are left out of both test suites and run here, in the ZTS images of

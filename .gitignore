@@ -20,6 +20,9 @@
 thread_runner.php
 thread_runner_*.php
 
+# Trace written when SWOOLE_KAFKA_TRACE points into the workspace (the Tests workflow).
+/ci-trace/
+
 # Ignore project files.
 /Dockerfile.bak
 /html/*

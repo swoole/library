@@ -24,6 +24,7 @@ use Swoole\Kafka\Consumer\ConsumerConfig;
 use Swoole\Kafka\Producer\Producer;
 use Swoole\Kafka\Producer\ProducerConfig;
 use Swoole\Kafka\Socket\StreamSocket;
+use Swoole\Kafka\Trace;
 use Swoole\Tests\TestCase;
 
 /**
@@ -35,6 +36,18 @@ use Swoole\Tests\TestCase;
  */
 class BrokerTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Trace::log('TEST START ' . $this->getName());
+    }
+
+    protected function tearDown(): void
+    {
+        Trace::log('TEST END ' . $this->getName());
+        parent::tearDown();
+    }
+
     public function testSyncClientReadsApiVersions(): void
     {
         $this->inCoroutine(function (): void {
@@ -419,13 +432,18 @@ class BrokerTest extends TestCase
     private function inCoroutine(callable $callback): void
     {
         $error = null;
+        Trace::log('scheduler begin ' . $this->getName());
         Coroutine\run(static function () use ($callback, &$error): void {
             try {
+                Trace::log('scheduler callback begin');
                 $callback();
+                Trace::log('scheduler callback end');
             } catch (\Throwable $throwable) {
+                Trace::log('scheduler callback threw ' . $throwable::class . ': ' . $throwable->getMessage());
                 $error = $throwable;
             }
         });
+        Trace::log('scheduler end ' . $this->getName());
         if ($error instanceof \Throwable) {
             throw $error;
         }

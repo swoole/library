@@ -23,6 +23,7 @@ use Swoole\Kafka\Protocol\RequestHeader\RequestHeader;
 use Swoole\Kafka\Protocol\ResponseHeader\ResponseHeader;
 use Swoole\Kafka\Protocol\Type\Int32;
 use Swoole\Kafka\Socket\SwooleSocket;
+use Swoole\Kafka\Trace;
 
 class SwooleClient extends SyncClient
 {
@@ -89,6 +90,7 @@ class SwooleClient extends SyncClient
         }
         $kafkaRequest                       = new KafkaRequest($request, $header);
         $correlationId                      = $header->getCorrelationId();
+        Trace::log(sprintf('send %s correlation=%d %s:%d', $request->getApiKeyText(), $correlationId, $this->getHost(), $this->getPort()));
         $this->recvChannels[$correlationId] = new Channel(1);
         if ($hasResponse) {
             $this->waitResponseMaps[$correlationId] = [
@@ -117,7 +119,10 @@ class SwooleClient extends SyncClient
         } else {
             $this->recvChannels[$correlationId] = $channel = new Channel(1);
         }
-        $data = $channel->pop($this->getConfig()->getRecvTimeout());
+        $timeout = $this->getConfig()->getRecvTimeout();
+        Trace::log(sprintf('recv pop correlation=%s timeout=%s %s:%d', $correlationId, $timeout, $this->getHost(), $this->getPort()));
+        $data = $channel->pop($timeout);
+        Trace::log(sprintf('recv pop done correlation=%s %s', $correlationId, $data === false ? 'timeout' : ($data instanceof \Throwable ? $data::class : 'frame')));
         unset($this->recvChannels[$correlationId]);
         if ($data === false) {
             throw new \RuntimeException('Recv data timeout');
@@ -139,7 +144,9 @@ class SwooleClient extends SyncClient
     private function startRecvCo(): void
     {
         $this->coRecvRunning = true;
-        $this->recvCoId      = Coroutine::create(function () {
+        Trace::log(sprintf('recv co create %s:%d', $this->getHost(), $this->getPort()));
+        $this->recvCoId = Coroutine::create(function () {
+            Trace::log(sprintf('recv co enter %s:%d', $this->getHost(), $this->getPort()));
             while ($this->coRecvRunning) {
                 try {
                     $data = $this->socket->recv(4, -1);
@@ -162,6 +169,7 @@ class SwooleClient extends SyncClient
                         $this->recvChannels[$correlationId]->push($data);
                     }
                 } catch (\Exception $e) {
+                    Trace::log(sprintf('recv co fail %s:%d %s: %s', $this->getHost(), $this->getPort(), $e::class, $e->getMessage()));
                     if (!($e instanceof SocketException && !$this->connected)) {
                         $callback = $this->getConfig()->getExceptionCallback();
                         if ($callback) {
@@ -174,6 +182,7 @@ class SwooleClient extends SyncClient
             }
             $this->coRecvRunning = false;
             $this->connected     = false;
+            Trace::log(sprintf('recv co exit %s:%d', $this->getHost(), $this->getPort()));
             $this->socket->close();
         });
     }

@@ -14,6 +14,7 @@ namespace Swoole\Kafka\Socket;
 use Swoole\Kafka\Config\CommonConfig;
 use Swoole\Kafka\Exception\ConnectionException;
 use Swoole\Kafka\Exception\SocketException;
+use Swoole\Kafka\Trace;
 
 class StreamSocket implements SocketInterface
 {
@@ -88,6 +89,7 @@ class StreamSocket implements SocketInterface
         if ($timeout < 0) {
             $timeout = null;
         }
+        Trace::log(sprintf('socket connect %s timeout=%s', $uri, $timeout === null ? '-1' : $timeout));
         $socket = stream_socket_client(
             $uri,
             $errno,
@@ -186,7 +188,9 @@ class StreamSocket implements SocketInterface
         if ($timeout === null) {
             $timeout = $this->config->getRecvTimeout();
         }
+        Trace::log(sprintf('socket recv %s len=%d timeout=%s', $this->getURI(), $length, $timeout));
         $readable = $this->select([$this->socket], $timeout);
+        Trace::log(sprintf('socket recv selected %s len=%d readable=%s', $this->getURI(), $length, $readable === false ? 'false' : (string) $readable));
 
         if ($readable === false) {
             $this->close();
