@@ -44,7 +44,15 @@ class UVarInt extends AbstractType
         $result = 0;
         $i      = 0;
         $size   = 0;
-        while (0 != (($b = \ord($value[$size++])) & 0x80)) {
+        $length = \strlen($value);
+        while (true) {
+            if ($size >= $length) {
+                throw new \InvalidArgumentException('incomplete Varint');
+            }
+            $b = \ord($value[$size++]);
+            if (0 == ($b & 0x80)) {
+                break;
+            }
             $result |= ($b & 0x7F) << $i;
             $i += 7;
             if ($i > 28) {

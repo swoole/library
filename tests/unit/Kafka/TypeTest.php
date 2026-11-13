@@ -206,6 +206,13 @@ class TypeTest extends TestCase
         }
     }
 
+    public function testUVarIntRejectsAnEmptyBuffer(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $size = 0;
+        UVarInt::unpack('', $size);
+    }
+
     public function testVarInt(): void
     {
         foreach ([

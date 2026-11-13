@@ -160,83 +160,15 @@ class RecordBatch extends AbstractStruct
             return;
         }
         $size += $length;
-        $data = substr($data, $tmpSize, $length);
-
-        $this->baseOffset = Int64::unpack($data, $tmpSize);
-        $data             = substr($data, $tmpSize);
-
-        $this->batchLength = Int32::unpack($data, $tmpSize);
-        $data              = substr($data, $tmpSize);
-
-        $this->partitionLeaderEpoch = Int32::unpack($data, $tmpSize);
-        $data                       = substr($data, $tmpSize);
-
-        $this->magic = Int8::unpack($data, $tmpSize);
-        $data        = substr($data, $tmpSize);
-
-        $this->crc = Int32::unpack($data, $tmpSize);
-        $data      = substr($data, $tmpSize);
-
-        if (ProtocolUtil::int32(hexdec(ProtocolUtil::crc32c($data))) !== $this->crc) {
-            throw new CRC32Exception('crc32 verification failed');
-        }
-
-        $this->attributes->setValue(Int16::unpack($data, $tmpSize));
-        $data = substr($data, $tmpSize);
-
-        $this->lastOffsetDelta = Int32::unpack($data, $tmpSize);
-        $data                  = substr($data, $tmpSize);
-
-        $this->firstTimestamp = Int64::unpack($data, $tmpSize);
-        $data                 = substr($data, $tmpSize);
-
-        $this->maxTimestamp = Int64::unpack($data, $tmpSize);
-        $data               = substr($data, $tmpSize);
-
-        $this->producerId = Int64::unpack($data, $tmpSize);
-        $data             = substr($data, $tmpSize);
-
-        $this->producerEpoch = Int16::unpack($data, $tmpSize);
-        $data                = substr($data, $tmpSize);
-
-        $this->baseSequence = Int32::unpack($data, $tmpSize);
-        $data               = substr($data, $tmpSize);
-
-        $lengthBin = substr($data, 0, 4);
-        $data      = substr($data, 4);
-
-        $compression = $this->attributes->getCompression();
-        if ($compression !== Compression::NONE) {
-            switch ($compression) {
-                case Compression::GZIP:
-                    $data = gzdecode($data);
-                    break;
-                case Compression::SNAPPY:
-                    if (\function_exists('snappy_uncompress')) {
-                        $data = snappy_uncompress($data);
-                    } else {
-                        throw new \RuntimeException('Please install and enable snappy extension first: https://github.com/kjdev/php-ext-snappy');
-                    }
-                    break;
-                case Compression::LZ4:
-                    if (\function_exists('lz4_uncompress')) {
-                        $data = LZ4::uncompress($data);
-                    } else {
-                        throw new \RuntimeException('Please install and enable lz4 extension first: https://github.com/kjdev/php-ext-lz4');
-                    }
-                    break;
-                case Compression::ZSTD:
-                    if (\function_exists('zstd_uncompress')) {
-                        $data = zstd_uncompress($data);
-                    } else {
-                        throw new \RuntimeException('Please install and enable zstd extension first: https://github.com/kjdev/php-ext-zstd');
-                    }
-                    break;
-                default:
-                    throw new UnsupportedCompressionException(sprintf('Unsupport compression %s', $compression));
+        $payload       = substr($data, $tmpSize, $length);
+        $this->records = [];
+        // A fetch can return several batches. The CRC covers one batch, not the batches that follow it.
+        while ($payload !== '') {
+            $records = $this->unpackBatch($payload);
+            foreach ($records as $record) {
+                $this->records[] = $record;
             }
         }
-        $this->records = ArrayInt32::unpack($lengthBin . $data, $tmpSize, Record::class);
     }
 
     public function toArray(): array
@@ -415,5 +347,95 @@ class RecordBatch extends AbstractStruct
         $this->records = $records;
 
         return $this;
+    }
+
+    /**
+     * @return Record[]
+     */
+    private function unpackBatch(string &$payload): array
+    {
+        $this->baseOffset = Int64::unpack($payload, $tmpSize);
+        $payload          = substr($payload, $tmpSize);
+
+        $this->batchLength = Int32::unpack($payload, $tmpSize);
+        $payload           = substr($payload, $tmpSize);
+
+        // batchLength counts the bytes after itself. The CRC covers the bytes after the CRC field.
+        $crcLength = $this->batchLength - 9;
+        if ($crcLength < 0 || \strlen($payload) < 9 + $crcLength) {
+            throw new CRC32Exception('truncated record batch');
+        }
+        $batch   = substr($payload, 0, 9 + $crcLength);
+        $payload = substr($payload, 9 + $crcLength);
+
+        $this->partitionLeaderEpoch = Int32::unpack($batch, $tmpSize);
+        $batch                      = substr($batch, $tmpSize);
+
+        $this->magic = Int8::unpack($batch, $tmpSize);
+        $batch       = substr($batch, $tmpSize);
+
+        $this->crc = Int32::unpack($batch, $tmpSize);
+        $data      = substr($batch, $tmpSize);
+
+        if (ProtocolUtil::int32(hexdec(ProtocolUtil::crc32c($data))) !== $this->crc) {
+            throw new CRC32Exception('crc32 verification failed');
+        }
+
+        $this->attributes->setValue(Int16::unpack($data, $tmpSize));
+        $data = substr($data, $tmpSize);
+
+        $this->lastOffsetDelta = Int32::unpack($data, $tmpSize);
+        $data                  = substr($data, $tmpSize);
+
+        $this->firstTimestamp = Int64::unpack($data, $tmpSize);
+        $data                 = substr($data, $tmpSize);
+
+        $this->maxTimestamp = Int64::unpack($data, $tmpSize);
+        $data               = substr($data, $tmpSize);
+
+        $this->producerId = Int64::unpack($data, $tmpSize);
+        $data             = substr($data, $tmpSize);
+
+        $this->producerEpoch = Int16::unpack($data, $tmpSize);
+        $data                = substr($data, $tmpSize);
+
+        $this->baseSequence = Int32::unpack($data, $tmpSize);
+        $data               = substr($data, $tmpSize);
+
+        $lengthBin = substr($data, 0, 4);
+        $data      = substr($data, 4);
+
+        $compression = $this->attributes->getCompression();
+        if ($compression !== Compression::NONE) {
+            switch ($compression) {
+                case Compression::GZIP:
+                    $data = gzdecode($data);
+                    break;
+                case Compression::SNAPPY:
+                    if (\function_exists('snappy_uncompress')) {
+                        $data = snappy_uncompress($data);
+                    } else {
+                        throw new \RuntimeException('Please install and enable snappy extension first: https://github.com/kjdev/php-ext-snappy');
+                    }
+                    break;
+                case Compression::LZ4:
+                    if (\function_exists('lz4_uncompress')) {
+                        $data = LZ4::uncompress($data);
+                    } else {
+                        throw new \RuntimeException('Please install and enable lz4 extension first: https://github.com/kjdev/php-ext-lz4');
+                    }
+                    break;
+                case Compression::ZSTD:
+                    if (\function_exists('zstd_uncompress')) {
+                        $data = zstd_uncompress($data);
+                    } else {
+                        throw new \RuntimeException('Please install and enable zstd extension first: https://github.com/kjdev/php-ext-zstd');
+                    }
+                    break;
+                default:
+                    throw new UnsupportedCompressionException(sprintf('Unsupport compression %s', $compression));
+            }
+        }
+        return ArrayInt32::unpack($lengthBin . $data, $tmpSize, Record::class) ?? [];
     }
 }
