@@ -128,13 +128,14 @@ jobs:
         run: |
           # safe.directory: the checkout belongs to the runner user, and the container runs as root (see
           # docker-compose.yml). The image has no MongoDB extension, which mongodb/mongodb asks for.
-          # xxhash asks for bcmath; these tests never load it. The app image installs bcmath instead.
+          # xxhash requires bcmath, which this image does not ship.
           docker run --rm -v "$(pwd):/var/www" -w /var/www \
             -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/var/www \
             "phpswoole/swoole:php${{ matrix.php }}-zts" sh -e -c '
               php -v
               php --ri swoole
-              composer install -n -q --no-progress --ignore-platform-req=ext-mongodb --ignore-platform-req=ext-bcmath
+              docker-php-ext-install bcmath
+              composer install -n -q --no-progress --ignore-platform-req=ext-mongodb
               php -d swoole.enable_library=Off ./vendor/bin/phpunit --no-configuration --bootstrap tests/bootstrap.php tests/unit/Thread
               php -d swoole.enable_library=Off examples/thread/pool.php
             '

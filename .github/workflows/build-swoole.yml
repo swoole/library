@@ -26,7 +26,7 @@ jobs:
           # The extensions are what the unit tests below need (setup-php installs the Oracle Instant Client
           # for pdo_oci). They are installed on every PHP version of the matrix, so a version where one of
           # them cannot be installed fails visibly here even though tests run on a subset of the matrix.
-          extensions: gd, mysqli, pdo_mysql, pdo_pgsql, pdo_sqlite, pdo_oci, pcntl, posix, redis, mongodb, sockets
+          extensions: bcmath, gd, mysqli, pdo_mysql, pdo_pgsql, pdo_sqlite, pdo_oci, pcntl, posix, redis, mongodb, sockets
           tools: composer:v2, phpize
           coverage: none
 
