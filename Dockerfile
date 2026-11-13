@@ -91,7 +91,8 @@ ARG BUILD_JOBS=""
 ARG PDO_OCI_VERSION=1.2.0
 RUN <<'EOF'
     jobs="${BUILD_JOBS:-$(nproc)}"
-    docker-php-ext-install -j"${jobs}" mysqli pdo_pgsql
+    # bcmath: exussum12/xxhash, required to exercise Kafka LZ4 record batches.
+    docker-php-ext-install -j"${jobs}" mysqli pdo_pgsql bcmath
     docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp --with-xpm --with-avif
     docker-php-ext-install -j"${jobs}" gd
     export ORACLE_HOME=instantclient,/usr/local/instantclient
@@ -103,7 +104,7 @@ RUN <<'EOF'
     fi
     mkdir /out
     ext_dir="$(php-config --extension-dir)"
-    for ext in mysqli pdo_pgsql gd pdo_oci ; do
+    for ext in mysqli pdo_pgsql gd pdo_oci bcmath ; do
         strip --strip-all -o "/out/${ext}.so" "${ext_dir}/${ext}.so"
     done
     runtime-packages /out/*.so /usr/local/instantclient/*.so* > /out/runtime-packages
@@ -165,7 +166,7 @@ RUN --mount=type=bind,from=extensions,source=/out,target=/mnt/extensions \
     php -m
     php --ri swoole
     # Fail the build, not the tests, when an extension or a Swoole feature is missing.
-    for extension in curl gd mongodb mysqli pdo_mysql pdo_oci pdo_pgsql pdo_sqlite redis sockets swoole ; do
+    for extension in bcmath curl gd mongodb mysqli pdo_mysql pdo_oci pdo_pgsql pdo_sqlite redis sockets swoole ; do
         php -r 'exit(extension_loaded($argv[1]) ? 0 : 1);' "${extension}" || { echo "Extension ${extension} is missing." ; exit 1 ; }
     done
     php -r 'exit(ini_get("swoole.enable_library") ? 1 : 0);' || { echo "swoole.enable_library is on." ; exit 1 ; }
