@@ -389,27 +389,58 @@ class HandlerTest extends TestCase
     public function testResolveWithSeveralAddressesNoneOfWhichWorks(): void
     {
         self::coRun(function () {
-            $host = HTTPBIN_SERVER_HOST;
-            $port = HTTPBIN_SERVER_PORT;
-            $ch   = curl_init();
+            // Reserve a local port without listening, so both addresses refuse the connection immediately.
+            $socket = new Coroutine\Socket(AF_INET, SOCK_STREAM, 0);
+            self::assertTrue($socket->bind('127.0.0.1', 0));
+            $port = $socket->getsockname()['port'];
+            $ch   = curl_init("http://resolve.test:{$port}/");
 
-            curl_setopt($ch, CURLOPT_URL, HTTPBIN_SERVER_URL . '/get');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            curl_setopt($ch, CURLOPT_RESOLVE, ["{$host}:{$port}:192.0.2.1,198.51.100.1"]);
+            // Address iteration is independent of the timeout budget, which is checked in a separate test.
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 0);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["resolve.test:{$port}:127.0.0.1,127.0.0.2"]);
             $tried = [];
             curl_setopt($ch, CURLOPT_PREREQFUNCTION, function ($handler, string $primaryIp) use (&$tried): int {
                 $tried[] = $primaryIp;
                 return CURL_PREREQFUNC_OK;
             });
 
-            $start = microtime(true);
-            self::assertFalse(curl_exec($ch));
-            self::assertSame(['192.0.2.1', '198.51.100.1'], $tried, 'Every address was tried, in turn.');
-            self::assertLessThan(1.8, microtime(true) - $start, 'CURLOPT_CONNECTTIMEOUT is the time to connect to any of the addresses.');
-            self::assertNotSame(0, curl_errno($ch));
-            self::assertSame('', curl_getinfo($ch, CURLINFO_PRIMARY_IP));
+            try {
+                self::assertFalse(curl_exec($ch));
+                self::assertSame(['127.0.0.1', '127.0.0.2'], $tried, 'Every address was tried, in turn.');
+                self::assertSame(CURLE_COULDNT_CONNECT, curl_errno($ch));
+                self::assertSame('', curl_getinfo($ch, CURLINFO_PRIMARY_IP));
+            } finally {
+                $socket->close();
+            }
+        });
+    }
+
+    public function testResolveStopsAfterSharedConnectTimeout(): void
+    {
+        self::coRun(function () {
+            $socket = new Coroutine\Socket(AF_INET, SOCK_STREAM, 0);
+            self::assertTrue($socket->bind('127.0.0.1', 0));
+            $port = $socket->getsockname()['port'];
+            $ch   = curl_init("http://resolve.test:{$port}/");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 1);
+            curl_setopt($ch, CURLOPT_RESOLVE, ["resolve.test:{$port}:127.0.0.1,127.0.0.2"]);
+            $tried = [];
+            curl_setopt($ch, CURLOPT_PREREQFUNCTION, static function ($handler, string $primaryIp) use (&$tried): int {
+                $tried[] = $primaryIp;
+                // Exhaust the shared budget before a connection is refused; no upper bound on elapsed time is needed.
+                Coroutine::sleep(0.01);
+                return CURL_PREREQFUNC_OK;
+            });
+            try {
+                self::assertFalse(curl_exec($ch));
+                self::assertSame(['127.0.0.1'], $tried, 'An exhausted connect budget must prevent the next address from being tried.');
+                self::assertNotSame(0, curl_errno($ch));
+            } finally {
+                $socket->close();
+            }
         });
     }
 
@@ -421,16 +452,15 @@ class HandlerTest extends TestCase
     {
         self::coRun(function () {
             // A port nothing listens on, for now: 127.0.0.1 and 127.0.0.2 refuse the connection at once. The socket
-            // only finds a free port; it never listens.
+            // reserves the port until the first request has failed; it never listens.
             $socket = new Coroutine\Socket(AF_INET, SOCK_STREAM, 0);
             self::assertTrue($socket->bind('127.0.0.1', 0));
             $port = $socket->getsockname()['port'];
-            $socket->close();
 
             $ch = curl_init("http://resolve.test:{$port}/");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 0);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 0);
             curl_setopt($ch, CURLOPT_RESOLVE, ["resolve.test:{$port}:127.0.0.1,127.0.0.2"]);
             $tried = [];
             curl_setopt($ch, CURLOPT_PREREQFUNCTION, function ($handler, string $primaryIp) use (&$tried): int {
@@ -438,8 +468,12 @@ class HandlerTest extends TestCase
                 return CURL_PREREQFUNC_OK;
             });
 
-            self::assertFalse(curl_exec($ch));
-            self::assertSame(['127.0.0.1', '127.0.0.2'], $tried);
+            try {
+                self::assertFalse(curl_exec($ch));
+                self::assertSame(['127.0.0.1', '127.0.0.2'], $tried);
+            } finally {
+                $socket->close();
+            }
 
             $server = new Server('127.0.0.1', $port);
             Coroutine\go(function () use ($server) {

@@ -56,27 +56,39 @@ class WaitGroupTest extends TestCase
     public function testWait(): void
     {
         self::coRun(function () {
-            $wg = new WaitGroup(4);
-            $N  = 4;
-            $st = microtime(true);
+            $N        = 4;
+            $wg       = new WaitGroup($N);
+            $ready    = new Channel($N);
+            $release  = new Channel($N);
+            $finished = new Channel($N);
+            $observed = new Channel(1);
+            $returned = false;
             foreach (range(1, $N) as $i) {
-                \Swoole\Coroutine::create(function () use ($wg) {
-                    System::sleep(0.5);
+                \Swoole\Coroutine::create(static function () use ($wg, $ready, $release, $finished): void {
+                    $ready->push(true);
+                    $release->pop();
                     $wg->done();
+                    $finished->push(true);
                 });
             }
-            $this->assertEquals($N, $wg->count(), 'Four active coroutines in sleeping state (not yet finished execution).');
-
-            $wg->wait();
-
-            // Run concurrently the four coroutines take about 0.5 second in total; run one after another they
-            // would take 2. The previous +-0.025s window had no headroom and failed on 0.5504s.
-            self::assertThat(
-                microtime(true) - $st,
-                $this->logicalAnd(self::greaterThan(0.49), self::lessThan(1.5)),
-                'The four coroutines run concurrently, taking about 0.5 second in total rather than 4 x 0.5.'
-            );
-            $this->assertEquals(0, $wg->count(), 'All four coroutines have finished execution.');
+            foreach (range(1, $N) as $i) {
+                self::assertTrue($ready->pop());
+            }
+            self::assertSame($N, $wg->count());
+            \Swoole\Coroutine::create(static function () use ($wg, $release, $finished, $observed, $N, &$returned): void {
+                \Swoole\Coroutine::sleep(0.001);
+                for ($i = 1; $i < $N; $i++) {
+                    $release->push(true);
+                    $finished->pop();
+                }
+                // The last child is still suspended: wait() must not have returned after the other three finished.
+                $observed->push([!$returned, $wg->count()]);
+                $release->push(true);
+            });
+            self::assertTrue($wg->wait());
+            $returned = true;
+            self::assertSame([true, 1], $observed->pop());
+            self::assertSame(0, $wg->count(), 'All four coroutines have finished execution.');
         });
     }
 }

@@ -14,6 +14,7 @@
     <testsuite name="concurrent">
       <directory suffix="Test.php">tests/unit</directory>
       <exclude>tests/unit/Thread</exclude>
+      <exclude>tests/unit/LibraryManifestTest.php</exclude>
       <exclude>tests/unit/NameResolver/ServerLifecycleTest.php</exclude>
       <exclude>tests/unit/NameResolver/TransportCompatibilityTest.php</exclude>
       <exclude>tests/unit/Coroutine/FunctionTest.php</exclude>
@@ -32,6 +33,8 @@
     <!--
       Run with ./vendor/bin/phpunit. These tests cannot share a run with the ones above:
 
+      - LibraryManifestTest synchronously parses the embedded sources with PhpParser. It blocks the shared
+        event loop long enough to exhaust curl connection budgets and delay coroutine timers.
       - Coroutine/FunctionTest calls Swoole\Runtime::setHookFlags() directly in its test bodies. That takes
         effect process-wide and immediately, even from inside a running coroutine, so it turns on the STDIO
         and file hooks counit excludes on purpose and then unhooks everything for whatever is in flight;
@@ -69,6 +72,7 @@
         same time would write its requests into that file, or stop writing the CI artifact.
     -->
     <testsuite name="serial">
+      <file>tests/unit/LibraryManifestTest.php</file>
       <file>tests/unit/NameResolver/ServerLifecycleTest.php</file>
       <file>tests/unit/NameResolver/TransportCompatibilityTest.php</file>
       <file>tests/unit/Coroutine/FunctionTest.php</file>
