@@ -33,6 +33,20 @@ class PDOConfig
 
     protected array $options = [];
 
+    protected bool $retryOnLostConnection = false;
+
+    public function getRetryOnLostConnection(): bool
+    {
+        return $this->retryOnLostConnection;
+    }
+
+    /** Only enable for work that can safely be repeated after an ambiguous transport failure. */
+    public function withRetryOnLostConnection(bool $retry): self
+    {
+        $this->retryOnLostConnection = $retry;
+        return $this;
+    }
+
     public function getDriver(): string
     {
         return $this->driver;
@@ -62,7 +76,7 @@ class PDOConfig
 
     public function hasUnixSocket(): bool
     {
-        return !empty($this->unixSocket);
+        return $this->unixSocket !== null && $this->unixSocket !== '';
     }
 
     public function getUnixSocket(): ?string

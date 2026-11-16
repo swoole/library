@@ -4,6 +4,9 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
 Backward-incompatible changes:
 
+* PDO and mysqli proxies report connection loss without automatically replaying the failed call. A later explicit call reconnects. Opt in with `PDOConfig::withRetryOnLostConnection(true)`, `MysqliConfig::withRetryOnLostConnection(true)`, or `setRetryOnLostConnection(true)` on a standalone proxy only when the work can safely be repeated. A server may have committed a write before its response was lost; transaction failures are never replayed.
+* `ConnectionPool` requires a positive size and distinct connection objects. Duplicate and foreign returns throw. `put(null)` requires one identifiable borrowed or lost connection; use `discard($connection)` with multiple borrowers.
+* `RedisPool::put()` sends `UNWATCH` and restores the configured database, in addition to discarding MULTI/pipeline state. Redis ACL users of the pool need permission for those commands.
 * Dropped support for Swoole below 6.3.
 * FastCGI is now a Composer-only component and is no longer packed into the Swoole extension; `\Swoole\FastCGI` and `\Swoole\Coroutine\FastCGI` are loaded through the Composer autoloader, and the `Co\FastCGI\*` short-name aliases are removed.
 * `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
@@ -27,6 +30,7 @@ Backward-incompatible changes:
 
 Added:
 
+* `ConnectionPool` accepts an optional fourth constructor argument to dispose of closed/discarded connections. `close()` drains idle connections and releases active connections when they are returned; mysqli and Redis pools explicitly close their native connections. PDO pools release their references; external statements and persistent connections may retain native sessions.
 * `Swoole\Coroutine\batch()` and `map()` accept an optional final `$completed` output argument. It is `false` if the wait timed out or was canceled; partial results and tasks continuing in the background retain their existing behavior.
 * `\Swoole\Grpc` provides a coroutine gRPC client, with Etcd and Helloworld examples and generated clients under `examples/grpc`. It is a Composer-only component and is not packed into the Swoole extension.
 * `\Swoole\Grpc` gains a standard status model (`Status\StatusCode`, `Status`, `RpcException`), an idiomatic `Result`/`invokeUnary()` entry point, `CallOptions` for deadlines (`grpc-timeout`), gzip compression and `-bin` metadata, client interceptors (including a retry interceptor), and feature-detecting trailers extraction. All additions are opt-in; generated stubs keep returning `[reply, status, response]`.
@@ -66,6 +70,10 @@ Removed:
 
 Fixed:
 
+* Lost-connection detection uses SQLSTATE and driver error codes, matches specific diagnostics without case sensitivity, and keeps authentication, SQL, constraint and serialization errors out of the transport retry path.
+* `RedisPool` authenticates with password `'0'`; failed cleaning or replacement preserves the pool's capacity for later recovery.
+* mysqli `close()` and statement `close()` are not retried. Statement re-preparation preserves queries of `'0'` and `''`, and proxy calls preserve native warnings. Remembered `change_user()` passwords use `SensitiveParameterValue` to redact debug output; this is not memory encryption.
+* `PDOPool` rejects DSN separators and NULs in connection components, quotes PostgreSQL values and validates Oracle Easy Connect fields. `PDOConfig::hasUnixSocket()` recognizes the path `'0'`. PDO statement binding methods declare native-compatible parameter types and preserve references across reconnects.
 * `\Swoole\Coroutine\Barrier` honors positive timeouts below a millisecond and no longer keeps stale coroutine cancellation state after a timeout.
 * Coroutine HTTP helpers preserve empty and zero bodies. The stream driver returns real status codes, headers and cookies, including for error responses. Cookie values containing `=` are preserved, and malformed cookies are ignored. Request bodies of `'0'`, `0` and empty arrays are sent consistently.
 * Negative initial `WaitGroup` counters and negative `parallel()` counts are rejected before tasks start; `WaitGroup::wait()` clears its waiting state even on exceptions.

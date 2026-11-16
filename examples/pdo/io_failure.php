@@ -60,7 +60,9 @@ Coroutine\run(function () {
         Coroutine::create(function () use ($pool, &$success) {
             /* @var $pdo PDO */
             while (true) {
-                $pdo       = $pool->get();
+                $pdo = $pool->get();
+                // This example only repeats SELECT 1 + 1, which has no side effects.
+                $pdo->setRetryOnLostConnection(true);
                 $statement = $pdo->prepare('SELECT 1 + 1');
                 $ret       = $statement->execute();
                 if ($ret !== true) {

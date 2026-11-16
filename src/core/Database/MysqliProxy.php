@@ -12,11 +12,15 @@ declare(strict_types=1);
 namespace Swoole\Database;
 
 /**
+ * A lost connection is reported without replaying an ambiguous call. A later explicit call reconnects.
+ * setRetryOnLostConnection(true) opts in to replay outside transactions; only use it for repeatable work.
+ * Pools restore the policy from MysqliConfig::withRetryOnLostConnection() on every checkout.
+ *
  * @method \mysqli __getObject()
  */
 class MysqliProxy extends ObjectProxy
 {
-    public const IO_METHOD_REGEX = '/^(autocommit|begin_transaction|change_user|close|commit|execute_query|kill|multi_query|ping|prepare|query|real_connect|real_query|reap_async_query|refresh|release_savepoint|rollback|savepoint|select_db|send_query|set_charset|ssl_set)$/i';
+    public const IO_METHOD_REGEX = '/^(autocommit|begin_transaction|change_user|commit|execute_query|kill|multi_query|ping|prepare|query|real_connect|real_query|reap_async_query|refresh|release_savepoint|rollback|savepoint|select_db|send_query|set_charset|ssl_set)$/i';
 
     public const IO_ERRORS = [
         2002, // MYSQLND_CR_CONNECTION_ERROR
@@ -31,12 +35,15 @@ class MysqliProxy extends ObjectProxy
 
     protected array $setOptContext = [];
 
+    /** @var array{string, \SensitiveParameterValue, ?string}|array{} */
     protected array $changeUserContext = [];
 
     /** @var callable */
     protected $constructor;
 
     protected int $round = 0;
+
+    protected bool $retryOnLostConnection = false;
 
     /**
      * Whether a transaction was started with begin_transaction() and not yet ended with commit() or rollback().
@@ -56,6 +63,8 @@ class MysqliProxy extends ObjectProxy
      */
     protected ?bool $autocommitMode = null;
 
+    private bool $lost = false;
+
     public function __construct(callable $constructor)
     {
         parent::__construct($constructor());
@@ -64,12 +73,15 @@ class MysqliProxy extends ObjectProxy
 
     public function __call(string $name, array $arguments)
     {
+        if ($this->lost && strcasecmp($name, 'close') !== 0) {
+            $this->reconnect();
+        }
         for ($n = 3; $n--;) {
             // Under the default report mode (MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT since PHP 8.1) a failure
             // throws a mysqli_sql_exception instead of returning false; both forms are handled the same way below.
             $exception = null;
             try {
-                $ret = @$this->__object->{$name}(...$arguments);
+                $ret = $this->__object->{$name}(...$arguments);
             } catch (\mysqli_sql_exception $exception) {
                 $ret = false;
             }
@@ -96,12 +108,12 @@ class MysqliProxy extends ObjectProxy
                     }
                     throw new MysqliException($this->__object->error, $errno);
                 }
-                if ($this->inTransaction()) {
+                if ($this->inTransaction() || !$this->retryOnLostConnection) {
                     // The transaction died with the connection. Reconnecting and re-running this one call would
                     // silently drop what ran before it in the transaction, and run this call, and the commit(), on
                     // a fresh connection outside of any transaction. The caller has to see the lost connection and
                     // redo the whole unit of work; the next call, outside the transaction, reconnects as usual.
-                    $this->reset();
+                    $this->markAsLost();
                     if ($exception) {
                         throw $exception;
                     }
@@ -131,6 +143,30 @@ class MysqliProxy extends ObjectProxy
         return $ret;
     }
 
+    /** Opt in only when repeating the operation cannot duplicate effects. */
+    public function setRetryOnLostConnection(bool $retry): void
+    {
+        $this->retryOnLostConnection = $retry;
+    }
+
+    public function shouldRetryOnLostConnection(): bool
+    {
+        return $this->retryOnLostConnection;
+    }
+
+    /** @internal */
+    public function isLost(): bool
+    {
+        return $this->lost;
+    }
+
+    /** @internal */
+    public function markAsLost(): void
+    {
+        $this->lost = true;
+        $this->reset();
+    }
+
     public function getRound(): int
     {
         return $this->round;
@@ -138,7 +174,9 @@ class MysqliProxy extends ObjectProxy
 
     public function reconnect(): void
     {
+        $this->lost = true;
         parent::__construct(($this->constructor)());
+        $this->lost = false;
         $this->round++;
         $this->reset();
         /* restore context */
@@ -149,7 +187,8 @@ class MysqliProxy extends ObjectProxy
             $this->__object->set_opt($opt, $val);
         }
         if (!empty($this->changeUserContext)) {
-            $this->__object->change_user(...$this->changeUserContext);
+            [$username, $password, $database] = $this->changeUserContext;
+            $this->__object->change_user($username, $password->getValue(), $database);
         }
         if ($this->autocommitMode !== null) {
             $this->__object->autocommit($this->autocommitMode);
@@ -209,7 +248,10 @@ class MysqliProxy extends ObjectProxy
 
     public function change_user(string $username, #[\SensitiveParameter] string $password, ?string $database): bool
     {
-        $this->changeUserContext = [$username, $password, $database];
-        return $this->__object->change_user($username, $password, $database);
+        $result = $this->__object->change_user($username, $password, $database);
+        if ($result) {
+            $this->changeUserContext = [$username, new \SensitiveParameterValue($password), $database];
+        }
+        return $result;
     }
 }

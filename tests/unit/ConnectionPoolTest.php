@@ -19,6 +19,102 @@ use Swoole\Tests\TestCase;
  */
 class ConnectionPoolTest extends TestCase
 {
+    public function testInvalidSizeIsRejectedBeforeMakingConnections(): void
+    {
+        foreach ([0, -1] as $size) {
+            try {
+                new ConnectionPool(static fn () => new \stdClass(), $size);
+                self::fail('Pool size must be positive');
+            } catch (\InvalidArgumentException $e) {
+                self::assertStringContainsString('positive', $e->getMessage());
+            }
+        }
+    }
+
+    public function testDuplicateAndForeignReturnsDoNotCorruptThePool(): void
+    {
+        self::coRun(static function (): void {
+            $pool       = new ConnectionPool(static fn () => new \stdClass(), 1);
+            $connection = $pool->get();
+            $pool->put($connection);
+            foreach ([$connection, new \stdClass()] as $invalid) {
+                try {
+                    $pool->put($invalid);
+                    self::fail('Invalid returns must throw');
+                } catch (\LogicException|\InvalidArgumentException) {
+                    self::assertSame($connection, $pool->get(0.1));
+                    $pool->put($connection);
+                }
+            }
+            $pool->fill();
+            self::assertSame($connection, $pool->get(0.1));
+            self::assertFalse($pool->get(0.001));
+            $pool->close();
+        });
+    }
+
+    public function testDiscardIdentifiesTheLeaseWhenMultipleConnectionsAreBorrowed(): void
+    {
+        self::coRun(static function (): void {
+            $pool   = new ConnectionPool(static fn () => new \stdClass(), 2);
+            $first  = $pool->get();
+            $second = $pool->get();
+            try {
+                $pool->put(null);
+                self::fail('An ambiguous null return must be rejected');
+            } catch (\InvalidArgumentException $e) {
+                self::assertStringContainsString('discard', $e->getMessage());
+            }
+            $pool->discard($first);
+            $replacement = $pool->get(0.1);
+            self::assertNotSame($first, $replacement);
+            $pool->put($second);
+            $pool->put($replacement);
+            $pool->fill();
+            $pool->close();
+        });
+    }
+
+    public function testCloseDisposesIdleConnectionsAndLateReturns(): void
+    {
+        self::coRun(static function (): void {
+            $closed = [];
+            $pool   = new ConnectionPool(static fn () => new \stdClass(), 2, null,
+                static function (object $connection) use (&$closed): void { $closed[] = $connection; });
+            $borrowed = $pool->get();
+            $idle     = $pool->get();
+            $pool->put($idle);
+            $pool->close();
+            self::assertSame([$idle], $closed);
+            $pool->put($borrowed);
+            $pool->put($borrowed);
+            $pool->close();
+            self::assertSame([$idle, $borrowed], $closed);
+        });
+    }
+
+    public function testFailedConstructionDoesNotConsumeCapacity(): void
+    {
+        self::coRun(static function (): void {
+            $fail = true;
+            $pool = new ConnectionPool(static function () use (&$fail): object {
+                if ($fail) {
+                    $fail = false;
+                    throw new \RuntimeException('construction failed');
+                }
+                return new \stdClass();
+            }, 1);
+            try {
+                $pool->get();
+                self::fail('Construction must fail once');
+            } catch (\RuntimeException $e) {
+                self::assertSame('construction failed', $e->getMessage());
+            }
+            self::assertInstanceOf(\stdClass::class, $pool->get(0.1));
+            $pool->close();
+        });
+    }
+
     public function testCloseTwice(): void
     {
         self::coRun(function () {
@@ -28,9 +124,12 @@ class ConnectionPoolTest extends TestCase
             $pool->close();
             $pool->close();
 
-            $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Pool has been closed');
-            $pool->get();
+            try {
+                $pool->get();
+                self::fail('A closed pool cannot be used');
+            } catch (\RuntimeException $e) {
+                self::assertSame('Pool has been closed', $e->getMessage());
+            }
         });
     }
 
@@ -161,9 +260,12 @@ class ConnectionPoolTest extends TestCase
             $pool = new ConnectionPool(fn () => new \stdClass(), 1);
             $pool->close();
 
-            $this->expectException(\RuntimeException::class);
-            $this->expectExceptionMessage('Pool has been closed');
-            $pool->withConnection(fn () => null);
+            try {
+                $pool->withConnection(fn () => null);
+                self::fail('A closed pool cannot be used');
+            } catch (\RuntimeException $e) {
+                self::assertSame('Pool has been closed', $e->getMessage());
+            }
         });
     }
 

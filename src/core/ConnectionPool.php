@@ -24,8 +24,24 @@ class ConnectionPool
 
     protected int $num = 0;
 
-    public function __construct(callable $constructor, protected int $size = self::DEFAULT_SIZE, protected ?string $proxy = null)
+    /** @var \WeakMap<object, bool> true while checked out, false while queued */
+    private \WeakMap $connections;
+
+    /** @var callable|null */
+    private $destructor;
+
+    /**
+     * @param callable(): object $constructor Creates a distinct connection object.
+     * @param (callable(object): void)|null $destructor Releases a discarded or idle connection; active loans are
+     *                                                  released when returned after close().
+     */
+    public function __construct(callable $constructor, protected int $size = self::DEFAULT_SIZE, protected ?string $proxy = null, ?callable $destructor = null)
     {
+        if ($size <= 0) {
+            throw new \InvalidArgumentException('Connection pool size must be positive');
+        }
+        $this->connections = new \WeakMap();
+        $this->destructor  = $destructor;
         $this->pool        = new Channel($this->size);
         $this->constructor = $constructor;
     }
@@ -36,7 +52,7 @@ class ConnectionPool
             // A closed pool has nowhere to keep the connections: they would be made, counted and dropped.
             return;
         }
-        while ($this->size > $this->num) {
+        while ($this->pool !== null && $this->size > $this->num) {
             $this->make();
         }
     }
@@ -56,7 +72,11 @@ class ConnectionPool
         if ($this->pool->isEmpty() && $this->num < $this->size) {
             $this->make();
         }
-        return $this->pool->pop($timeout);
+        $connection = $this->pool?->pop($timeout) ?? false;
+        if (is_object($connection)) {
+            $this->connections[$connection] = true;
+        }
+        return $connection;
     }
 
     /**
@@ -70,7 +90,7 @@ class ConnectionPool
      * The callback must not put the connection back itself, nor use it, or anything bound to it, such as a
      * statement, a generator or another coroutine, after it returned: the connection is someone else's by then.
      * A callback that calls withConnection() of the same pool needs a second free connection, or it waits forever;
-     * give the inner call a timeout. Code that has to discard a broken connection uses get() and put(null).
+     * give the inner call a timeout. Code that has to discard a broken connection uses get() and discard().
      *
      * @template T
      * @param callable(mixed): T $callback called with the connection; what it returns is returned
@@ -91,7 +111,7 @@ class ConnectionPool
             if ($errCode === SWOOLE_CHANNEL_CANCELED) {
                 throw new \RuntimeException('Canceled while waiting for a connection from the pool');
             }
-            throw new \RuntimeException("No connection is available from the pool within {$timeout} seconds");
+            throw new \RuntimeException(sprintf('No connection is available from the pool within %g seconds', $timeout));
         }
 
         try {
@@ -101,17 +121,62 @@ class ConnectionPool
         }
     }
 
+    /**
+     * Return a checked-out connection. Foreign or duplicate returns throw before changing the pool.
+     * A null return is supported only when exactly one lost or checked-out connection can be identified;
+     * use discard($connection) when several connections are borrowed.
+     */
     public function put(mixed $connection): void
     {
         if ($this->pool === null) {
+            if (is_object($connection) && isset($this->connections[$connection])) {
+                unset($this->connections[$connection]);
+                $this->dispose($connection);
+            }
             return;
         }
-        if ($connection !== null) {
-            $this->pool->push($connection);
-        } else {
-            /* connection broken */
-            $this->num -= 1;
-            $this->make();
+        if ($connection === null) {
+            $borrowed = [];
+            foreach ($this->connections as $object => $checkedOut) {
+                if ($checkedOut) {
+                    $borrowed[] = $object;
+                }
+            }
+            if (count($borrowed) === 1 && $this->num === count($this->connections)) {
+                $this->discard($borrowed[0]);
+                return;
+            }
+            // A borrower may already have released its last reference to the broken object.
+            if ($borrowed === [] && $this->num - count($this->connections) === 1) {
+                $this->num--;
+                $this->make();
+                return;
+            }
+            throw new \InvalidArgumentException('Cannot identify the broken connection; use discard($connection)');
+        }
+        $this->assertCanReturn($connection);
+        $this->connections[$connection] = false;
+        $this->pool->push($connection);
+    }
+
+    /**
+     * Discard this checked-out connection and replace it. Unlike put(null), this also works with multiple borrowers.
+     */
+    public function discard(object $connection): void
+    {
+        $this->assertCanReturn($connection);
+        unset($this->connections[$connection]);
+        if ($this->pool === null) {
+            $this->dispose($connection);
+            return;
+        }
+        $this->num--;
+        try {
+            $this->dispose($connection);
+        } finally {
+            if ($this->pool !== null && $this->num < $this->size) {
+                $this->make();
+            }
         }
     }
 
@@ -120,9 +185,36 @@ class ConnectionPool
         if ($this->pool === null) {
             return;
         }
-        $this->pool->close();
+        $pool       = $this->pool;
         $this->pool = null;
         $this->num  = 0;
+        $failure    = null;
+        try {
+            while (!$pool->isEmpty()) {
+                $connection = $pool->pop();
+                unset($this->connections[$connection]);
+                try {
+                    $this->dispose($connection);
+                } catch (\Throwable $e) {
+                    $failure = $failure ?? $e;
+                }
+            }
+        } finally {
+            $pool->close();
+        }
+        if ($failure !== null) {
+            throw $failure;
+        }
+    }
+
+    protected function assertCanReturn(mixed $connection): void
+    {
+        if (!is_object($connection) || !isset($this->connections[$connection])) {
+            throw new \InvalidArgumentException('The connection does not belong to this pool');
+        }
+        if (!$this->connections[$connection]) {
+            throw new \LogicException('The connection has already been returned to this pool');
+        }
     }
 
     protected function make(): void
@@ -135,9 +227,25 @@ class ConnectionPool
                 $connection = ($this->constructor)();
             }
         } catch (\Throwable $throwable) {
-            $this->num--;
+            if ($this->pool !== null) {
+                $this->num--;
+            }
             throw $throwable;
         }
+        if (!is_object($connection) || isset($this->connections[$connection])) {
+            if ($this->pool !== null) {
+                $this->num--;
+            }
+            throw new \UnexpectedValueException('The connection constructor must return a new object');
+        }
+        $this->connections[$connection] = true;
         $this->put($connection);
+    }
+
+    private function dispose(object $connection): void
+    {
+        if ($this->destructor !== null) {
+            ($this->destructor)($connection);
+        }
     }
 }

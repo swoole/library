@@ -31,7 +31,7 @@ class PDOPool extends ConnectionPool
      * Get a PDO connection from the pool. The PDO connection (a PDO object) is wrapped in a PDOProxy object returned.
      *
      * @param float $timeout the number of seconds to wait for a connection; 0 or less waits with no time limit
-     * @return PDOProxy|false Returns a PDOProxy object from the pool, or false if the pool is full and the timeout is reached.
+     * @return PDOProxy|false Returns a PDOProxy object from the pool, or false if no connection is available before the timeout.
      *                        {@inheritDoc}
      */
     public function get(float $timeout = -1)
@@ -43,6 +43,7 @@ class PDOPool extends ConnectionPool
         }
 
         $pdo->reset();
+        $pdo->setRetryOnLostConnection($this->config->getRetryOnLostConnection());
 
         return $pdo;
     }
@@ -63,9 +64,12 @@ class PDOPool extends ConnectionPool
      */
     public function put(mixed $connection): void
     {
-        if ($connection instanceof PDOProxy && !$this->clean($connection)) {
+        if ($connection !== null && $this->pool !== null) {
+            $this->assertCanReturn($connection);
+        }
+        if ($this->pool !== null && $connection instanceof PDOProxy && !$this->clean($connection)) {
             try {
-                parent::put(null);
+                parent::discard($connection);
             } catch (\Throwable) {
                 // Putting a connection back is no place to report that a new one cannot be made.
             }
@@ -82,6 +86,9 @@ class PDOPool extends ConnectionPool
      */
     private function clean(PDOProxy $connection): bool
     {
+        if ($connection->isLost()) {
+            return false;
+        }
         $pdo = $connection->__getObject();
         // The state PDO reports now, not the one the proxy recorded: a connection that was lost reads as inside a
         // transaction, the rollback fails, and the connection is replaced.
@@ -129,6 +136,13 @@ class PDOPool extends ConnectionPool
      */
     private function createDSN(string $driver): string
     {
+        if (in_array($driver, ['mysql', 'pgsql', 'oci'], true)) {
+            foreach (['host' => $this->config->getHost(), 'dbname' => $this->config->getDbname(), 'charset' => $this->config->getCharset(), 'unixSocket' => $this->config->getUnixSocket()] as $name => $value) {
+                if ($value !== null && (str_contains($value, ';') || str_contains($value, "\0"))) {
+                    throw new \InvalidArgumentException("Invalid DSN component: {$name}");
+                }
+            }
+        }
         switch ($driver) {
             case 'mysql':
                 if ($this->config->hasUnixSocket()) {
@@ -138,10 +152,21 @@ class PDOPool extends ConnectionPool
                 }
                 break;
             case 'pgsql':
-                $dsn = 'pgsql:host=' . ($this->config->hasUnixSocket() ? $this->config->getUnixSocket() : $this->config->getHost()) . ";port={$this->config->getPort()};dbname={$this->config->getDbname()}";
+                $quote = static fn (string $value): string => "'" . str_replace(['\\', "'"], ['\\\\', "\\'"], $value) . "'";
+                $host  = $this->config->hasUnixSocket() ? $this->config->getUnixSocket() : $this->config->getHost();
+                $dsn   = 'pgsql:host=' . $quote($host) . ";port={$this->config->getPort()};dbname=" . $quote($this->config->getDbname());
                 break;
             case 'oci':
-                $dsn = 'oci:dbname=' . ($this->config->hasUnixSocket() ? $this->config->getUnixSocket() : $this->config->getHost()) . ':' . $this->config->getPort() . '/' . $this->config->getDbname() . ';charset=' . $this->config->getCharset();
+                $host = $this->config->hasUnixSocket() ? $this->config->getUnixSocket() : $this->config->getHost();
+                if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+                    $host = '[' . $host . ']';
+                } elseif (!preg_match('/^(?:[a-z0-9_.-]+|\[[a-f0-9:.%_-]+\])$/iD', $host)) {
+                    throw new \InvalidArgumentException('Invalid Oracle DSN host');
+                }
+                if (!preg_match('/^[a-z0-9_.$-]+$/iD', $this->config->getDbname()) || !preg_match('/^[a-z0-9_]+$/iD', $this->config->getCharset())) {
+                    throw new \InvalidArgumentException('Invalid Oracle DSN service or charset');
+                }
+                $dsn = 'oci:dbname=' . $host . ':' . $this->config->getPort() . '/' . $this->config->getDbname() . ';charset=' . $this->config->getCharset();
                 break;
             case 'sqlite':
                 // There are three types of SQLite databases: databases on disk, databases in memory, and temporary

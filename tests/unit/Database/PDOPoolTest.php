@@ -49,8 +49,7 @@ class PDOPoolTest extends DatabaseTestCase
                     } catch (\PDOException) {
                         // do nothing
                     }
-                    $pdo = null;
-                    $pool->put(null);
+                    $pool->discard($pdo);
 
                     $actual[] = $row['n'];
                 });

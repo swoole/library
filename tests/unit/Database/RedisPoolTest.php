@@ -26,20 +26,21 @@ class RedisPoolTest extends DatabaseTestCase
 
     /**
      * A password-only auth authenticates against the default user, as it did before array auth was supported.
+     * @dataProvider passwords
      */
-    public function testAuthWithPassword(): void
+    public function testAuthWithPassword(string $password): void
     {
         self::saveHookFlags();
         self::setHookFlags(SWOOLE_HOOK_ALL);
-        self::coRun(function () {
+        self::coRun(function () use ($password) {
             $admin = new \Redis();
             $admin->connect(REDIS_SERVER_HOST, REDIS_SERVER_PORT);
-            $admin->config('SET', 'requirepass', 'default_user_secret');
+            $admin->config('SET', 'requirepass', $password);
             try {
                 $config = (new RedisConfig())
                     ->withHost(REDIS_SERVER_HOST)
                     ->withPort(REDIS_SERVER_PORT)
-                    ->withAuth('default_user_secret')
+                    ->withAuth($password)
                 ;
                 $pool  = new RedisPool($config, 1);
                 $redis = $pool->get();
@@ -58,6 +59,62 @@ class RedisPoolTest extends DatabaseTestCase
             }
         });
         self::restoreHookFlags();
+    }
+
+    public static function passwords(): array
+    {
+        return [['default_user_secret'], ['0']];
+    }
+
+    public function testPutClearsWatchAndRestoresTheConfiguredDatabase(): void
+    {
+        self::coRun(function (): void {
+            $config = (new RedisConfig())->withHost(REDIS_SERVER_HOST)->withPort(REDIS_SERVER_PORT)->withDbIndex(2);
+            $pool   = new RedisPool($config, 1);
+            $redis  = $pool->get();
+            $admin  = new \Redis();
+            $admin->connect(REDIS_SERVER_HOST, REDIS_SERVER_PORT);
+            $key = 'swoole:review:watch:' . uniqid();
+            try {
+                $redis->select(5);
+                $redis->set($key, 'before');
+                $redis->watch($key);
+                $pool->put($redis);
+                $admin->select(5);
+                $admin->set($key, 'changed');
+                $again = $pool->get();
+                self::assertSame(2, $again->getDBNum());
+                self::assertFalse($again->get($key));
+                $again->multi();
+                $again->set($key, 'own database');
+                self::assertSame([true], $again->exec(), 'A previous borrower must not leave a dirty WATCH');
+                $again->del($key);
+                $pool->put($again);
+            } finally {
+                $admin->del($key);
+                $admin->close();
+                $pool->close();
+            }
+        });
+    }
+
+    public function testFailedCleaningAndReplacementDoNotConsumeCapacity(): void
+    {
+        self::coRun(function (): void {
+            $config = (new RedisConfig())->withHost(REDIS_SERVER_HOST)->withPort(REDIS_SERVER_PORT)->withTimeout(0.1);
+            $pool   = new RedisPool($config, 1);
+            $broken = $pool->get();
+            $broken->close();
+            $config->withPort(1);
+            $pool->put($broken);
+            $config->withPort(REDIS_SERVER_PORT);
+            $replacement = $pool->get(0.1);
+            self::assertNotSame($broken, $replacement);
+            self::assertTrue($replacement->ping());
+            $pool->put($replacement);
+            $pool->close();
+            self::assertFalse($replacement->isConnected());
+        });
     }
 
     /**

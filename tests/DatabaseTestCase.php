@@ -29,9 +29,10 @@ use Swoole\Database\RedisPool;
  */
 class DatabaseTestCase extends TestCase
 {
+    // Reconnection fixtures opt in explicitly to exercise replay. Default-off behavior is tested separately.
     protected static function getMysqliPool(int $size = ConnectionPool::DEFAULT_SIZE): MysqliPool
     {
-        $config = (new MysqliConfig())
+        $config = (new MysqliConfig())->withRetryOnLostConnection(true)
             ->withHost(MYSQL_SERVER_HOST)
             ->withPort(MYSQL_SERVER_PORT)
             ->withDbName(MYSQL_SERVER_DB)
@@ -79,7 +80,7 @@ class DatabaseTestCase extends TestCase
 
     protected static function getPdoMysqlPool(int $size = ConnectionPool::DEFAULT_SIZE): PDOPool
     {
-        $config = (new PDOConfig())
+        $config = (new PDOConfig())->withRetryOnLostConnection(true)
             ->withHost(MYSQL_SERVER_HOST)
             ->withPort(MYSQL_SERVER_PORT)
             ->withDbName(MYSQL_SERVER_DB)
@@ -93,7 +94,7 @@ class DatabaseTestCase extends TestCase
 
     protected static function getPdoPgsqlPool(int $size = ConnectionPool::DEFAULT_SIZE): PDOPool
     {
-        $config = (new PDOConfig())
+        $config = (new PDOConfig())->withRetryOnLostConnection(true)
             ->withDriver('pgsql')
             ->withHost(PGSQL_SERVER_HOST)
             ->withPort(PGSQL_SERVER_PORT)
@@ -107,7 +108,7 @@ class DatabaseTestCase extends TestCase
 
     protected static function getPdoOraclePool(int $size = ConnectionPool::DEFAULT_SIZE): PDOPool
     {
-        $config = (new PDOConfig())
+        $config = (new PDOConfig())->withRetryOnLostConnection(true)
             ->withDriver('oci')
             ->withHost(ORACLE_SERVER_HOST)
             ->withPort(ORACLE_SERVER_PORT)
@@ -137,7 +138,7 @@ class DatabaseTestCase extends TestCase
                 unlink($file);
             }
         });
-        $config = (new PDOConfig())->withDriver('sqlite')->withDbname($file);
+        $config = (new PDOConfig())->withRetryOnLostConnection(true)->withDriver('sqlite')->withDbname($file);
 
         return new PDOPool($config, $size);
     }

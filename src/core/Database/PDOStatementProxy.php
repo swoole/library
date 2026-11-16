@@ -45,6 +45,11 @@ class PDOStatementProxy extends ObjectProxy
         // Not the state PDO reports now, which a connection found dead makes "inside a transaction" on PostgreSQL, but
         // the one the parent recorded, which includes a transaction started by hand. A connection known to be lost is
         // in no transaction any more: that one went down with it, and was reported.
+        if (strcasecmp($name, 'execute') === 0 && ($this->parent->isLost() || $this->parent->getRound() !== $this->parentRound)) {
+            if (!$this->reprepare()) {
+                return false;
+            }
+        }
         $inTransaction = $this->parent->hasOpenTransaction();
         $failed        = null;
         try {
@@ -57,7 +62,7 @@ class PDOStatementProxy extends ObjectProxy
             ? DetectsLostConnections::causedByLostConnection($failed)
             : ($ret === false && self::errorInfoIsLostConnection($this->__object->errorInfo(), $this->parent->__getObject()->errorInfo()));
         if ($ret === false && $lost) {
-            if ($inTransaction) {
+            if ($inTransaction || !$this->parent->shouldRetryOnLostConnection()) {
                 // The transaction died with the connection. The caller is told, and the next call reconnects.
                 if ($this->parent->getRound() === $this->parentRound) {
                     $this->parent->markAsLost();
@@ -111,7 +116,7 @@ class PDOStatementProxy extends ObjectProxy
         return $this->__object->setFetchMode(...$this->setFetchModeContext);
     }
 
-    public function bindParam($param, &$var, $type = \PDO::PARAM_STR, $maxLength = 0, $driverOptions = null): bool
+    public function bindParam(int|string $param, mixed &$var, int $type = \PDO::PARAM_STR, int $maxLength = 0, mixed $driverOptions = null): bool
     {
         // The variable is kept by reference: a statement prepared again after a reconnect is bound to the variable of
         // the caller, as the first one was, and not to the value the variable had at the time of this call.
@@ -121,13 +126,13 @@ class PDOStatementProxy extends ObjectProxy
         return $this->__object->bindParam($param, $var, $type, $maxLength, $driverOptions);
     }
 
-    public function bindColumn($column, &$var, $type = \PDO::PARAM_STR, $maxLength = 0, $driverOptions = null): bool
+    public function bindColumn(int|string $column, mixed &$var, int $type = \PDO::PARAM_STR, int $maxLength = 0, mixed $driverOptions = null): bool
     {
         $this->bindColumnContext[$column] = [&$var, $type, $maxLength, $driverOptions];
         return $this->__object->bindColumn($column, $var, $type, $maxLength, $driverOptions);
     }
 
-    public function bindValue($param, $value, $type = \PDO::PARAM_STR): bool
+    public function bindValue(int|string $param, mixed $value, int $type = \PDO::PARAM_STR): bool
     {
         $key = self::parameterKey($param);
         unset($this->bindParamContext[$key]);
@@ -141,6 +146,11 @@ class PDOStatementProxy extends ObjectProxy
      * @param array<int|string, mixed> $arguments
      */
     private function reexecute(array $arguments): mixed
+    {
+        return $this->reprepare() && $this->__object->execute(...$arguments);
+    }
+
+    private function reprepare(): bool
     {
         // A parent of another round has reconnected already, unless that reconnect failed and left it lost.
         if ($this->parent->getRound() === $this->parentRound || $this->parent->isLost()) {
@@ -171,7 +181,7 @@ class PDOStatementProxy extends ObjectProxy
             $this->__object->bindValue($parameter, ...$item);
         }
 
-        return $this->__object->execute(...$arguments);
+        return true;
     }
 
     /**
@@ -181,8 +191,7 @@ class PDOStatementProxy extends ObjectProxy
     private static function errorInfoIsLostConnection(array $statementInfo, array $connectionInfo): bool
     {
         foreach ([$statementInfo, $connectionInfo] as $info) {
-            $message = (string) ($info[2] ?? '');
-            if ($message !== '' && DetectsLostConnections::causedByLostConnection(new \PDOException($message, (int) ($info[1] ?? 0)))) {
+            if (DetectsLostConnections::causedByErrorInfo($info)) {
                 return true;
             }
         }

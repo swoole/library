@@ -19,6 +19,38 @@ use Swoole\Tests\DatabaseTestCase;
  */
 class PDOProxyTest extends DatabaseTestCase
 {
+    public function testSilentLostConnectionRetainsDiagnosticsUntilTheNextOperation(): void
+    {
+        self::coRun(static function (): void {
+            $proxy = new PDOProxy(static fn () => new class extends \PDO {
+                public function __construct()
+                {
+                    parent::__construct('sqlite::memory:');
+                }
+
+                public function exec(string $statement): int|false
+                {
+                    return false;
+                }
+
+                public function errorInfo(): array
+                {
+                    return ['HY000', 2006, 'MySQL server has gone away'];
+                }
+
+                public function errorCode(): ?string
+                {
+                    return 'HY000';
+                }
+            });
+            $proxy->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
+            self::assertFalse($proxy->exec('INSERT INTO writes VALUES(1)'));
+            self::assertSame(2006, $proxy->errorInfo()[1]);
+            self::assertSame('HY000', $proxy->errorCode());
+            self::assertSame(0, $proxy->getRound());
+        });
+    }
+
     /**
      * The proxy turns the exception error mode on, but the application is free to pick another one, and
      * PDO::query() and PDO::prepare() return false in those instead of a statement.
@@ -343,6 +375,7 @@ class PDOProxyTest extends DatabaseTestCase
                     : new \PDO('mysql:host=' . MYSQL_SERVER_HOST . ';port=' . MYSQL_SERVER_PORT . ';dbname=' . MYSQL_SERVER_DB, MYSQL_SERVER_USER, MYSQL_SERVER_PWD);
             });
 
+            $pdo->setRetryOnLostConnection(true);
             self::killPdoConnection($pdo);
             $down = true;
             try {

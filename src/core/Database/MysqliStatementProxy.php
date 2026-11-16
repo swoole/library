@@ -18,7 +18,7 @@ class MysqliStatementProxy extends ObjectProxy
      * the result of an execute() that went down with the connection, and running it on a statement that was
      * prepared again but never executed fails with "Commands out of sync" in place of the lost connection.
      */
-    public const IO_METHOD_REGEX = '/^(close|execute|prepare)$/i';
+    public const IO_METHOD_REGEX = '/^(execute|prepare)$/i';
 
     /** @var \mysqli_stmt */
     protected $__object;
@@ -39,12 +39,16 @@ class MysqliStatementProxy extends ObjectProxy
 
     public function __call(string $name, array $arguments)
     {
+        if (in_array(strtolower($name), ['execute', 'prepare'], true)
+            && ($this->parent->isLost() || $this->parent->getRound() !== $this->parentRound)) {
+            $this->reprepare();
+        }
         for ($n = 3; $n--;) {
             // Under the default report mode (MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT since PHP 8.1) a failure
             // throws a mysqli_sql_exception instead of returning false; both forms are handled the same way below.
             $exception = null;
             try {
-                $ret = @$this->__object->{$name}(...$arguments);
+                $ret = $this->__object->{$name}(...$arguments);
             } catch (\mysqli_sql_exception $exception) {
                 $ret = false;
             }
@@ -69,34 +73,15 @@ class MysqliStatementProxy extends ObjectProxy
                     }
                     throw new MysqliException($this->__object->error, $errno);
                 }
-                if ($this->parent->inTransaction()) {
+                if ($this->parent->inTransaction() || !$this->parent->shouldRetryOnLostConnection()) {
                     // The transaction died with the connection; see MysqliProxy::__call() for why this is not retried.
-                    $this->parent->reset();
+                    $this->parent->markAsLost();
                     if ($exception) {
                         throw $exception;
                     }
                     throw new MysqliException($this->__object->error, $errno);
                 }
-                if ($this->parent->getRound() === $this->parentRound) {
-                    /* if not equal, parent has reconnected */
-                    $this->parent->reconnect();
-                }
-                $this->parentRound = $this->parent->getRound();
-                $parent            = $this->parent->__getObject();
-                $statement         = $this->queryString ? @$parent->prepare($this->queryString) : @$parent->stmt_init();
-                if ($statement === false) {
-                    throw new MysqliException($parent->error, $parent->errno);
-                }
-                $this->__object = $statement;
-                if (!empty($this->bindParamContext)) {
-                    $this->__object->bind_param($this->bindParamContext[0], ...$this->bindParamContext[1]);
-                }
-                if (!empty($this->bindResultContext)) {
-                    $this->__object->bind_result(...$this->bindResultContext);
-                }
-                foreach ($this->attrSetContext as $attr => $value) {
-                    $this->__object->attr_set($attr, $value);
-                }
+                $this->reprepare();
                 continue;
             }
             if (strcasecmp($name, 'prepare') === 0) {
@@ -125,5 +110,29 @@ class MysqliStatementProxy extends ObjectProxy
     {
         $this->bindResultContext = $vars;
         return $this->__object->bind_result(...$vars);
+    }
+
+    private function reprepare(): void
+    {
+        if ($this->parent->getRound() === $this->parentRound || $this->parent->isLost()) {
+            /* if not equal, parent has reconnected */
+            $this->parent->reconnect();
+        }
+        $this->parentRound = $this->parent->getRound();
+        $parent            = $this->parent->__getObject();
+        $statement         = $this->queryString !== null ? $parent->prepare($this->queryString) : $parent->stmt_init();
+        if ($statement === false) {
+            throw new MysqliException($parent->error, $parent->errno);
+        }
+        $this->__object = $statement;
+        if (!empty($this->bindParamContext)) {
+            $this->__object->bind_param($this->bindParamContext[0], ...$this->bindParamContext[1]);
+        }
+        if (!empty($this->bindResultContext)) {
+            $this->__object->bind_result(...$this->bindResultContext);
+        }
+        foreach ($this->attrSetContext as $attr => $value) {
+            $this->__object->attr_set($attr, $value);
+        }
     }
 }

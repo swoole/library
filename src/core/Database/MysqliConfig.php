@@ -29,6 +29,20 @@ class MysqliConfig
 
     protected array $options = [];
 
+    protected bool $retryOnLostConnection = false;
+
+    public function getRetryOnLostConnection(): bool
+    {
+        return $this->retryOnLostConnection;
+    }
+
+    /** Only enable for work that can safely be repeated after an ambiguous transport failure. */
+    public function withRetryOnLostConnection(bool $retry): self
+    {
+        $this->retryOnLostConnection = $retry;
+        return $this;
+    }
+
     public function getHost(): string
     {
         return $this->host;

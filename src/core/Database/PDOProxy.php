@@ -12,6 +12,10 @@ declare(strict_types=1);
 namespace Swoole\Database;
 
 /**
+ * A lost connection is reported without replaying an ambiguous call. A later explicit call reconnects.
+ * setRetryOnLostConnection(true) opts in to replay outside transactions; only use it for repeatable work.
+ * Pools restore the policy from PDOConfig::withRetryOnLostConnection() on every checkout.
+ *
  * @method \PDO __getObject()
  */
 class PDOProxy extends ObjectProxy
@@ -25,6 +29,8 @@ class PDOProxy extends ObjectProxy
     protected $constructor;
 
     protected int $round = 0;
+
+    protected bool $retryOnLostConnection = false;
 
     /**
      * Whether the connection is inside a transaction, as PDO reported it right after the last call that reached the
@@ -54,6 +60,10 @@ class PDOProxy extends ObjectProxy
     public function __call(string $name, array $arguments)
     {
         if ($this->lost) {
+            if (in_array(strtolower($name), ['errorinfo', 'errorcode'], true)) {
+                // Diagnostics belong to the failed call, so reading them must not reconnect and clear them.
+                return $this->__object->{$name}(...$arguments);
+            }
             if (strcasecmp($name, 'rollBack') === 0) {
                 // The transaction died with the connection, and the server has rolled it back. Nothing to send.
                 return true;
@@ -73,7 +83,7 @@ class PDOProxy extends ObjectProxy
                 }
                 throw $e;
             }
-            if ($this->openTransaction) {
+            if ($this->openTransaction || !$this->retryOnLostConnection) {
                 // The transaction died with the connection. The caller is told, and the next call reconnects.
                 $this->markAsLost();
                 throw $e;
@@ -84,7 +94,7 @@ class PDOProxy extends ObjectProxy
         // ERRMODE_SILENT and ERRMODE_WARNING report a lost connection as false plus errorInfo(), not as an exception.
         // A false that is a lost connection is retried the same way; any other false is the caller's error.
         if ($ret === false && !$this->lost && self::errorInfoIsLostConnection($this->__object->errorInfo())) {
-            if ($this->openTransaction) {
+            if ($this->openTransaction || !$this->retryOnLostConnection) {
                 $this->markAsLost();
                 return false;
             }
@@ -101,6 +111,17 @@ class PDOProxy extends ObjectProxy
         }
 
         return $ret;
+    }
+
+    /** Opt in only when repeating the operation cannot duplicate effects. */
+    public function setRetryOnLostConnection(bool $retry): void
+    {
+        $this->retryOnLostConnection = $retry;
+    }
+
+    public function shouldRetryOnLostConnection(): bool
+    {
+        return $this->retryOnLostConnection;
     }
 
     public function getRound(): int
@@ -199,11 +220,6 @@ class PDOProxy extends ObjectProxy
      */
     private static function errorInfoIsLostConnection(array $info): bool
     {
-        $message = (string) ($info[2] ?? '');
-        if ($message === '') {
-            return false;
-        }
-
-        return DetectsLostConnections::causedByLostConnection(new \PDOException($message, (int) ($info[1] ?? 0)));
+        return DetectsLostConnections::causedByErrorInfo($info);
     }
 }

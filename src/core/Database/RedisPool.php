@@ -34,7 +34,7 @@ class RedisPool extends ConnectionPool
                 $this->config->getRetryInterval(),
                 $this->config->getReadTimeout()
             );
-            if ($this->config->getAuth()) {
+            if ($this->config->getAuth() !== '' && $this->config->getAuth() !== []) {
                 $redis->auth($this->config->getAuth());
             }
             if ($this->config->getDbIndex() !== 0) {
@@ -47,7 +47,9 @@ class RedisPool extends ConnectionPool
             }
 
             return $redis;
-        }, $size);
+        }, $size, null, static function (\Redis $connection): void {
+            $connection->close();
+        });
     }
 
     /**
@@ -58,16 +60,18 @@ class RedisPool extends ConnectionPool
      * cannot be brought back is replaced; when the replacement cannot be made, it is left to the next get() to make
      * it and to report the failure.
      *
-     * State the connection does not report is not reset: a WATCH that was not ended with EXEC, DISCARD or UNWATCH, or
-     * a database chosen with select().
+     * WATCH is cleared and the configured database is selected before the next borrower receives the connection.
      *
      * @param \Redis|null $connection the connection to return, or null to have a broken connection replaced
      */
     public function put(mixed $connection): void
     {
-        if ($connection instanceof \Redis && !$this->clean($connection)) {
+        if ($connection !== null && $this->pool !== null) {
+            $this->assertCanReturn($connection);
+        }
+        if ($this->pool !== null && $connection instanceof \Redis && !$this->clean($connection)) {
             try {
-                parent::put(null);
+                parent::discard($connection);
             } catch (\Throwable) {
                 // Putting a connection back is no place to report that a new one cannot be made.
             }
@@ -85,10 +89,15 @@ class RedisPool extends ConnectionPool
     private function clean(\Redis $connection): bool
     {
         try {
+            if (!$connection->isConnected()) {
+                return false;
+            }
             if ($connection->getMode() !== \Redis::ATOMIC) {
                 $connection->discard();
             }
-            return $connection->getMode() === \Redis::ATOMIC;
+            return $connection->getMode() === \Redis::ATOMIC
+                && $connection->unwatch()
+                && $connection->select($this->config->getDbIndex());
         } catch (\RedisException) {
             return false;
         }

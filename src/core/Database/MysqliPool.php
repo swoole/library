@@ -38,7 +38,13 @@ class MysqliPool extends ConnectionPool
             }
             $mysqli->set_charset($this->config->getCharset());
             return $mysqli;
-        }, $size, MysqliProxy::class);
+        }, $size, MysqliProxy::class, static function (MysqliProxy $connection): void {
+            try {
+                $connection->__getObject()->close();
+            } catch (\Error) {
+                // The borrower may already have closed this mysqli object.
+            }
+        });
     }
 
     /**
@@ -47,7 +53,7 @@ class MysqliPool extends ConnectionPool
      * borrower from reconnecting when the connection is lost.
      *
      * @param float $timeout the number of seconds to wait for a connection; 0 or less waits with no time limit
-     * @return MysqliProxy|false Returns a MysqliProxy object from the pool, or false if the pool is full and the timeout is reached.
+     * @return MysqliProxy|false Returns a MysqliProxy object from the pool, or false if no connection is available before the timeout.
      */
     public function get(float $timeout = -1)
     {
@@ -58,6 +64,7 @@ class MysqliPool extends ConnectionPool
         }
 
         $mysqli->reset();
+        $mysqli->setRetryOnLostConnection($this->config->getRetryOnLostConnection());
 
         return $mysqli;
     }
@@ -77,9 +84,12 @@ class MysqliPool extends ConnectionPool
      */
     public function put(mixed $connection): void
     {
-        if ($connection instanceof MysqliProxy && !$this->clean($connection)) {
+        if ($connection !== null && $this->pool !== null) {
+            $this->assertCanReturn($connection);
+        }
+        if ($this->pool !== null && $connection instanceof MysqliProxy && !$this->clean($connection)) {
             try {
-                parent::put(null);
+                parent::discard($connection);
             } catch (\Throwable) {
                 // Putting a connection back is no place to report that a new one cannot be made.
             }
@@ -96,6 +106,9 @@ class MysqliPool extends ConnectionPool
      */
     private function clean(MysqliProxy $connection): bool
     {
+        if ($connection->isLost()) {
+            return false;
+        }
         if ($connection->inTransaction()) {
             $mysqli = $connection->__getObject();
             try {
