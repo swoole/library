@@ -139,8 +139,16 @@ if (!mkdir($remote_object_dir, 0700)) {
 }
 $remote_object_bootstrap = var_export(dirname(__DIR__) . '/examples/remote-object/bootstrap.php', true);
 file_put_contents($remote_object_dir . '/bootstrap.php', "<?php\nrequire {$remote_object_bootstrap};\n");
-swoole_library_set_option('default_remote_object_server_worker_num', 8);
 swoole_library_set_option('default_remote_object_server_dir', $remote_object_dir);
+// The remote object tests exercise the generic RPC API and call arbitrary functions and classes
+// (php_uname, fopen, PDO, ...). The production daemon is restricted to the library's own needs by
+// default, so opt out here. Setting the options in full also keeps the worker/server-mode defaults.
+swoole_library_set_option('default_remote_object_server_options', [
+    'worker_num'        => 8,
+    'server_mode'       => defined('SWOOLE_THREAD') ? SWOOLE_THREAD : SWOOLE_BASE,
+    'allowed_functions' => [],
+    'allowed_classes'   => [],
+]);
 
 // Forked workers inherit this handler but never own the parent process's server directory.
 register_shutdown_function(static function () use ($remote_object_dir, $remote_object_owner): void {

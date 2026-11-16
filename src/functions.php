@@ -160,6 +160,10 @@ function swoole_init_default_remote_object_server(): void
             'server_mode' => defined('SWOOLE_THREAD') ? SWOOLE_THREAD : SWOOLE_BASE,
         ];
     }
+    // The daemon only needs what the library forwards to it; see src/remote_object_config.php.
+    // An application that uses the default client for its own remote objects can override these
+    // two keys (or set them to [] for no restriction) through default_remote_object_server_options.
+    $options += SWOOLE_LIBRARY_REMOTE_OBJECT_CONFIG;
 
     $print_log('remote object server options: ' . var_export($options, true));
 

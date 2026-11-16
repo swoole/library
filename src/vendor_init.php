@@ -24,6 +24,7 @@ ini_set('swoole.enable_library', 'On');
 // Every library file outside the PSR-4 root (src/core), which Composer cannot autoload on demand. The list follows the
 // order of src/__init__.php, and a file of that kind added there has to be added here as well.
 require_once __DIR__ . '/constants.php';
+require_once __DIR__ . '/remote_object_config.php';
 require_once __DIR__ . '/std/exec.php';
 require_once __DIR__ . '/core/Coroutine/Http/functions.php';
 require_once __DIR__ . '/core/Coroutine/functions.php';
