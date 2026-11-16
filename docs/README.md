@@ -1,6 +1,6 @@
 # 文档
 
-这里是 Swoole Library 的使用说明。表里的类通过 Composer 的 `Swoole\` 自动加载。gRPC、Debugger、Proxy 和 Kafka 不编译进 Swoole 扩展，安装 `swoole/library` 后即可使用。在本仓库里跑示例时加上 `-d swoole.enable_library=Off`，这样加载的是仓库里的源码。
+这里是 Swoole Library 的使用说明。表里的类通过 Composer 的 `Swoole\` 自动加载。gRPC、Debugger、Proxy、Kafka 和 FastCGI 不编译进 Swoole 扩展。`swoole.enable_library=Off` 时安装 `swoole/library` 即可；`On` 时只注册这些命名空间的 PSR-4 规则，两种方式互斥，见根目录 [README.md](../README.md) 的 Autoloading 章节。在本仓库里跑示例时加上 `-d swoole.enable_library=Off`，这样加载的是仓库里的源码。
 
 ## 并入的模块
 
@@ -21,7 +21,8 @@ Kafka 的 LZ4 记录批需要 `exussum12/xxhash`，`StickyAssignor` 需要 `chde
 | 主题 | 文档 |
 | --- | --- |
 | 用 NameResolver 做服务发现 | [name-resolver.md](name-resolver.md) |
+| FastCGI 客户端 | 根目录 [README.md](../README.md#examples-of-fastcgi-calls) 与 `examples/fastcgi` |
 
 ## English
 
-The pages above are the user guides. gRPC, Debugger, Proxy and Kafka are loaded by Composer's `Swoole\` autoload and are not compiled into the Swoole extension. Install `swoole/library` to use them. Examples in this repository need `php -d swoole.enable_library=Off`.
+The pages above are the user guides. gRPC, Debugger, Proxy, Kafka and FastCGI are loaded by Composer's `Swoole\` autoload and are not compiled into the Swoole extension. With `swoole.enable_library=Off`, install `swoole/library`; with `On`, register PSR-4 rules for those namespaces only. The two modes are mutually exclusive -- see the Autoloading section of the root [README.md](../README.md). Examples in this repository need `php -d swoole.enable_library=Off`.

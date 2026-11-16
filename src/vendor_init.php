@@ -9,6 +9,19 @@
 
 declare(strict_types=1);
 
+if (defined('SWOOLE_LIBRARY')) {
+    // This is the initialization script for a Composer install of swoole/library, which replaces the
+    // extension's embedded copy; it requires swoole.enable_library=Off. With the embedded library on,
+    // the constants and global functions below already exist and requiring them again would redeclare
+    // them. Loading this file in that state is a configuration error, so fail loudly instead of doing
+    // nothing silently.
+    throw new \RuntimeException(
+        'swoole/library cannot be loaded with swoole.enable_library=On. Run PHP with '
+        . '-d swoole.enable_library=Off to use the Composer package, or, with the embedded library on, '
+        . 'autoload only the Composer-only namespaces through PSR-4 (see composer-embedded.json).'
+    );
+}
+
 ini_set('swoole.enable_library', 'On');
 
 // Every library file outside the PSR-4 root (src/core), which Composer cannot autoload on demand. The list follows the

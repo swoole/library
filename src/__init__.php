@@ -17,12 +17,17 @@ return [
      * Composer-only modules: loaded via the "Swoole\\" PSR-4 autoload rule, NOT compiled into the
      * extension header. make-library skips these paths in its "Some files are not loaded" check
      * (see swoole/make-library). Do not add them to "files" below; they must keep being autoloaded.
+     * A prefix covers the path itself and its directory only, so the standalone core/FastCGI.php
+     * is listed separately from the core/FastCGI/ tree.
      */
     'ignore' => [
         'core/Grpc',
         'core/Debugger',
         'core/Proxy',
         'core/Kafka',
+        'core/FastCGI.php',
+        'core/FastCGI',
+        'core/Coroutine/FastCGI',
     ],
     /* Notice: Sort by dependency */
     'files' => [
@@ -65,29 +70,6 @@ return [
         # <core for cURL> #
         'core/Curl/Exception.php',
         'core/Curl/Handler.php',
-        # <core for FastCGI> #
-        'core/FastCGI.php',
-        'core/FastCGI/Record.php',
-        'core/FastCGI/Record/Params.php',
-        'core/FastCGI/Record/AbortRequest.php',
-        'core/FastCGI/Record/BeginRequest.php',
-        'core/FastCGI/Record/Data.php',
-        'core/FastCGI/Record/EndRequest.php',
-        'core/FastCGI/Record/GetValues.php',
-        'core/FastCGI/Record/GetValuesResult.php',
-        'core/FastCGI/Record/Stdin.php',
-        'core/FastCGI/Record/Stdout.php',
-        'core/FastCGI/Record/Stderr.php',
-        'core/FastCGI/Record/UnknownType.php',
-        'core/FastCGI/FrameParser.php',
-        'core/FastCGI/Message.php',
-        'core/FastCGI/Request.php',
-        'core/FastCGI/Response.php',
-        'core/FastCGI/HttpRequest.php',
-        'core/FastCGI/HttpResponse.php',
-        'core/Coroutine/FastCGI/Client.php',
-        'core/Coroutine/FastCGI/Client/Exception.php',
-        'core/Coroutine/FastCGI/Proxy.php',
         # <core for Process> #
         'core/Process/Manager.php',
         # <core for RemoteObject> #

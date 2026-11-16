@@ -5,6 +5,7 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 Backward-incompatible changes:
 
 * Dropped support for Swoole below 6.3.
+* FastCGI is now a Composer-only component and is no longer packed into the Swoole extension; `\Swoole\FastCGI` and `\Swoole\Coroutine\FastCGI` are loaded through the Composer autoloader, and the `Co\FastCGI\*` short-name aliases are removed.
 * `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, restore autocommit, and replace a connection that cannot be cleaned. The mysqli pool does not see a transaction started with `query('START TRANSACTION')`.
 * `\Swoole\Database\PDOProxy::inTransaction()` reports the transaction the driver reports after the last call, so it sees one started by hand, e.g. with `exec('BEGIN')`, and no longer reports one ended with `exec('COMMIT')` or by an implicit commit. The protected property `$inTransaction` is removed.
@@ -57,6 +58,7 @@ Removed:
 
 Fixed:
 
+* `src/vendor_init.php` throws a `\RuntimeException` with a clear message when loaded while `swoole.enable_library=On`, instead of failing on redeclared constants and functions. Use `-d swoole.enable_library=Off` for the Composer package, or the Composer-only PSR-4 rules of `composer-embedded.json` with the embedded library on.
 * `\Swoole\Grpc\Client` keeps a response that arrives while `send()` is still writing, and drops a stream id from a connection that has since been replaced.
 * `\Swoole\Grpc\StreamingCall::cancel()` removes the stream from the shared connection, and `push()` no longer writes when the stream failed to open.
 * A per-call `timeout` limits the local wait. A wait that runs out is `DEADLINE_EXCEEDED`.
