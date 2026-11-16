@@ -26,7 +26,7 @@ class LibraryManifestTest extends TestCase
     public function testComposerLoadsEveryFileThatPsr4CannotLoadInManifestOrder(): void
     {
         $root     = dirname(__DIR__, 2);
-        $manifest = require $root . '/src/__init__.php';
+        $manifest = require $root . '/src/embedded_manifest.php';
         $expected = [];
         foreach ($manifest['files'] as $file) {
             $class        = 'Swoole\\' . str_replace('/', '\\', substr($file, 5, -4));
@@ -42,7 +42,7 @@ class LibraryManifestTest extends TestCase
     public function testEmbeddedClassAndTraitDependenciesPrecedeTheirUsers(): void
     {
         $root      = dirname(__DIR__, 2);
-        $manifest  = require $root . '/src/__init__.php';
+        $manifest  = require $root . '/src/embedded_manifest.php';
         $classes   = [];
         $positions = [];
         foreach ($manifest['files'] as $position => $file) {

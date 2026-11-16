@@ -5,10 +5,10 @@
  *
  * This is the in-tree replacement for swoole-src's tools/build-library.php. Keeping it here means
  * the Swoole build no longer has to install a pinned `swoole/make-library` release via Composer:
- * the generator it uses lives in tools/make-library/ and is always in sync with __init__.php.
+ * the generator it uses lives in tools/make-library/ and is always in sync with embedded_manifest.php.
  *
  * Layout expected by the CI (build-swoole.yml): swoole-src is at <root>, this library is checked
- * out at <root>/library, and the command is run from <root>. SWOOLE_DIR (read by src/__init__.php
+ * out at <root>/library, and the command is run from <root>. SWOOLE_DIR (read by src/embedded_manifest.php
  * for the output path) defaults to <root>; it can be overridden for local runs.
  */
 

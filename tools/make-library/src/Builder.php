@@ -23,11 +23,11 @@ class Builder
         if (!$this->librarySrcDir or !is_dir($this->librarySrcDir)) {
             throw new Exception("The LibrarySrcDir is not exists", 1);
         }
-        $initFile = $this->librarySrcDir . '/__init__.php';
-        if (!is_file($initFile)) {
-            throw new Exception("The __init__.php file [$initFile] not found in LibrarySrcDir", 2);
+        $manifestFile = $this->librarySrcDir . '/embedded_manifest.php';
+        if (!is_file($manifestFile)) {
+            throw new Exception("The embedded_manifest.php file [$manifestFile] not found in LibrarySrcDir", 2);
         }
-        $cfg = require $initFile;
+        $cfg = require $manifestFile;
         if (empty($cfg['files'])) {
             throw new Exception("The library files must be not empty", 3);
         }
@@ -114,7 +114,7 @@ class Builder
     public function getUnloadedFiles(): array
     {
         // These two are part of the build machinery, not the library payload.
-        $ignore_files = ['vendor_init.php', '__init__.php'];
+        $ignore_files = ['vendor_init.php', 'embedded_manifest.php'];
 
         $diff_files = array_diff($this->scanFiles(), $this->files);
         foreach ($diff_files as $k => $f) {

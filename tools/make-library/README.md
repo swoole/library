@@ -4,15 +4,15 @@ Convert `PHP` code to a `C/C++` header file (`php_swoole_library.h`).
 
 This tool is **vendored inside `swoole/library`** under `tools/make-library/`. The Swoole build
 (`tools/build-library.php` at the repository root) calls it directly, so the embedded PHP library
-is always generated with a version of the generator that matches this repo's `src/__init__.php`.
+is always generated with a version of the generator that matches this repo's `src/embedded_manifest.php`.
 There is no separate `swoole/make-library` package to install or release.
 
-## Edit `__init__.php`
+## Edit `embedded_manifest.php`
 
-Edit the `__init__.php` file in the source code directory, the `make-library` script will read this file to configuration.
+Edit the `embedded_manifest.php` file in the source code directory, the `make-library` script will read this file to configuration.
 
 ```php
-# file: __init__.php
+# file: embedded_manifest.php
 <?php
 return [
     'name' => 'swoole',  // Library name
@@ -41,7 +41,7 @@ return [
 
 ### `ignore` (optional)
 
-By default `make-library` requires every file under `src/` (except `__init__.php` and
+By default `make-library` requires every file under `src/` (except `embedded_manifest.php` and
 `vendor_init.php`) to be listed in `files`; otherwise the build fails with
 `Some files are not loaded: ...`. This catches files accidentally left out of the compiled
 header.
@@ -63,7 +63,7 @@ php tools/build-library.php           # builds <swoole-src>/ext-src/php_swoole_l
 php tools/make-library/bin/make-library.php ./src
 ```
 
-The first parameter is the source code path, there must exist `__init__.php` in this directory.
+The first parameter is the source code path, there must exist `embedded_manifest.php` in this directory.
 Both entry points escape C++14 trigraphs in the generated header, preserving the original PHP
 bytes. Source paths are passed as literal command arguments, including spaces and quotes.
 Generation fails if two source paths produce the same C symbol, or a path produces an invalid

@@ -8,6 +8,7 @@
  */
 
 declare(strict_types=1);
+
 return [
     'name'            => 'swoole',
     'checkFileChange' => !getenv('SWOOLE_LIBRARY_DEV'),
@@ -104,6 +105,5 @@ return [
         # <finalizer> #
         'functions.php',
         'alias.php',
-        'alias_ns.php',
     ],
 ];

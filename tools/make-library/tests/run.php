@@ -56,7 +56,7 @@ function makeFixture(array $files, ?array $ignore, array $overrides = [], string
         $cfg['ignore'] = $ignore;
     }
     $cfg = array_replace($cfg, $overrides);
-    file_put_contents($src . '/__init__.php', '<?php return ' . var_export($cfg, true) . ';');
+    file_put_contents($src . '/embedded_manifest.php', '<?php return ' . var_export($cfg, true) . ';');
     file_put_contents($src . '/vendor_init.php', "<?php\n// vendor init\n");
 
     return [$src, $root . '/out.h'];
@@ -129,7 +129,7 @@ assertSame(
     'without ignore, undeclared files are reported'
 );
 assertTrue(!in_array('vendor_init.php', $unloaded, true), 'vendor_init.php is always ignored');
-assertTrue(!in_array('__init__.php', $unloaded, true), '__init__.php is always ignored');
+assertTrue(!in_array('embedded_manifest.php', $unloaded, true), 'embedded_manifest.php is always ignored');
 assertTrue(!in_array('constants.php', $unloaded, true), 'declared files are not reported');
 cleanup($src);
 
@@ -185,7 +185,7 @@ cleanup($src);
 // 5. Invalid ignore type is rejected with a clear exception.
 // ---------------------------------------------------------------------------
 [$src, $out] = makeFixture(['constants.php', 'core/Constant.php'], null);
-// Overwrite __init__.php with a bad ignore value.
+// Overwrite embedded_manifest.php with a bad ignore value.
 $cfg = [
     'name' => 'swoole',
     'checkFileChange' => false,
@@ -194,7 +194,7 @@ $cfg = [
     'files' => ['constants.php', 'core/Constant.php'],
     'ignore' => 'core/Grpc',
 ];
-file_put_contents($src . '/__init__.php', '<?php return ' . var_export($cfg, true) . ';');
+file_put_contents($src . '/embedded_manifest.php', '<?php return ' . var_export($cfg, true) . ';');
 $threw = false;
 try {
     new SwooleLibrary\Builder($src);

@@ -52,7 +52,7 @@ jobs:
           cd swoole
           # The library generator is vendored in this repository (tools/make-library) and invoked
           # via tools/build-library.php, so no Composer install of a pinned swoole/make-library
-          # release is needed. The generator stays in sync with library/src/__init__.php.
+          # release is needed. The generator stays in sync with library/src/embedded_manifest.php.
 
           cat ext-src/php_swoole_library.h | grep '/* $Id:' # the commit # of Swoole Library used in Swoole.
           php ./library/tools/build-library.php
