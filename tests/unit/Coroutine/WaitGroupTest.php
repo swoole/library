@@ -19,6 +19,40 @@ use Swoole\Tests\TestCase;
  */
 class WaitGroupTest extends TestCase
 {
+    public function testNegativeInitialCounterIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new WaitGroup(-1);
+    }
+
+    public function testWaitingFlagIsResetAfterAnException(): void
+    {
+        self::coRun(function (): void {
+            $wg = new class(1) extends WaitGroup {
+                public function __construct(int $delta)
+                {
+                    parent::__construct($delta);
+                    $this->chan = new class(1) extends Channel {
+                        public function pop(float $timeout = -1): mixed
+                        {
+                            throw new \RuntimeException('pop failed');
+                        }
+                    };
+                }
+            };
+            try {
+                $wg->wait();
+                self::fail('pop() must fail');
+            } catch (\RuntimeException $e) {
+                self::assertSame('pop failed', $e->getMessage());
+            }
+            $wg->add();
+            $wg->done();
+            $wg->done();
+            self::assertTrue($wg->wait());
+        });
+    }
+
     public function testWait(): void
     {
         self::coRun(function () {

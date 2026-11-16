@@ -324,13 +324,42 @@ class MultiplexClientTest extends TestCase
     {
         self::coRun(function () {
             $client = new MultiplexClient('127.0.0.1', 1);
-            foreach (['recv' => [], 'read' => [], 'write' => [1, 'x'], 'goaway' => []] as $method => $args) {
+            foreach (['send' => [new Request()], 'recv' => [], 'read' => [], 'write' => [1, 'x'], 'goaway' => []] as $method => $args) {
                 try {
                     $client->{$method}(...$args);
                     $this->fail("{$method}() must throw");
                 } catch (\BadMethodCallException $e) {
                     $this->assertNotSame('', $e->getMessage());
                 }
+            }
+        });
+    }
+
+    public function testUnansweredStreamsCannotAccumulateWithoutBound(): void
+    {
+        self::coRun(function (): void {
+            $server        = $this->startServer();
+            $heldResponses = [];
+            $server->handle('/never', static function ($request, $response) use (&$heldResponses): void {
+                $heldResponses[] = $response;
+            });
+            $client = $this->newClient($server, ['heartbeat_idle_time' => 0]);
+            try {
+                for ($i = 0; $i < 128; $i++) {
+                    self::assertFalse($client->request(self::newRequest('/never', ''), 0.001));
+                }
+                self::assertFalse($client->connected, 'A connection full of unanswered streams must be recycled');
+                $property = (new \ReflectionObject($client))->getProperty('abandonedStreams');
+                self::assertSame([], $property->getValue($client));
+                $response = $client->request(self::newRequest('/', 'fresh'));
+                self::assertInstanceOf(Response::class, $response);
+                self::assertSame('fresh', $response->data);
+            } finally {
+                $client->close();
+                foreach ($heldResponses as $response) {
+                    $response->close();
+                }
+                $server->shutdown();
             }
         });
     }

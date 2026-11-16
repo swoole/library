@@ -33,6 +33,56 @@ class FunctionTest extends TestCase
         self::trace('TEST END ' . $this->getName());
     }
 
+    public function testCompletionStatusDistinguishesTimeoutFromNullResults(): void
+    {
+        self::coRun(function (): void {
+            $completed = null;
+            self::assertSame(['null' => null], batch(['null' => static fn () => null], -1, $completed));
+            self::assertTrue($completed);
+            $result = batch(['slow' => static function (): void {
+                System::sleep(0.05);
+            }], 0.001, $completed);
+            self::assertSame(['slow' => null], $result);
+            self::assertFalse($completed);
+
+            self::assertSame([null], map([1], static fn () => null, -1, $completed));
+            self::assertTrue($completed);
+            self::assertSame([null], map([1], static function (): void {
+                System::sleep(0.05);
+            }, 0.001, $completed));
+            self::assertFalse($completed);
+        });
+    }
+
+    public function testParallelRejectsNegativeCountsWithoutStartingTasks(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        parallel(-1, static function (): void {});
+    }
+
+    public function testParallelAllowsZeroTasks(): void
+    {
+        $called = false;
+        parallel(0, static function () use (&$called): void { $called = true; });
+        self::assertFalse($called);
+    }
+
+    public function testDeadlockDiagnosticIncludesCoroutineTrace(): void
+    {
+        $output = '';
+        self::coRun(static function () use (&$output): void {
+            ob_start();
+            try {
+                deadlock_check();
+                $output = ob_get_contents();
+            } finally {
+                ob_end_clean();
+            }
+        });
+        self::assertStringContainsString('[FATAL ERROR]: all coroutines (count:', $output);
+        self::assertStringContainsString('[Coroutine-', $output);
+    }
+
     public function testBatchTimeout(): void
     {
         self::coRun(function () {

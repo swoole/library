@@ -20,6 +20,37 @@ use Swoole\Tests\TestCase;
  */
 class BarrierTest extends TestCase
 {
+    public function testSubMillisecondTimeoutAndRepeatedWaits(): void
+    {
+        self::coRun(function (): void {
+            $barrier       = Barrier::make();
+            $holder        = $barrier;
+            $watchdogFired = false;
+            $cid           = Coroutine::getCid();
+            $watchdog      = \Swoole\Timer::after(1000, static function () use (&$watchdogFired, $cid): void {
+                $watchdogFired = true;
+                Coroutine::resume($cid);
+            });
+            try {
+                Barrier::wait($barrier, 0.0005);
+                self::assertFalse($watchdogFired, 'A positive sub-millisecond timeout must be honored');
+                self::assertNull($barrier);
+            } finally {
+                \Swoole\Timer::clear($watchdog);
+            }
+            // Destruction in the waiting coroutine used to leave its cid in a static cancellation list.
+            unset($holder);
+            $finished = false;
+            $barrier  = Barrier::make();
+            Coroutine::create(static function () use ($barrier, &$finished): void {
+                Coroutine::sleep(0.02);
+                $finished = true;
+            });
+            Barrier::wait($barrier);
+            self::assertTrue($finished, 'A previous timeout must not skip the next wait in the same coroutine');
+        });
+    }
+
     public function testWait(): void
     {
         self::coRun(function () {

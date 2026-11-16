@@ -7,6 +7,11 @@ Backward-incompatible changes:
 * Dropped support for Swoole below 6.3.
 * FastCGI is now a Composer-only component and is no longer packed into the Swoole extension; `\Swoole\FastCGI` and `\Swoole\Coroutine\FastCGI` are loaded through the Composer autoloader, and the `Co\FastCGI\*` short-name aliases are removed.
 * `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
+* `\Swoole\ArrayObject::unserialize()` disables object instantiation by default. Pass an explicit class list as its second argument to restore trusted objects, or `true` to allow all classes. The `Serializable` interface remains supported for legacy payloads.
+* `\Swoole\ArrayObject::rewind()` and `next()` now return `void`, following the `Iterator` interface. String wrapper methods now declare their return types.
+* `\Swoole\StringObject::append()` returns a new object without modifying the original string.
+* HTTP helpers reject unknown `http_client_driver` options. Use `null` or `'http_client'` for the default driver, `'curl'` or `'stream'`.
+* `\Swoole\Coroutine\Server::start()` rejects concurrent calls and calls after the server has stopped. `\Swoole\Coroutine\Http2\MultiplexClient::send()` is disabled; use `request()`.
 * `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, restore autocommit, and replace a connection that cannot be cleaned. The mysqli pool does not see a transaction started with `query('START TRANSACTION')`.
 * `\Swoole\Database\PDOProxy::inTransaction()` reports the transaction the driver reports after the last call, so it sees one started by hand, e.g. with `exec('BEGIN')`, and no longer reports one ended with `exec('COMMIT')` or by an implicit commit. The protected property `$inTransaction` is removed.
 * `\Swoole\Database\RedisPool::put()` brings a connection left in MULTI or pipeline mode back to the normal mode, discarding the queued commands, and replaces a connection that cannot be brought back.
@@ -22,6 +27,7 @@ Backward-incompatible changes:
 
 Added:
 
+* `Swoole\Coroutine\batch()` and `map()` accept an optional final `$completed` output argument. It is `false` if the wait timed out or was canceled; partial results and tasks continuing in the background retain their existing behavior.
 * `\Swoole\Grpc` provides a coroutine gRPC client, with Etcd and Helloworld examples and generated clients under `examples/grpc`. It is a Composer-only component and is not packed into the Swoole extension.
 * `\Swoole\Grpc` gains a standard status model (`Status\StatusCode`, `Status`, `RpcException`), an idiomatic `Result`/`invokeUnary()` entry point, `CallOptions` for deadlines (`grpc-timeout`), gzip compression and `-bin` metadata, client interceptors (including a retry interceptor), and feature-detecting trailers extraction. All additions are opt-in; generated stubs keep returning `[reply, status, response]`.
 * `\Swoole\Grpc\StreamingCall` gains cross-DATA-frame message reassembly, a message `Iterator`, status/trailers introspection, `recvResult()` and local `cancel()`. `recv()` returns one reassembled gRPC message; `send()`, `push()` and `end()` are unchanged.
@@ -59,6 +65,15 @@ Removed:
 
 Fixed:
 
+* `\Swoole\Coroutine\Barrier` honors positive timeouts below a millisecond and no longer keeps stale coroutine cancellation state after a timeout.
+* Coroutine HTTP helpers preserve empty and zero bodies. The stream driver returns real status codes, headers and cookies, including for error responses. Cookie values containing `=` are preserved, and malformed cookies are ignored. Request bodies of `'0'`, `0` and empty arrays are sent consistently.
+* Negative initial `WaitGroup` counters and negative `parallel()` counts are rejected before tasks start; `WaitGroup::wait()` clears its waiting state even on exceptions.
+* HTTP/2 multiplexed connections are recycled after 128 abandoned streams remain unanswered, bounding retained state. This closes other in-flight requests; the next `request()` reconnects.
+* String wrappers handle the end-of-string index, empty strings and negative indices without warnings; `trim('0')` honors its character mask. `MultibyteStringObject` reads, reverses, changes case and splits chunks by character.
+* `\Swoole\ArrayObject::get()` throws `ArrayKeyNotExists` for missing non-string keys, and `randomGet()` returns `null` for an empty array.
+* `swoole_is_in_container()` recognizes markers at offset zero and handles unavailable procfs. `swoole_container_cpu_num()` handles whitespace-separated cgroup quotas and falls back to the host CPU count for unavailable or invalid quota data.
+* `swoole_table()` validates field definitions and string lengths before using them.
+* Default remote object server startup has a ten-second timeout, configurable through the `default_remote_object_server_startup_timeout` library option in seconds. Startup waits for a listening socket, detects failed processes, reports decoded exit codes, drains process output while waiting, and releases the startup lock on failure.
 * `src/vendor_init.php` no longer redeclares constants and global functions when `swoole.enable_library=On`; the Composer autoloader can now be loaded alongside the embedded library, and its PSR-4 rules supply the Composer-only components the extension does not pack.
 * `\Swoole\Grpc\Client` keeps a response that arrives while `send()` is still writing, and drops a stream id from a connection that has since been replaced.
 * `\Swoole\Grpc\StreamingCall::cancel()` removes the stream from the shared connection, and `push()` no longer writes when the stream failed to open.

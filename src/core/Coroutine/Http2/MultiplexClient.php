@@ -27,6 +27,7 @@ if (!class_exists(Client::class, false)) {
 
 /**
  * An HTTP/2 client that multiplexes requests from many coroutines over one shared connection.
+ * Available only with HTTP/2 support; check class_exists(Client::class, false) before using it.
  *
  * A single recv-loop coroutine reads every response off the connection and routes it to the
  * requesting coroutine by stream ID. The connection is established on demand and re-established
@@ -34,9 +35,9 @@ if (!class_exists(Client::class, false)) {
  * not peer liveness); a heartbeat checker closes it after a period without requests.
  *
  * The connection is owned by that machinery: the frame-level API inherited from the base class
- * (recv(), read(), write(), goaway()) is disabled and throws, and send() must not be called
- * directly -- the response to a stream that request() did not register would be parked forever,
- * and the connection could then never idle-close. Use request().
+ * (send(), recv(), read(), write(), goaway()) is disabled and throws. Use request().
+ * A connection with 128 unanswered abandoned streams is closed to bound retained state. Other
+ * in-flight requests then fail as on any connection close; the next request reconnects.
  *
  * Besides the settings understood by the underlying client, set() accepts two options that borrow
  * Swoole\Server's heartbeat vocabulary -- here they govern the client's own outbound connection:
@@ -60,6 +61,9 @@ final class MultiplexClient extends Client
     private const DEFAULT_HEARTBEAT_CHECK_INTERVAL = 3;
 
     private const DEFAULT_HEARTBEAT_IDLE_TIME = 10;
+
+    // Recycle the connection if the peer never answers abandoned streams, bounding their tombstones.
+    private const MAX_ABANDONED_STREAMS = 128;
 
     /**
      * @var object|null identity token of the currently running recv loop; null when none is running.
@@ -140,7 +144,7 @@ final class MultiplexClient extends Client
             if (!$this->ensureRecvLoop()) {
                 return false;
             }
-            $streamId = $this->send($request);
+            $streamId = parent::send($request);
             if ($streamId === false) {
                 return false;
             }
@@ -179,6 +183,10 @@ final class MultiplexClient extends Client
                             $this->setError(SWOOLE_ERROR_CO_TIMEDOUT, 'the response timed out');
                         } else {
                             $this->setError(SWOOLE_ERROR_CO_CANCELED, 'the wait for the response was canceled');
+                        }
+                        if (count($this->abandonedStreams) >= self::MAX_ABANDONED_STREAMS) {
+                            // close() also wakes other in-flight requests; their callers can retry on a fresh connection.
+                            $this->close();
                         }
                     }
                 }
@@ -231,6 +239,14 @@ final class MultiplexClient extends Client
         $this->sleepChannel = null;
         $sleepChannel?->close();
         return $wasUp;
+    }
+
+    /**
+     * @throws \BadMethodCallException always
+     */
+    public function send(Request $request): int|false
+    {
+        throw new \BadMethodCallException('requests must be sent through request() on a multiplexed connection');
     }
 
     /**
@@ -490,7 +506,7 @@ final class MultiplexClient extends Client
      */
     private function interruptibleSleep(float $seconds): void
     {
-        $this->sleepChannel ??= new Channel(1);
+        $this->sleepChannel = $this->sleepChannel ?? new Channel(1);
         $this->sleepChannel->pop($seconds);
     }
 }

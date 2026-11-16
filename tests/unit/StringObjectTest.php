@@ -115,6 +115,12 @@ class StringObjectTest extends TestCase
             swoole_string('ABC')->append(swoole_string(' hello')),
             'ABC hello'
         );
+
+        $original = swoole_string('a');
+        $appended = $original->append('b');
+        $this->assertSame('a', $original->toString());
+        $this->assertSame('ab', $appended->toString());
+        $this->assertNotSame($original, $appended);
     }
 
     public function testChar(): void
@@ -124,12 +130,19 @@ class StringObjectTest extends TestCase
         $this->assertEquals($str->char(0), 'A');
         $this->assertEquals($str->char(2), 'C');
         $this->assertEquals($str->char(100), '');
+        $this->assertSame('', $str->char(3));
+        $this->assertSame('C', $str->char(-1));
+        $this->assertSame('A', $str->char(-3));
+        $this->assertSame('', $str->char(-4));
+        $this->assertSame('', swoole_string()->char(0));
+        $this->assertSame('', swoole_string()->char(-1));
     }
 
     public function testTrim(): void
     {
         $str = swoole_string("   \nhello world\n")->trim();
         $this->assertEquals($str->toString(), 'hello world');
+        $this->assertSame('abc', swoole_string('000abc000')->trim('0')->toString());
     }
 
     public function testIpos(): void

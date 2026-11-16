@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Swoole;
 
+use Swoole\Exception\ArrayKeyNotExists;
 use Swoole\Tests\TestCase;
 
 /**
@@ -161,6 +162,58 @@ class ArrayObjectTest extends TestCase
     public function testOffsetExists(): void
     {
         $this->assertEquals($this->data->offsetExists(9), isset($this->control_data[9]));
+    }
+
+    public function testArrayAccessPreservesNativeValues(): void
+    {
+        $array = swoole_array(['null' => null, 'string' => 'value', 'array' => ['nested']]);
+        $this->assertFalse(isset($array['null']));
+        $this->assertTrue($array->exists('null'));
+        $this->assertNull($array->get('null'));
+        $this->assertSame('fallback', $array['null'] ?? 'fallback');
+        $this->assertSame('value', $array['string']);
+        $this->assertSame(['nested'], $array['array']);
+        $this->assertInstanceOf(StringObject::class, $array->get('string'));
+        $this->assertInstanceOf(ArrayObject::class, $array->get('array'));
+        $this->assertNull($array['missing']);
+    }
+
+    public function testMissingKeysThrowTheExpectedException(): void
+    {
+        foreach ([1, 1.0, 1.5, true, false, null, 'missing'] as $key) {
+            try {
+                // PHP itself deprecates the lossy conversion of fractional array keys.
+                @swoole_array()->get($key);
+                $this->fail('Missing key must throw ArrayKeyNotExists');
+            } catch (ArrayKeyNotExists $e) {
+                $this->assertSame((string) $key, $e->getMessage());
+            }
+        }
+    }
+
+    public function testSerializationCompatibility(): void
+    {
+        $array = ['hello' => 'world', 'nested' => [1, null, false]];
+        $this->assertSame($array, unserialize(serialize(swoole_array($array)))->toArray());
+
+        // Keep reading payloads written before __serialize() was introduced.
+        $payload = serialize($array);
+        $legacy  = 'C:18:"Swoole\ArrayObject":' . strlen($payload) . ':{' . $payload . '}';
+        $this->assertSame($array, unserialize($legacy)->toArray());
+    }
+
+    public function testUnserializeRequiresExplicitClassPermission(): void
+    {
+        ArrayObjectWakeupProbe::$wakeups = 0;
+        $object                          = new ArrayObjectWakeupProbe();
+        $payload                         = serialize([$object]);
+        $restored                        = swoole_array()->unserialize($payload);
+        $this->assertInstanceOf(\__PHP_Incomplete_Class::class, $restored[0]);
+        $this->assertSame(0, ArrayObjectWakeupProbe::$wakeups);
+
+        $restored->unserialize($payload, [ArrayObjectWakeupProbe::class]);
+        $this->assertInstanceOf(ArrayObjectWakeupProbe::class, $restored[0]);
+        $this->assertSame(1, ArrayObjectWakeupProbe::$wakeups);
     }
 
     public function testSearch(): void
@@ -592,6 +645,9 @@ class ArrayObjectTest extends TestCase
     public function testRandomGet(): void
     {
         $this->assertTrue($this->data->contains($this->data->randomGet()));
+        $this->assertNull(swoole_array()->randomGet());
+        $this->assertInstanceOf(StringObject::class, swoole_array(['value'])->randomGet());
+        $this->assertInstanceOf(ArrayObject::class, swoole_array([['nested']])->randomGet());
     }
 
     public function testSum(): void
@@ -674,5 +730,18 @@ class ArrayObjectTest extends TestCase
         $arr = ArrayObject::from([1, 2, 3]);
         $this->assertInstanceOf(ArrayObject::class, $arr);
         $this->assertSame([1, 2, 3], $arr->toArray());
+    }
+}
+
+/**
+ * @internal
+ */
+class ArrayObjectWakeupProbe
+{
+    public static int $wakeups = 0;
+
+    public function __wakeup(): void
+    {
+        self::$wakeups++;
     }
 }

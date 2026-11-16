@@ -25,6 +25,26 @@ use function Swoole\Coroutine\Http\post;
  */
 class HttpFunctionTest extends TestCase
 {
+    private array $options = [];
+
+    protected function setUp(): void
+    {
+        $this->options = swoole_library_get_options();
+    }
+
+    protected function tearDown(): void
+    {
+        swoole_library_set_options($this->options);
+    }
+
+    public function testUnknownDriverIsRejected(): void
+    {
+        swoole_library_set_option(Constant::OPTION_HTTP_CLIENT_DRIVER, 'typo-driver');
+        $this->expectException(Http\Client\Exception::class);
+        $this->expectExceptionMessage('unknown HTTP client driver');
+        get('http://127.0.0.1/');
+    }
+
     public function testGet(): void
     {
         self::coRun(function () {

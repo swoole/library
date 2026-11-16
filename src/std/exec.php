@@ -23,6 +23,7 @@ function swoole_exec(string $command, mixed &$output = null, mixed &$returnVar =
                 $value = substr($value, 0, -1);
             }
         }
+        unset($value);
         if (($endLine = end($outputList)) === '') {
             array_pop($outputList);
             $endLine = end($outputList);

@@ -47,12 +47,12 @@ class StringObject implements \Stringable
 
     public function pos(string $needle, int $offset = 0): false|int
     {
-        return strpos($this->string, $needle, $offset);
+        return $this->indexOf($needle, $offset);
     }
 
     public function rpos(string $needle, int $offset = 0): false|int
     {
-        return strrpos($this->string, $needle, $offset);
+        return $this->lastIndexOf($needle, $offset);
     }
 
     public function reverse(): static
@@ -60,10 +60,7 @@ class StringObject implements \Stringable
         return new static(strrev($this->string)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return false|int
-     */
-    public function ipos(string $needle)
+    public function ipos(string $needle): false|int
     {
         return stripos($this->string, $needle);
     }
@@ -80,32 +77,23 @@ class StringObject implements \Stringable
 
     public function trim(string $characters = ''): static
     {
-        if ($characters) {
+        if ($characters !== '') {
             return new static(trim($this->string, $characters)); // @phpstan-ignore new.static
         }
         return new static(trim($this->string)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function ltrim(): self
+    public function ltrim(): static
     {
         return new static(ltrim($this->string)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function rtrim(): self
+    public function rtrim(): static
     {
         return new static(rtrim($this->string)); // @phpstan-ignore new.static
     }
 
-    /**
-     * @return static
-     */
-    public function substr(int $offset, ?int $length = null)
+    public function substr(int $offset, ?int $length = null): static
     {
         return new static(substr($this->string, $offset, $length)); // @phpstan-ignore new.static
     }
@@ -117,7 +105,7 @@ class StringObject implements \Stringable
 
     public function append(mixed $str): static
     {
-        return new static($this->string .= $str); // @phpstan-ignore new.static
+        return new static($this->string . $str); // @phpstan-ignore new.static
     }
 
     /**
@@ -164,7 +152,8 @@ class StringObject implements \Stringable
 
     public function char(int $index): string
     {
-        if ($index > strlen($this->string)) {
+        $length = $this->length();
+        if ($length === 0 || $index >= $length || $index < -$length) {
             return '';
         }
         return $this->string[$index];

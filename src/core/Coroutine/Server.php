@@ -70,6 +70,8 @@ class Server
     /** @var Socket */
     protected $socket;
 
+    private bool $stopped = false;
+
     /**
      * Server constructor.
      * @throws Exception
@@ -116,12 +118,16 @@ class Server
     public function shutdown(): bool
     {
         $this->running = false;
+        $this->stopped = true;
         return $this->socket->cancel();
     }
 
     public function start(): bool
     {
-        $this->running = true;
+        if ($this->running || $this->stopped) {
+            $this->errCode = $this->running ? SOCKET_EALREADY : SOCKET_EINVAL;
+            return false;
+        }
         if ($this->fn === null) {
             $this->errCode = SOCKET_EINVAL;
             return false;
@@ -132,61 +138,67 @@ class Server
             return false;
         }
 
-        $skipped = 0;
-        while ($this->running) {
-            $conn = $socket->accept();
-            if ($conn) {
-                $skipped = 0;
-                $conn->setProtocol($this->setting);
-                if (!empty($this->setting[Constant::OPTION_OPEN_SSL])) {
-                    $fn = static function ($fn, $connection) {
-                        /* @var $connection Connection */
-                        if (!$connection->exportSocket()->sslHandshake()) {
-                            return;
-                        }
-                        $fn($connection);
-                    };
-                    $arguments = [$this->fn, new Connection($conn)];
-                } else {
-                    $fn        = $this->fn;
-                    $arguments = [new Connection($conn)];
-                }
-                if (Coroutine::create($fn, ...$arguments) === false) {
-                    goto _wait;
-                }
-            } else {
-                if ($socket->errCode == SOCKET_EMFILE || $socket->errCode == SOCKET_ENFILE) {
-                    _wait:
-                    Coroutine::sleep(1);
-                    continue;
-                }
-                if ($socket->errCode == SOCKET_ETIMEDOUT) {
-                    continue;
-                }
-                if (self::isTransientAcceptError($socket->errCode)) {
-                    if (++$skipped > self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW) {
-                        if ($skipped === self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW + 1) {
-                            try {
-                                trigger_error("accept keeps failing, Error: {$socket->errMsg}[{$socket->errCode}]; the server goes on accepting, a millisecond apart", E_USER_WARNING);
-                            } catch (\Throwable) {
-                                // An error handler that turns warnings into exceptions must not stop the server: the
-                                // warning only reports that it goes on.
+        $this->running = true;
+        try {
+            $skipped = 0;
+            while ($this->running) {
+                $conn = $socket->accept();
+                if ($conn) {
+                    $skipped = 0;
+                    $conn->setProtocol($this->setting);
+                    if (!empty($this->setting[Constant::OPTION_OPEN_SSL])) {
+                        $fn = static function ($fn, $connection) {
+                            /* @var $connection Connection */
+                            if (!$connection->exportSocket()->sslHandshake()) {
+                                return;
                             }
-                        }
-                        Coroutine::sleep(0.001);
+                            $fn($connection);
+                        };
+                        $arguments = [$this->fn, new Connection($conn)];
+                    } else {
+                        $fn        = $this->fn;
+                        $arguments = [new Connection($conn)];
                     }
-                    continue;
+                    if (Coroutine::create($fn, ...$arguments) === false) {
+                        goto _wait;
+                    }
+                } else {
+                    if ($socket->errCode == SOCKET_EMFILE || $socket->errCode == SOCKET_ENFILE) {
+                        _wait:
+                        Coroutine::sleep(1);
+                        continue;
+                    }
+                    if ($socket->errCode == SOCKET_ETIMEDOUT) {
+                        continue;
+                    }
+                    if (self::isTransientAcceptError($socket->errCode)) {
+                        if (++$skipped > self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW) {
+                            if ($skipped === self::TRANSIENT_ACCEPT_ERRORS_IN_A_ROW + 1) {
+                                try {
+                                    trigger_error("accept keeps failing, Error: {$socket->errMsg}[{$socket->errCode}]; the server goes on accepting, a millisecond apart", E_USER_WARNING);
+                                } catch (\Throwable) {
+                                    // An error handler that turns warnings into exceptions must not stop the server: the
+                                    // warning only reports that it goes on.
+                                }
+                            }
+                            Coroutine::sleep(0.001);
+                        }
+                        continue;
+                    }
+                    if ($socket->errCode == SOCKET_ECANCELED) {
+                        break;
+                    }
+                    $this->errCode = $socket->errCode;
+                    trigger_error("accept failed, Error: {$socket->errMsg}[{$socket->errCode}]", E_USER_WARNING);
+                    return false;
                 }
-                if ($socket->errCode == SOCKET_ECANCELED) {
-                    break;
-                }
-                $this->errCode = $socket->errCode;
-                trigger_error("accept failed, Error: {$socket->errMsg}[{$socket->errCode}]", E_USER_WARNING);
-                return false;
             }
-        }
 
-        return true;
+            return true;
+        } finally {
+            $this->running = false;
+            $this->stopped = true;
+        }
     }
 
     private static function isTransientAcceptError(int $errCode): bool

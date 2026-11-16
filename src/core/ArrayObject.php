@@ -13,6 +13,7 @@ namespace Swoole;
 
 use Swoole\Exception\ArrayKeyNotExists;
 
+// Serializable remains necessary to read legacy C-format payloads; new payloads use __serialize().
 class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
 {
     /**
@@ -63,20 +64,12 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return count($this->array);
     }
 
-    /**
-     * @return mixed
-     */
-    #[\ReturnTypeWillChange]
-    public function current()
+    public function current(): mixed
     {
         return current($this->array);
     }
 
-    /**
-     * @return mixed
-     */
-    #[\ReturnTypeWillChange]
-    public function key()
+    public function key(): int|string|null
     {
         return key($this->array);
     }
@@ -86,22 +79,14 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return $this->key() !== null;
     }
 
-    /**
-     * @return mixed
-     */
-    #[\ReturnTypeWillChange]
-    public function rewind()
+    public function rewind(): void
     {
-        return reset($this->array);
+        reset($this->array);
     }
 
-    /**
-     * @return mixed
-     */
-    #[\ReturnTypeWillChange]
-    public function next()
+    public function next(): void
     {
-        return next($this->array);
+        next($this->array);
     }
 
     /**
@@ -112,7 +97,7 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         // A null key is the empty string for PHP, which deprecates passing it as null as of PHP 8.5.
         $key = $key ?? '';
         if (!$this->exists($key)) {
-            throw new ArrayKeyNotExists($key);
+            throw new ArrayKeyNotExists((string) $key);
         }
         return static::detectType($this->array[$key]);
     }
@@ -220,10 +205,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return mixed|null
+     * Array access returns the raw value, like a native array; get() provides wrapped values.
      */
-    #[\ReturnTypeWillChange]
-    public function offsetGet(mixed $key)
+    public function offsetGet(mixed $key): mixed
     {
         $key = $key ?? '';
         if (!array_key_exists($key, $this->array)) {
@@ -252,10 +236,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
     }
 
     /**
-     * @return bool
+     * Match isset() on a native array. Use exists() to include keys whose value is null.
      */
-    #[\ReturnTypeWillChange]
-    public function offsetExists(mixed $key)
+    public function offsetExists(mixed $key): bool
     {
         $key = $key ?? '';
         return isset($this->array[$key]);
@@ -310,9 +293,14 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
         return serialize($this->array);
     }
 
-    public function unserialize(string|\Stringable|StringObject $string): self
+    /**
+     * Only allow object classes explicitly when restoring trusted data.
+     *
+     * @param bool|list<class-string> $allowed_classes
+     */
+    public function unserialize(string|\Stringable|StringObject $string, bool|array $allowed_classes = false): self
     {
-        $this->array = (array) unserialize((string) $string);
+        $this->array = (array) unserialize((string) $string, ['allowed_classes' => $allowed_classes]);
         return $this;
     }
 
@@ -408,6 +396,9 @@ class ArrayObject implements \ArrayAccess, \Serializable, \Countable, \Iterator
      */
     public function randomGet()
     {
+        if ($this->isEmpty()) {
+            return null;
+        }
         return static::detectType($this->array[array_rand($this->array, 1)]);
     }
 

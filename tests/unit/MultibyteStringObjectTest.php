@@ -57,6 +57,31 @@ class MultibyteStringObjectTest extends TestCase
             ->substr(4, 8)->toString(), 'o swoole');
     }
 
+    public function testMultibyteOperations(): void
+    {
+        $str = swoole_mbstring('hé世界🙂');
+        $this->assertSame(5, $str->length());
+        $this->assertSame('é', $str->char(1));
+        $this->assertSame('🙂', $str->char(-1));
+        $this->assertSame('h', $str->char(-5));
+        $this->assertSame('', $str->char(-6));
+        $this->assertSame('', $str->char(5));
+        $this->assertSame('', swoole_mbstring()->char(0));
+        $this->assertSame('🙂界世éh', $str->reverse()->toString());
+        $this->assertSame('äbc', swoole_mbstring('ÄBC')->lower()->toString());
+        $this->assertSame('ÄBC', swoole_mbstring('äbc')->upper()->toString());
+        $this->assertSame(['hé', '世界', '🙂'], $str->chunk(2)->toArray());
+        $this->assertSame('hé|世界|🙂|', $str->chunkSplit(2, '|')->toString());
+        $this->assertSame('|', swoole_mbstring()->chunkSplit(2, '|')->toString());
+        $this->assertSame(['h', '世界🙂'], $str->split('é')->toArray());
+        $this->assertSame('é世', $str->substr(1, 2)->toString());
+        $this->assertSame(2, $str->pos('世'));
+        $this->assertSame(3, $str->rpos('界'));
+        $this->assertSame(1, swoole_mbstring('hÉllo')->ipos('é'));
+        $this->assertSame('hé世界🙂', $str->toString());
+        $this->assertInstanceOf(MultibyteStringObject::class, $str->append('!')->trim()->substr(0));
+    }
+
     public function chunk(): void
     {
         $r            = swoole_mbstring('hello swoole and hello world')->chunk(5)->toArray();

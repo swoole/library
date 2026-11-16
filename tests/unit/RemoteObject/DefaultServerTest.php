@@ -79,6 +79,115 @@ class DefaultServerTest extends TestCase
         self::assertTrue($this->ping());
     }
 
+    public function testStartOutsideACoroutine(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-sync-' . uniqid());
+        $hooks = \Swoole\Runtime::getHookFlags();
+        \Swoole\Runtime::setHookFlags(0);
+        try {
+            swoole_init_default_remote_object_server();
+        } finally {
+            \Swoole\Runtime::setHookFlags($hooks);
+        }
+        self::assertTrue($this->ping());
+    }
+
+    /**
+     * @dataProvider failedStarts
+     */
+    public function testFailedStartIsBoundedAndReleasesTheLock(bool $coroutine, string $bootstrap, string $message): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-fail-' . uniqid());
+        file_put_contents($this->dir . '/bootstrap.php', "<?php\n" . $bootstrap);
+        swoole_library_set_option('default_remote_object_server_startup_timeout', 0.5);
+
+        $exception = null;
+        $start     = static function () use (&$exception): void {
+            try {
+                swoole_init_default_remote_object_server();
+            } catch (\RuntimeException $e) {
+                $exception = $e;
+            }
+        };
+        if ($coroutine) {
+            self::coRun($start);
+        } else {
+            $hooks = \Swoole\Runtime::getHookFlags();
+            \Swoole\Runtime::setHookFlags(0);
+            try {
+                $start();
+            } finally {
+                \Swoole\Runtime::setHookFlags($hooks);
+            }
+        }
+        self::assertNotNull($exception, 'A failed startup must throw');
+        self::assertStringContainsString($message, $exception->getMessage());
+
+        $lock = fopen($this->dir . '/remote-object-server.lock', 'c');
+        try {
+            self::assertTrue(flock($lock, LOCK_EX | LOCK_NB), 'Startup failures must release the lock');
+        } finally {
+            fclose($lock);
+        }
+    }
+
+    public static function failedStarts(): iterable
+    {
+        foreach ([false, true] as $coroutine) {
+            $mode = $coroutine ? 'coroutine: ' : 'sync: ';
+            yield $mode . 'nonzero exit' => [$coroutine, "fwrite(STDERR, str_repeat('failure', 20000)); exit(7);", 'exit code 7'];
+            yield $mode . 'signal exit' => [$coroutine, 'posix_kill(getmypid(), SIGTERM);', 'signal 15'];
+            yield $mode . 'no daemon' => [$coroutine, 'exit(0);', 'timed out waiting'];
+            yield $mode . 'frontend hangs' => [$coroutine, 'sleep(30);', 'timed out waiting'];
+            yield $mode . 'dead daemon' => [$coroutine, "file_put_contents(__DIR__ . '/remote-object-server.pid', (string) getmypid()); exit(0);", 'exited before becoming ready'];
+        }
+    }
+
+    public function testLockContentionHasAStartupTimeout(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-lock-' . uniqid());
+        swoole_library_set_option('default_remote_object_server_startup_timeout', 0.05);
+        $lock = fopen($this->dir . '/remote-object-server.lock', 'c');
+        flock($lock, LOCK_EX);
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('timed out waiting');
+            swoole_init_default_remote_object_server();
+        } finally {
+            fclose($lock);
+        }
+    }
+
+    public function testBoundSocketWithoutAListenerIsNotReady(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-bind-' . uniqid());
+        swoole_library_set_option('default_remote_object_server_startup_timeout', 0.05);
+        $hooks = \Swoole\Runtime::getHookFlags();
+        \Swoole\Runtime::setHookFlags(0);
+        $socket = stream_socket_server('unix://' . $this->dir . '/remote-object-server.sock', $errno, $error, STREAM_SERVER_BIND);
+        $lock   = fopen($this->dir . '/remote-object-server.lock', 'c');
+        flock($lock, LOCK_EX);
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('timed out waiting');
+            swoole_init_default_remote_object_server();
+        } finally {
+            fclose($socket);
+            fclose($lock);
+            \Swoole\Runtime::setHookFlags($hooks);
+        }
+    }
+
+    public function testRunningPidWithoutASocketHasAStartupTimeout(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-pid-' . uniqid());
+        file_put_contents($this->dir . '/remote-object-server.pid', (string) getmypid());
+        swoole_library_set_option('default_remote_object_server_startup_timeout', 0.05);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('timed out waiting');
+        swoole_init_default_remote_object_server();
+    }
+
     private function useDirectory(string $dir): void
     {
         $this->dir = $dir;

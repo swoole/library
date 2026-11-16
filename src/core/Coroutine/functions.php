@@ -34,7 +34,12 @@ function defer(callable $fn): void
     Coroutine::defer($fn);
 }
 
-function batch(array $tasks, float $timeout = -1): array
+/**
+ * Returns partial results on timeout; unfinished tasks have null results and continue running.
+ *
+ * @param-out bool $completed Whether every task finished before the wait ended.
+ */
+function batch(array $tasks, float $timeout = -1, mixed &$completed = null): array
 {
     $wg = new WaitGroup(count($tasks));
     foreach ($tasks as $id => $task) {
@@ -49,12 +54,15 @@ function batch(array $tasks, float $timeout = -1): array
             }
         });
     }
-    $wg->wait($timeout);
+    $completed = $wg->wait($timeout);
     return $tasks;
 }
 
 function parallel(int $n, callable $fn): void
 {
+    if ($n < 0) {
+        throw new \InvalidArgumentException('The number of parallel tasks must not be negative');
+    }
     $count = $n;
     $wg    = new WaitGroup($n);
     while ($count--) {
@@ -78,12 +86,14 @@ function parallel(int $n, callable $fn): void
  * @param array $list A list of key/value paired input data.
  * @param callable $fn The callback function to apply to each item on the list. The callback takes on two parameters.
  *                     The list parameter's value being the first, and the key/index second.
- * @param float $timeout > 0 means waiting for the specified number of seconds. other means no waiting.
+ * @param float $timeout Positive values bound the wait in seconds; non-positive values wait indefinitely.
+ * @param-out bool $completed Whether every task finished before the wait ended. On timeout, unfinished tasks
+ *                            have null results and continue running.
  * @return array Returns an array containing the results of applying the callback function to the corresponding value
  *               and key of the list (used as arguments for the callback). The returned array will preserve the keys of
  *               the list.
  */
-function map(array $list, callable $fn, float $timeout = -1): array
+function map(array $list, callable $fn, float $timeout = -1, mixed &$completed = null): array
 {
     $wg = new WaitGroup(count($list));
     foreach ($list as $id => $elem) {
@@ -96,7 +106,7 @@ function map(array $list, callable $fn, float $timeout = -1): array
             }
         });
     }
-    $wg->wait($timeout);
+    $completed = $wg->wait($timeout);
     return $list;
 }
 

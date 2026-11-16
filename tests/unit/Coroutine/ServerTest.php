@@ -19,6 +19,25 @@ use Swoole\Tests\TestCase;
  */
 class ServerTest extends TestCase
 {
+    public function testStartCannotReenterOrRestartAStoppedServer(): void
+    {
+        self::coRun(function (): void {
+            $server = new Server('127.0.0.1', 0);
+            $server->handle(static function (): void {});
+            $result = null;
+            $cid    = \Swoole\Coroutine::create(static function () use ($server, &$result): void {
+                $result = $server->start();
+            });
+            self::assertFalse($server->start());
+            self::assertSame(SOCKET_EALREADY, $server->errCode);
+            $server->shutdown();
+            self::assertFalse($server->start());
+            self::assertSame(SOCKET_EINVAL, $server->errCode);
+            self::assertTrue($result);
+            self::assertFalse(\Swoole\Coroutine::exists($cid));
+        });
+    }
+
     public function testFatalAcceptFailureReturnsFalse(): void
     {
         $socket = new class {
@@ -56,7 +75,10 @@ class ServerTest extends TestCase
         });
 
         try {
-            $result = $server->start();
+            $result = null;
+            self::coRun(static function () use ($server, &$result): void {
+                $result = $server->start();
+            });
         } finally {
             restore_error_handler();
         }
@@ -87,7 +109,10 @@ class ServerTest extends TestCase
         });
 
         try {
-            $result = $server->start();
+            $result = null;
+            self::coRun(static function () use ($server, &$result): void {
+                $result = $server->start();
+            });
         } finally {
             restore_error_handler();
         }
@@ -115,7 +140,10 @@ class ServerTest extends TestCase
             throw new \ErrorException($message, 0, $severity);
         });
         try {
-            $result = $server->start();
+            $result = null;
+            self::coRun(static function () use ($server, &$result): void {
+                $result = $server->start();
+            });
         } finally {
             restore_error_handler();
         }

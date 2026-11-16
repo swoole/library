@@ -26,9 +26,10 @@ function request(
 ): ClientProxy {
     $driver = swoole_library_get_option('http_client_driver');
     return match ($driver) {
-        'curl'   => request_with_curl($url, $method, $data, $options, $headers, $cookies),
-        'stream' => request_with_stream($url, $method, $data, $options, $headers, $cookies),
-        default  => request_with_http_client($url, $method, $data, $options, $headers, $cookies),
+        'curl'              => request_with_curl($url, $method, $data, $options, $headers, $cookies),
+        'stream'            => request_with_stream($url, $method, $data, $options, $headers, $cookies),
+        null, 'http_client' => request_with_http_client($url, $method, $data, $options, $headers, $cookies),
+        default             => throw new Exception('unknown HTTP client driver: ' . var_export($driver, true)),
     };
 }
 
@@ -47,6 +48,9 @@ function request_with_http_client(
     if (empty($info['scheme'])) {
         throw new Exception('The URL given is illegal [no scheme]');
     }
+    if (empty($info['host'])) {
+        throw new Exception('The URL given is illegal [no host]');
+    }
     if ($info['scheme'] == 'http') {
         $client = new Client($info['host'], swoole_array_default_value($info, 'port', 80), false);
     } elseif ($info['scheme'] == 'https') {
@@ -55,14 +59,14 @@ function request_with_http_client(
         throw new Exception('unknown scheme "' . $info['scheme'] . '"');
     }
     $client->setMethod($method);
-    if ($data) {
-        $client->setData($data);
+    if ($data !== null) {
+        $client->setData(is_array($data) ? $data : (string) $data);
     }
     $client->set($options ?: []);
     $client->setHeaders($headers ?: []);
     $client->setCookies($cookies ?: []);
     $request_url = swoole_array_default_value($info, 'path', '/');
-    if (!empty($info['query'])) {
+    if (isset($info['query']) && $info['query'] !== '') {
         $request_url .= '?' . $info['query'];
     }
     if ($client->execute($request_url)) {
@@ -93,29 +97,22 @@ function request_with_curl(
     }
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
-    $responseHeaders = $responseCookies = [];
-    curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $header) use (&$responseHeaders, &$responseCookies) {
-        $len    = strlen($header);
-        $header = explode(':', $header, 2);
-        if (count($header) < 2) {
-            return $len;
-        }
-        $headerKey = strtolower(trim($header[0]));
-        if ($headerKey == 'set-cookie') {
-            [$k, $v]             = explode('=', $header[1]);
-            $responseCookies[$k] = $v;
-        } else {
-            $responseHeaders[$headerKey][] = trim($header[1]);
-        }
-        return $len;
+    $responseHeaderLines = [];
+    curl_setopt($ch, CURLOPT_HEADERFUNCTION, static function ($ch, string $header) use (&$responseHeaderLines): int {
+        $responseHeaderLines[] = $header;
+        return strlen($header);
     });
-    if ($data) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    if ($data !== null) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ? $data : (string) $data);
     }
-    if ($headers) {
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    if ($headers !== null) {
+        $headerLines = [];
+        foreach ($headers as $key => $value) {
+            $headerLines[] = is_int($key) ? $value : "{$key}: {$value}";
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headerLines);
     }
-    if ($cookies) {
+    if ($cookies !== null) {
         $cookie_str = '';
         foreach ($cookies as $k => $v) {
             $cookie_str .= "{$k}={$v}; ";
@@ -140,7 +137,7 @@ function request_with_curl(
     }
     $body = curl_exec($ch);
     if ($body !== false) {
-        return new ClientProxy($body, curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $responseHeaders, $responseCookies);
+        return ClientProxy::fromHeaders($body, $responseHeaderLines, curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
     }
     throw new Exception(curl_error($ch), curl_errno($ch));
 }
@@ -158,24 +155,27 @@ function request_with_stream(
 ): ClientProxy {
     $stream_options = [
         'http' => [
-            'method' => $method,
+            'method'        => $method,
+            'ignore_errors' => true,
         ],
     ];
     $headerStr = '';
-    if ($headers) {
+    if ($headers !== null) {
         foreach ($headers as $k => $v) {
-            $headerStr .= "{$k}: {$v}\r\n";
+            $headerStr .= is_int($k) ? $v . "\r\n" : "{$k}: {$v}\r\n";
         }
     }
-    if ($cookies) {
+    if ($cookies !== null && $cookies !== []) {
+        $cookieParts = [];
         foreach ($cookies as $k => $v) {
-            $headerStr .= "Cookie: {$k}={$v}\r\n";
+            $cookieParts[] = "{$k}={$v}";
         }
+        $headerStr .= 'Cookie: ' . implode('; ', $cookieParts) . "\r\n";
     }
     if (isset($options['timeout'])) {
-        $stream_options['http']['timeout'] = intval($options['timeout']);
+        $stream_options['http']['timeout'] = (float) $options['timeout'];
     }
-    if ($data) {
+    if ($data !== null) {
         if (is_array($data)) {
             $headerStr .= "Content-type: application/x-www-form-urlencoded\r\n";
             $stream_options['http']['content'] = http_build_query($data);
@@ -186,12 +186,13 @@ function request_with_stream(
     if ($headerStr) {
         $stream_options['http']['header'] = $headerStr;
     }
-    $body = file_get_contents($url, false, stream_context_create($stream_options));
-    if ($body) {
-        return new ClientProxy($body, 200, [], []);
+    $http_response_header = [];
+    $body                 = @file_get_contents($url, false, stream_context_create($stream_options));
+    if ($body !== false) {
+        return ClientProxy::fromHeaders($body, $http_response_header);
     }
     $error = error_get_last();
-    throw new Exception($error['message']);
+    throw new Exception((string) ($error['message'] ?? 'failed to read HTTP response'));
 }
 
 /**

@@ -42,4 +42,36 @@ class ClientProxy
     {
         return $this->cookies;
     }
+
+    /**
+     * Parse the final header block, discarding interim responses and redirects.
+     *
+     * @param list<string> $lines
+     */
+    public static function fromHeaders(string $body, array $lines, int $defaultStatus = 200): self
+    {
+        $status  = $defaultStatus;
+        $headers = $cookies = [];
+        foreach ($lines as $line) {
+            if (preg_match('/^HTTP\/\S+\s+(\d{3})/', $line, $matches)) {
+                $status  = (int) $matches[1];
+                $headers = $cookies = [];
+                continue;
+            }
+            $parts = explode(':', $line, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+            $name             = strtolower(trim($parts[0]));
+            $value            = trim($parts[1]);
+            $headers[$name][] = $value;
+            if ($name === 'set-cookie') {
+                $cookie = explode('=', explode(';', $value, 2)[0], 2);
+                if (count($cookie) === 2 && trim($cookie[0]) !== '') {
+                    $cookies[trim($cookie[0])] = trim($cookie[1]);
+                }
+            }
+        }
+        return new self($body, $status, $headers, $cookies);
+    }
 }

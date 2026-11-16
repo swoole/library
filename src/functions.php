@@ -82,14 +82,18 @@ function swoole_array(array $array = []): Swoole\ArrayObject
 
 function swoole_table(int $size, string $fields): Swoole\Table
 {
-    $_fields = swoole_string($fields)->trim()->split(',');
-
     $table = new Swoole\Table($size, 0.25);
 
-    foreach ($_fields as $f) {
-        $_f   = swoole_string($f)->trim()->split(':');
-        $name = $_f->get(0)->trim()->toString();
-        $type = $_f->get(1)->trim();
+    foreach (explode(',', $fields) as $field) {
+        $parts = array_map('trim', explode(':', $field));
+        if (count($parts) < 2 || $parts[0] === '' || $parts[1] === '') {
+            throw new RuntimeException("invalid field definition[{$field}]");
+        }
+        [$name, $type] = $parts;
+        $is_string     = $type === 's' || $type === 'string';
+        if (count($parts) > ($is_string ? 3 : 2)) {
+            throw new RuntimeException("invalid field definition[{$field}]");
+        }
 
         switch ($type) {
             case 'i':
@@ -102,12 +106,12 @@ function swoole_table(int $size, string $fields): Swoole\Table
                 break;
             case 's':
             case 'string':
-                if ($_f->count() < 3) {
+                if (count($parts) < 3) {
                     throw new RuntimeException('need to give string length');
                 }
-                $length = (int) $_f->get(2)->trim()->toString();
-                if ($length <= 0) {
-                    throw new RuntimeException("invalid string length[{$length}]");
+                $length = filter_var($parts[2], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($length === false) {
+                    throw new RuntimeException("invalid string length[{$parts[2]}]");
                 }
                 $table->column($name, Swoole\Table::TYPE_STRING, $length);
                 break;
@@ -123,9 +127,9 @@ function swoole_table(int $size, string $fields): Swoole\Table
     return $table;
 }
 
-function swoole_array_list(mixed ...$arrray): Swoole\ArrayObject
+function swoole_array_list(mixed ...$array): Swoole\ArrayObject
 {
-    return new Swoole\ArrayObject($arrray);
+    return new Swoole\ArrayObject($array);
 }
 
 function swoole_array_default_value(array $array, mixed $key, mixed $default_value = null): mixed
@@ -138,8 +142,8 @@ function swoole_array_default_value(array $array, mixed $key, mixed $default_val
 
 function swoole_is_in_container(): bool
 {
-    $mountinfo = file_get_contents('/proc/self/mountinfo');
-    return strpos($mountinfo, 'kubepods') > 0 || strpos($mountinfo, 'docker') > 0;
+    $mountinfo = @file_get_contents('/proc/self/mountinfo');
+    return $mountinfo !== false && (str_contains($mountinfo, 'kubepods') || str_contains($mountinfo, 'docker'));
 }
 
 function swoole_container_cpu_num(): int
@@ -155,18 +159,23 @@ function swoole_container_cpu_num(): int
     $cpu_max = '/sys/fs/cgroup/cpu.max';
     if (file_exists($cpu_max)) {
         // The file holds "$MAX $PERIOD", e.g. "150000 100000", or "max 100000" when no quota is set.
-        $fields   = explode(' ', trim((string) file_get_contents($cpu_max)));
-        $quota_us = $fields[0];
+        $fields   = preg_split('/\s+/', trim((string) @file_get_contents($cpu_max)));
+        $quota_us = $fields[0] ?? '';
         if ($quota_us === 'max') {
             return swoole_cpu_num();
         }
-        $period_us = $fields[1] ?? 100000;
+        $period_us = $fields[1] ?? '';
     } else {
-        $quota_us  = file_get_contents('/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us');
-        $period_us = file_get_contents('/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us');
+        $quota_us  = @file_get_contents('/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us');
+        $period_us = @file_get_contents('/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us');
+    }
+    if (!is_numeric($quota_us) || !is_numeric($period_us)
+        || !is_finite((float) $quota_us) || !is_finite((float) $period_us)
+        || (float) $quota_us <= 0 || (float) $period_us <= 0) {
+        return swoole_cpu_num();
     }
     $cpu_num = floatval($quota_us) / floatval($period_us);
-    if ($cpu_num < 1) {
+    if (!is_finite($cpu_num) || $cpu_num < 1 || $cpu_num >= PHP_INT_MAX) {
         return swoole_cpu_num();
     }
     return intval(floor($cpu_num));
@@ -187,12 +196,6 @@ function swoole_init_default_remote_object_server(): void
     if (!is_dir($dir)) {
         mkdir($dir, 0755, true);
         $print_log("create dir[{$dir}]");
-    } else {
-        if (is_file($pid_file)
-            && posix_kill(intval(file_get_contents($pid_file)), 0)) {
-            $print_log('remote object server already running');
-            return;
-        }
     }
 
     $options = swoole_library_get_option('default_remote_object_server_options');
@@ -212,17 +215,48 @@ function swoole_init_default_remote_object_server(): void
     $log_file                    = $dir . '/remote-object-server.log';
     $lock_file                   = $dir . '/remote-object-server.lock';
 
-    $wait_ready_fn = function () use ($socket_file, $print_log) {
-        // wait for remote object server ready
-        while (true) {
-            if (posix_access($socket_file, POSIX_R_OK)) {
-                $print_log('remote object server ready');
-                break;
-            }
-            $print_log('wait for remote object server ready');
-            usleep(500000);
+    $startup_timeout = (float) (swoole_library_get_option('default_remote_object_server_startup_timeout') ?? 10.0);
+    if (!is_finite($startup_timeout) || $startup_timeout <= 0) {
+        throw new RuntimeException('remote object server startup timeout must be positive and finite');
+    }
+    $deadline       = hrtime(true) / 1e9 + $startup_timeout;
+    $check_deadline = static function () use ($deadline, $log_file): void {
+        if (hrtime(true) / 1e9 >= $deadline) {
+            throw new RuntimeException("timed out waiting for remote object server; see log[{$log_file}]");
         }
     };
+    $wait_ready_fn = static function () use ($socket_file, $pid_file, $print_log, $check_deadline): void {
+        while (true) {
+            clearstatcache(true, $pid_file);
+            if (is_file($pid_file)) {
+                $pid = (int) file_get_contents($pid_file);
+                if ($pid > 0 && !posix_kill($pid, 0)) {
+                    throw new RuntimeException("remote object server process[{$pid}] exited before becoming ready");
+                }
+            }
+            if (posix_access($socket_file, POSIX_R_OK)) {
+                // bind() creates the socket file before listen(); concurrent starters must wait for a listener.
+                $connection = @stream_socket_client('unix://' . $socket_file, $error_code, $error_message, 0.01);
+                if ($connection !== false) {
+                    fclose($connection);
+                    $print_log('remote object server ready');
+                    return;
+                }
+            }
+            $check_deadline();
+            $print_log('wait for remote object server ready');
+            usleep(10000);
+        }
+    };
+
+    if (is_file($pid_file)) {
+        $pid = (int) file_get_contents($pid_file);
+        if ($pid > 0 && posix_kill($pid, 0)) {
+            $print_log('remote object server already running');
+            $wait_ready_fn();
+            return;
+        }
+    }
 
     $lock_handle = fopen($lock_file, 'c');
     if (!$lock_handle) {
@@ -237,119 +271,133 @@ function swoole_init_default_remote_object_server(): void
         return;
     }
 
-    $options['enable_coroutine'] = false;
-    $options['bootstrap']        = $php_file;
-    $options['pid_file']         = $pid_file;
-    $options['log_file']         = $log_file;
-    $options['daemonize']        = true;
-    $options['socket_type']      = SWOOLE_SOCK_UNIX_STREAM;
+    try {
+        $options['enable_coroutine'] = false;
+        $options['bootstrap']        = $php_file;
+        $options['pid_file']         = $pid_file;
+        $options['log_file']         = $log_file;
+        $options['daemonize']        = true;
+        $options['socket_type']      = SWOOLE_SOCK_UNIX_STREAM;
 
-    // The generated file lives inside the project tree, so PHP-CS-Fixer checks it along with everything else
-    // and it has to be written in the project's coding style: standard file header, strict types, braces on
-    // their own lines, short array syntax, a trailing comma on every multiline array element and `=>` operators
-    // aligned within each array block. var_export() is not used for the options because it emits long array
-    // syntax and does not align anything; the array is written out below instead, one element per line.
-    $export_array = static function (array $data, int $depth = 1) use (&$export_array): string {
-        if (!$data) {
-            return '[]';
-        }
-        $indent = str_repeat('    ', $depth);
-        $keys   = array_map(static fn ($key) => var_export($key, true), array_keys($data));
-        $width  = max(array_map('strlen', $keys));
-        $lines  = [];
-        foreach (array_values($data) as $i => $value) {
-            if (is_array($value)) {
-                $exported = $export_array($value, $depth + 1);
-            } else {
-                $exported = $value === null ? 'null' : var_export($value, true);
+        // The generated file lives inside the project tree, so PHP-CS-Fixer checks it along with everything else
+        // and it has to be written in the project's coding style: standard file header, strict types, braces on
+        // their own lines, short array syntax, a trailing comma on every multiline array element and `=>` operators
+        // aligned within each array block. var_export() is not used for the options because it emits long array
+        // syntax and does not align anything; the array is written out below instead, one element per line.
+        $export_array = static function (array $data, int $depth = 1) use (&$export_array): string {
+            if (!$data) {
+                return '[]';
             }
-            $lines[] = $indent . str_pad($keys[$i], $width) . ' => ' . $exported . ',';
+            $indent = str_repeat('    ', $depth);
+            $keys   = array_map(static fn ($key) => var_export($key, true), array_keys($data));
+            $width  = max(array_map('strlen', $keys));
+            $lines  = [];
+            foreach (array_values($data) as $i => $value) {
+                if (is_array($value)) {
+                    $exported = $export_array($value, $depth + 1);
+                } else {
+                    $exported = $value === null ? 'null' : var_export($value, true);
+                }
+                $lines[] = $indent . str_pad($keys[$i], $width) . ' => ' . $exported . ',';
+            }
+            return "[\n" . implode("\n", $lines) . "\n" . str_repeat('    ', $depth - 1) . ']';
+        };
+
+        $exported_options     = $export_array($options);
+        $exported_socket_file = var_export($socket_file, true);
+
+        $rv = file_put_contents($php_file, <<<PHP
+            <?php
+            /**
+             * This file is part of Swoole.
+             *
+             * @link     https://www.swoole.com
+             * @contact  team@swoole.com
+             * @license  https://github.com/swoole/library/blob/master/LICENSE
+             */
+
+            declare(strict_types=1);
+
+            if (is_file(__DIR__ . '/vendor/autoload.php')) {
+                require __DIR__ . '/vendor/autoload.php';
+            }
+            if (is_file(__DIR__ . '/bootstrap.php')) {
+                require __DIR__ . '/bootstrap.php';
+            }
+
+            (new Swoole\\RemoteObject\\Server({$exported_socket_file}, 0, {$exported_options}))->start();
+
+            PHP);
+        if (!$rv) {
+            throw new RuntimeException("failed to write php file[{$php_file}]");
         }
-        return "[\n" . implode("\n", $lines) . "\n" . str_repeat('    ', $depth - 1) . ']';
-    };
+        $print_log("write php file[{$php_file}]");
 
-    $exported_options     = $export_array($options);
-    $exported_socket_file = var_export($socket_file, true);
-
-    $rv = file_put_contents($php_file, <<<PHP
-        <?php
-        /**
-         * This file is part of Swoole.
-         *
-         * @link     https://www.swoole.com
-         * @contact  team@swoole.com
-         * @license  https://github.com/swoole/library/blob/master/LICENSE
-         */
-
-        declare(strict_types=1);
-
-        if (is_file(__DIR__ . '/vendor/autoload.php')) {
-            require __DIR__ . '/vendor/autoload.php';
-        }
-        if (is_file(__DIR__ . '/bootstrap.php')) {
-            require __DIR__ . '/bootstrap.php';
+        $php_bin = PHP_BINARY;
+        if (posix_access($socket_file, POSIX_R_OK)) {
+            unlink($socket_file);
+            $print_log("remove socket file[{$socket_file}]");
         }
 
-        (new Swoole\\RemoteObject\\Server({$exported_socket_file}, 0, {$exported_options}))->start();
+        // Not escapeshellarg(), which drops the bytes that are not valid in the current locale, such as those of a
+        // non-ASCII character after setlocale(LC_CTYPE, 'C').
+        $quote = static function (string $arg): string {
+            return "'" . str_replace("'", "'\\''", $arg) . "'";
+        };
 
-        PHP);
-    if (!$rv) {
-        throw new RuntimeException("failed to write php file[{$php_file}]");
+        $hook_flags = Swoole\Runtime::getHookFlags();
+        // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
+        if (defined('SWOOLE_HOOK_MONGODB') && $hook_flags & SWOOLE_HOOK_MONGODB && !is_dir($dir . '/vendor/mongodb/mongodb')) {
+            system('cd ' . $quote($dir) . ' && composer require mongodb/mongodb');
+            $print_log('install mongodb library');
+        }
+
+        // Use an argument array so the process handle belongs to PHP itself, rather than a shell.
+        $proc = proc_open([$php_bin, $php_file], [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+        if ($proc === false) {
+            throw new RuntimeException('failed to start remote object server');
+        }
+        $print_log('start remote object server');
+
+        fclose($pipes[0]);
+        stream_set_blocking($pipes[1], false);
+        stream_set_blocking($pipes[2], false);
+        $output = '';
+        try {
+            // Poll without blocking the coroutine scheduler, and drain both pipes while the frontend runs.
+            while (true) {
+                $status = proc_get_status($proc);
+                $output .= stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+                if (!$status['running']) {
+                    break;
+                }
+                $check_deadline();
+                usleep(10000);
+            }
+
+            // proc_get_status() gives an exit code, not the encoded status returned by pcntl_waitpid().
+            if ($status['exitcode'] !== 0) {
+                throw new RuntimeException("failed to start remote object server: exit code {$status['exitcode']}, signal {$status['termsig']}, output: " . $output);
+            }
+        } finally {
+            if ($status['running'] ?? true) {
+                proc_terminate($proc, SIGKILL);
+            }
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($proc);
+        }
+        $print_log('remote object server frontend exited, the process turns to the backend for running');
+
+        $wait_ready_fn();
+    } finally {
+        flock($lock_handle, LOCK_UN);
+        fclose($lock_handle);
     }
-    $print_log("write php file[{$php_file}]");
-
-    $php_bin = PHP_BINARY;
-    if (posix_access($socket_file, POSIX_R_OK)) {
-        unlink($socket_file);
-        $print_log("remove socket file[{$socket_file}]");
-    }
-
-    // Not escapeshellarg(), which drops the bytes that are not valid in the current locale, such as those of a
-    // non-ASCII character after setlocale(LC_CTYPE, 'C').
-    $quote = static function (string $arg): string {
-        return "'" . str_replace("'", "'\\''", $arg) . "'";
-    };
-
-    $hook_flags = Swoole\Runtime::getHookFlags();
-    // Having enabled the MongoDB hook, you need to install the MongoDB PHP library through Composer.
-    if (defined('SWOOLE_HOOK_MONGODB') && $hook_flags & SWOOLE_HOOK_MONGODB && !is_dir($dir . '/vendor/mongodb/mongodb')) {
-        system('cd ' . $quote($dir) . ' && composer require mongodb/mongodb');
-        $print_log('install mongodb library');
-    }
-
-    // start server
-    $proc = proc_open($quote($php_bin) . ' ' . $quote($php_file), [
-        0 => ['pipe', 'r'],
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
-    ], $pipes);
-    if ($proc === false) {
-        throw new RuntimeException('failed to start remote object server');
-    }
-    $print_log('start remote object server');
-
-    $status = proc_get_status($proc);
-    if (!$status['running'] || !$status['pid']) {
-        throw new RuntimeException('failed to start remote object server');
-    }
-    $print_log("remote object server pid: {$status['pid']}");
-
-    if (Swoole\Coroutine::getCid() > 0) {
-        $exitStatus = Swoole\Coroutine\System::waitpid($status['pid']);
-    } else {
-        pcntl_waitpid($status['pid'], $status);
-        $exitStatus['code'] = $status;
-    }
-    if ($exitStatus['code'] !== 0) {
-        $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
-        throw new RuntimeException("failed to start remote object server: exit code {$exitStatus['code']}, output: " . $output);
-    }
-    proc_close($proc);
-    $print_log('remote object server frontend exited, the process turns to the backend for running');
-
-    $wait_ready_fn();
-    flock($lock_handle, LOCK_UN);
-    fclose($lock_handle);
 }
 
 function swoole_get_default_remote_object_server_dir(): string
