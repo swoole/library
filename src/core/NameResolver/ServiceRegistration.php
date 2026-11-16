@@ -48,6 +48,9 @@ final class ServiceRegistration
         $resolver = $settings['service_resolver'] ?? null;
         if ($resolver === null) {
             $candidates = $settings['name_resolver'] ?? (Coroutine::getOptions()['name_resolver'] ?? []);
+            if (!is_array($candidates)) {
+                throw new \InvalidArgumentException('name_resolver must be an array');
+            }
             $candidates = array_values(array_filter($candidates, static function ($candidate) use ($name): bool {
                 return $candidate instanceof NameResolver && (!$candidate->hasFilter() || ($candidate->getFilter())($name) === true);
             }));
@@ -90,8 +93,8 @@ final class ServiceRegistration
         if ($config === null) {
             return;
         }
-        self::$servers ??= new \WeakMap();
-        $existing = self::$servers[$server] ?? null;
+        self::$servers = self::$servers ?? new \WeakMap();
+        $existing      = self::$servers[$server] ?? null;
         if ($existing !== null && $existing->isActive()) {
             return;
         }
@@ -110,6 +113,9 @@ final class ServiceRegistration
             return;
         }
         $owner->deregister = $owner->deregister || $deregister;
+        if ($owner->stopped) {
+            return;
+        }
         $owner->stopped    = true;
         $owner->registration?->stopRenewal();
         $owner->wake->close();

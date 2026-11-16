@@ -17,10 +17,7 @@ use function Swoole\Coroutine\run;
 
 class Manager
 {
-    /**
-     * @var Pool
-     */
-    protected $pool;
+    protected ?Pool $pool = null;
 
     /**
      * @var int
@@ -37,6 +34,8 @@ class Manager
      */
     protected $startFuncMap = [];
 
+    private bool $running = false;
+
     public function __construct(int $ipcType = SWOOLE_IPC_NONE, int $msgQueueKey = 0)
     {
         $this->setIPCType($ipcType)->setMsgQueueKey($msgQueueKey);
@@ -50,6 +49,10 @@ class Manager
 
     public function addBatch(int $workerNum, callable $func, bool $enableCoroutine = false): self
     {
+        if ($workerNum < 1) {
+            throw new \InvalidArgumentException('workerNum must be greater than 0');
+        }
+        $this->assertStopped();
         for ($i = 0; $i < $workerNum; $i++) {
             $this->startFuncMap[] = [$func, $enableCoroutine];
         }
@@ -58,6 +61,10 @@ class Manager
 
     public function start(): void
     {
+        $this->assertStopped();
+        if ($this->startFuncMap === []) {
+            throw new \LogicException('Process manager requires at least one worker');
+        }
         $this->pool = new Pool(count($this->startFuncMap), $this->ipcType, $this->msgQueueKey, false);
 
         $this->pool->on(Constant::EVENT_WORKER_START, function (Pool $pool, int $workerId) {
@@ -69,11 +76,23 @@ class Manager
             }
         });
 
-        $this->pool->start();
+        $this->running = true;
+        try {
+            $this->pool->start();
+        } finally {
+            $this->running = false;
+            $this->pool    = null;
+        }
+    }
+
+    public function shutdown(): bool
+    {
+        return $this->running && $this->pool->shutdown();
     }
 
     public function setIPCType(int $ipcType): self
     {
+        $this->assertStopped();
         $this->ipcType = $ipcType;
         return $this;
     }
@@ -85,6 +104,7 @@ class Manager
 
     public function setMsgQueueKey(int $msgQueueKey): self
     {
+        $this->assertStopped();
         $this->msgQueueKey = $msgQueueKey;
         return $this;
     }
@@ -92,5 +112,12 @@ class Manager
     public function getMsgQueueKey(): int
     {
         return $this->msgQueueKey;
+    }
+
+    private function assertStopped(): void
+    {
+        if ($this->running) {
+            throw new \LogicException('Process manager is already running');
+        }
     }
 }

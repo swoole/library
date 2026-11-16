@@ -20,6 +20,14 @@ use Swoole\Tests\TestThread;
  */
 class PoolTest extends TestCase
 {
+    public function testShutdownBeforeStartIsHarmless(): void
+    {
+        $pool = new Pool(TestThread::class, 1);
+        $pool->shutdown();
+        $pool->shutdown();
+        self::assertSame(0, (new \ReflectionProperty(Pool::class, 'running'))->getValue($pool)->get());
+    }
+
     public function testPool(): void
     {
         $map = new Map();

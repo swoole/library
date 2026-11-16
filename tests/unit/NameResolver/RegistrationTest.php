@@ -22,6 +22,64 @@ use Swoole\Tests\TestCase;
  */
 class RegistrationTest extends TestCase
 {
+    public function testStopRenewalAndConcurrentStopsAreIdempotent(): void
+    {
+        self::coRun(static function (): void {
+            $state    = (object) ['leaves' => 0];
+            $started  = new Channel(1);
+            $release  = new Channel(1);
+            $resolver = new class($state, $started, $release) extends NameResolver {
+                public function __construct(private object $state, private Channel $started, private Channel $release)
+                {
+                    parent::__construct('http://127.0.0.1');
+                }
+
+                public function join(string $name, string $ip, int $port, array $options = []): bool
+                {
+                    return true;
+                }
+
+                public function getCluster(string $name): ?Cluster
+                {
+                    return null;
+                }
+
+                public function leave(string $name, string $ip, int $port): bool
+                {
+                    $this->state->leaves++;
+                    $this->started->push(true);
+                    $this->release->pop(2);
+                    return true;
+                }
+            };
+            $registration = $resolver->register('test', '127.0.0.1', 80);
+            $registration->stopRenewal();
+            $registration->stopRenewal();
+            self::assertFalse($registration->isRunning());
+            $done = new Channel(3);
+            Coroutine::create(static fn () => $done->push($registration->stop()));
+            self::assertTrue($started->pop(1));
+            Coroutine::create(static fn () => $done->push($registration->stop()));
+            Coroutine::create(static fn () => $done->push($registration->stop()));
+            $cancelled = new Channel(1);
+            $cid       = Coroutine::create(static function () use ($registration, $cancelled): void {
+                try {
+                    $registration->stop();
+                } catch (Exception $e) {
+                    $cancelled->push($e);
+                }
+            });
+            self::assertTrue(Coroutine::cancel($cid));
+            self::assertInstanceOf(Exception::class, $cancelled->pop(1));
+            self::assertSame(1, $state->leaves);
+            $release->push(true);
+            for ($i = 0; $i < 3; $i++) {
+                self::assertTrue($done->pop(1));
+            }
+            self::assertSame(1, $state->leaves);
+        });
+    }
+
     public function testStopWaitsForHeartbeatAndLeavesOnlyOnce(): void
     {
         self::coRun(function () {

@@ -21,6 +21,12 @@ class Server
 {
     public const DEFAULT_PORT = 9567;
 
+    private const HANDLERS = [
+        '_new', '_clone', '_call_function', '_call_method', '_read_property', '_write_property',
+        '_isset_property', '_unset_property', '_ping', '_destroy', '_destroy_batch', '_to_string',
+        '_iterate', '_offset_get', '_offset_set', '_offset_unset', '_offset_exists',
+    ];
+
     private readonly HttpServer $server;
 
     private array $objects = [];
@@ -44,8 +50,14 @@ class Server
 
     public function __construct(string $host = '127.0.0.1', int $port = self::DEFAULT_PORT, array $options = [])
     {
+        if (!isset($options['api_key']) || !is_string($options['api_key']) || $options['api_key'] === '') {
+            throw new Exception('Remote object servers require a nonempty api_key');
+        }
+        $this->apiKey = $options['api_key'];
+        unset($options['api_key']);
+        $options += SWOOLE_LIBRARY_REMOTE_OBJECT_CONFIG;
         // By default, thread mode is used, and when viewed with ps, only one process will be displayed.
-        $server_mode = $options['server_mode'] ?? SWOOLE_THREAD;
+        $server_mode = $options['server_mode'] ?? (defined('SWOOLE_THREAD') ? SWOOLE_THREAD : SWOOLE_BASE);
         $socket_type = $options['socket_type'] ?? SWOOLE_SOCK_TCP;
         if ($server_mode === SWOOLE_PROCESS
             && ((int) ($options['dispatch_mode'] ?? SWOOLE_DISPATCH_FDMOD) !== SWOOLE_DISPATCH_FDMOD
@@ -71,11 +83,6 @@ class Server
             unset($options['allowed_functions']);
         }
 
-        if (isset($options['api_key'])) {
-            $this->apiKey = $options['api_key'];
-            unset($options['api_key']);
-        }
-
         if ($options) {
             $server->set($options);
         }
@@ -99,7 +106,7 @@ class Server
     public function onRequest(Request $request, Response $response): void
     {
         $ctx = new Context($request, $response);
-        if ($this->apiKey && $this->apiKey !== ($request->header['x-api-key'] ?? '')) {
+        if (!hash_equals($this->apiKey, $request->header['x-api-key'] ?? '')) {
             $response->status(403);
             $ctx->end(['code' => -3, 'msg' => 'invalid api key']);
             return;
@@ -111,7 +118,7 @@ class Server
         $this->connections[$fd]['requests']++;
         try {
             $method = $ctx->getHandler();
-            if (method_exists($this, $method)) {
+            if (in_array($method, self::HANDLERS, true)) {
                 $this->{$method}($ctx);
             } else {
                 $ctx->end(['code' => -1, 'msg' => 'invalid request']);

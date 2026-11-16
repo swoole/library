@@ -28,7 +28,9 @@ final class Registration
 
     private bool $registered = false;
 
-    private bool $stopping = false;
+    private bool $wakeClosed = false;
+
+    private ?Channel $stopDone = null;
 
     private int $pid;
 
@@ -135,20 +137,24 @@ final class Registration
     public function stopRenewal(): void
     {
         $this->running = false;
-        if ($this->pid === getmypid()) {
+        if ($this->pid === getmypid() && !$this->wakeClosed) {
+            $this->wakeClosed = true;
             $this->wake->close();
         }
     }
 
     private function deregister(): bool
     {
-        while ($this->stopping) {
-            Coroutine::sleep(0.001);
+        while ($this->stopDone !== null) {
+            $done = $this->stopDone;
+            if ($done->pop() === false && $done->errCode !== SWOOLE_CHANNEL_CLOSED) {
+                throw new Exception('Cancelled while waiting for service deregistration', $done->errCode);
+            }
         }
         if (!$this->registered) {
             return true;
         }
-        $this->stopping = true;
+        $done = $this->stopDone = new Channel(1);
         try {
             if (!$this->resolver->leave($this->name, $this->ip, $this->port)) {
                 throw new Exception('Service deregistration failed');
@@ -159,7 +165,8 @@ final class Registration
             $this->lastError = $e;
             throw $e;
         } finally {
-            $this->stopping = false;
+            $this->stopDone = null;
+            $done->close();
         }
     }
 

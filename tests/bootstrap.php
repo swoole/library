@@ -97,8 +97,8 @@ const DOCUMENT_ROOT = '/var/www/tests/www';
 /**
  * Stops the default remote object server that keeps its files in $dir, if there is one, and removes the files.
  *
- * swoole_init_default_remote_object_server() writes five files into its directory (remote-object-server.php,
- * .sock, .pid, .log and .lock) and starts a daemon that nothing stops: it outlives the process that started it,
+ * swoole_init_default_remote_object_server() writes its script, socket, pid, log, lock and private key into
+ * its directory and starts a daemon that nothing stops: it outlives the process that started it,
  * and keeps running the library code it loaded at that time. The files outlive the daemon in turn, e.g. when the
  * container is restarted, and a socket file left like that can neither be read nor replaced on a Docker Desktop
  * bind mount, so the next server cannot start and its client waits forever.
@@ -131,7 +131,7 @@ function swoole_tests_stop_remote_object_server(string $dir): void
         }
     }
 
-    foreach (['php', 'sock', 'pid', 'log', 'lock'] as $extension) {
+    foreach (['php', 'sock', 'pid', 'log', 'lock', 'key'] as $extension) {
         // Not guarded by file_exists(): that is false for a socket file left by a dead server on a bind mount.
         @unlink($prefix . $extension);
     }

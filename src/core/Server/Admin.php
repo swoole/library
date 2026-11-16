@@ -390,7 +390,8 @@ class Admin
 
     public static function start(Server $server): void
     {
-        $admin_server_uri = swoole_string($server->setting['admin_server']);
+        self::$accessToken = '';
+        $admin_server_uri  = swoole_string($server->setting['admin_server']);
         if ($admin_server_uri->startsWith('unix:/')) {
             swoole_error_log(SWOOLE_LOG_ERROR, "admin_server[{$server->setting['admin_server']}] is not supported");
             return;
@@ -398,15 +399,26 @@ class Admin
 
         if ($admin_server_uri->contains('@')) {
             [$access_name, $access_secret] = $admin_server_uri->split('@', 2)->get(0)->split(':', 2)->toArray();
+            if ($access_name === '' || $access_secret === '') {
+                throw new \InvalidArgumentException('admin_server requires nonempty access name and secret');
+            }
             self::$accessToken             = sha1($access_name . $access_secret);
             [$host, $port]                 = $admin_server_uri->split('@', 2)->get(1)->split(':', 2)->toArray();
         } else {
-            [$host, $port] = $admin_server_uri->split(':', 2)->toArray();
+            throw new \InvalidArgumentException('admin_server requires access_name:access_secret@host:port');
         }
 
         $admin_server = new Coroutine\Http\Server($host, intval($port));
 
-        $admin_server->handle('/api', function (Request $req, Response $resp) use ($server) {
+        $token           = self::$accessToken;
+        $serverReference = \WeakReference::create($server);
+        $admin_server->handle('/api', static function (Request $req, Response $resp) use ($serverReference, $token) {
+            $server = $serverReference->get();
+            if ($server === null) {
+                $resp->status(503);
+                $resp->end();
+                return;
+            }
             $path_array = swoole_string($req->server['request_uri'])->trim('/')->split('/');
             if ($path_array->count() < 2 || $path_array->count() > 3) {
                 $resp->status(403);
@@ -415,9 +427,6 @@ class Admin
             }
 
             $resp->header('Server', 'swoole-admin-server');
-            $resp->header('Access-Control-Allow-Origin', '*');
-            $resp->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-            $resp->header('Access-Control-Allow-Headers', 'X-ACCESS-TOKEN, X-ADMIN-SERVER-ACCESS-TOKEN');
 
             $method = $req->getMethod();
 
@@ -426,14 +435,11 @@ class Admin
                 return;
             }
 
-            $token = self::getAccessToken();
-            if (!empty($token)) {
-                $token_header = $req->header['x-admin-server-access-token'] ?? '';
-                if ($token_header !== $token) {
-                    $resp->status(403);
-                    $resp->end(self::json('Bad access token', 4003));
-                    return;
-                }
+            $token_header = $req->header['x-admin-server-access-token'] ?? '';
+            if (!hash_equals($token, $token_header)) {
+                $resp->status(403);
+                $resp->end(self::json('Bad access token', 4003));
+                return;
             }
 
             $cmd = $path_array->get(1)->toString();
@@ -1008,7 +1014,17 @@ class Admin
         }
 
         $reflection = new \ReflectionClass($className);
-        $value      = $reflection->getStaticPropertyValue($propertyName, []);
+        if (!$reflection->hasProperty($propertyName)) {
+            return self::json('Static property not found', 4004);
+        }
+        $property = $reflection->getProperty($propertyName);
+        if (!$property->isPublic() || !$property->isStatic()) {
+            return self::json('Only public static properties can be inspected', 4003);
+        }
+        if (!$property->isInitialized()) {
+            return self::json('Static property is not initialized', 4004);
+        }
+        $value = $property->getValue();
 
         $result = [
             'value' => var_export($value, true),
@@ -1228,11 +1244,16 @@ class Admin
             return [0];
         }
 
-        $statAll  = file_get_contents('/proc/stat');
-        $statProc = file_get_contents("/proc/{$pid}/stat");
+        $statAll  = @file_get_contents('/proc/stat');
+        $statProc = @file_get_contents("/proc/{$pid}/stat");
+        if ($statAll === false || $statProc === false) {
+            return [0];
+        }
 
         $dataAll = preg_split("/[ \t]+/", $statAll, 6);
-        assert($dataAll[0] === 'cpu', '/proc/stat malformed');
+        if (count($dataAll) < 5 || $dataAll[0] !== 'cpu') {
+            return [0];
+        }
         $dataProc = preg_split("/[ \t]+/", $statProc, 15);
 
         if (isset($dataProc[13], $dataProc[14])) {

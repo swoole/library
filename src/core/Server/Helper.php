@@ -269,7 +269,9 @@ class Helper
                     }
                     $out = implode("\n", $lines);
                 }
-                file_put_contents($server->setting[Constant::OPTION_STATS_FILE], $out);
+                if (@file_put_contents($server->setting[Constant::OPTION_STATS_FILE], $out) !== strlen($out)) {
+                    swoole_error_log(SWOOLE_LOG_WARNING, 'Failed to write server stats file: ' . $server->setting[Constant::OPTION_STATS_FILE]);
+                }
             });
         }
     }

@@ -43,6 +43,7 @@ class Pool
             throw new \Exception('threadNum must be greater than 0');
         }
         $this->threadNum = $threadNum;
+        $this->running   = new Atomic(0);
     }
 
     public function withArguments(mixed ...$arguments): static
@@ -68,6 +69,9 @@ class Pool
      */
     public function start(): void
     {
+        if ($this->running->get()) {
+            throw new \LogicException('Thread pool is already running');
+        }
         if (empty($this->classDefinitionFile) && class_exists($this->runnableClass, false)) {
             $file = (new \ReflectionClass($this->runnableClass))->getFileName();
             if (!$this->isValidPhpFile($file)) {
@@ -105,16 +109,23 @@ class Pool
         }
 
         $this->queue     = new Queue();
-        $this->running   = new Atomic(1);
-        $this->proxyFile = $this->createRunner();
+        $this->running->set(1);
+        $this->proxyFile = '';
 
         try {
+            $this->proxyFile = $this->createRunner();
             for ($index = 0; $index < $this->threadNum; $index++) {
                 $this->createThread($index);
             }
 
-            while ($this->running->get()) {
+            while (true) {
                 $index  = $this->queue->pop(-1);
+                if (!$this->running->get()) {
+                    break;
+                }
+                if (!is_int($index) || !isset($this->threads[$index])) {
+                    continue;
+                }
                 $thread = $this->threads[$index];
                 $thread->join();
                 unset($this->threads[$index]);
@@ -129,14 +140,18 @@ class Pool
                 }
             } finally {
                 $this->threads = [];
-                unlink($this->proxyFile);
+                if ($this->proxyFile !== '') {
+                    unlink($this->proxyFile);
+                }
             }
         }
     }
 
     public function shutdown(): void
     {
-        $this->running->set(0);
+        if ($this->running->cmpset(1, 0)) {
+            $this->queue->push(null, Queue::NOTIFY_ALL);
+        }
     }
 
     /**

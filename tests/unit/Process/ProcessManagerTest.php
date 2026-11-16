@@ -21,6 +21,41 @@ use Swoole\Tests\TestCase;
  */
 class ProcessManagerTest extends TestCase
 {
+    public function testShutdownBeforeStartIsHarmless(): void
+    {
+        self::assertFalse((new ProcessManager())->shutdown());
+    }
+
+    public function testStartWithoutWorkersIsRejected(): void
+    {
+        $this->expectException(\LogicException::class);
+        (new ProcessManager())->start();
+    }
+
+    public function testInvalidWorkerCountIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        (new ProcessManager())->addBatch(-1, static function (): void {});
+    }
+
+    public function testRunningManagerRejectsReentryAndCanShutdown(): void
+    {
+        $checked = new Atomic(0);
+        $manager = new ProcessManager();
+        $manager->add(static function () use ($manager, $checked): void {
+            try {
+                $manager->start();
+            } catch (\LogicException) {
+                $checked->add();
+            } finally {
+                $manager->shutdown();
+            }
+        });
+        $manager->start();
+        self::assertSame(1, $checked->get());
+        self::assertFalse($manager->shutdown());
+    }
+
     public function testAdd(): void
     {
         $pm     = new ProcessManager();

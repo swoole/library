@@ -22,6 +22,62 @@ use Swoole\Tests\TestCase;
  */
 class ResolverTest extends TestCase
 {
+    public function testTimedOutAndCancelledWaitersAreRemovedBeforeOwnerCompletes(): void
+    {
+        self::coRun(static function (): void {
+            $release  = new Channel(1);
+            $done     = new Channel(1);
+            $resolver = self::resolver(static function () use ($release): Cluster {
+                $release->pop(2);
+                return self::cluster();
+            })->withTimeout(0.02);
+            Coroutine::create(static fn () => $done->push($resolver->lookup('slow')));
+            $pending = new \ReflectionProperty(NameResolver::class, 'pending');
+            try {
+                for ($i = 0; $i < 3; $i++) {
+                    try {
+                        $resolver->lookup('slow');
+                        self::fail('Waiter did not time out');
+                    } catch (Exception $e) {
+                        self::assertStringContainsString('Timed out waiting', $e->getMessage());
+                    }
+                    self::assertSame([], array_values($pending->getValue($resolver))[0]['waiters']);
+                }
+                $cancelled = new Channel(1);
+                $cid       = Coroutine::create(static function () use ($resolver, $cancelled): void {
+                    try {
+                        $resolver->lookup('slow');
+                    } catch (Exception $e) {
+                        $cancelled->push($e);
+                    }
+                });
+                self::assertCount(1, array_values($pending->getValue($resolver))[0]['waiters']);
+                self::assertTrue(Coroutine::cancel($cid));
+                self::assertInstanceOf(Exception::class, $cancelled->pop(1));
+                self::assertSame([], array_values($pending->getValue($resolver))[0]['waiters']);
+            } finally {
+                $release->push(true);
+                $done->pop(2);
+            }
+            self::assertSame([], $pending->getValue($resolver));
+        });
+    }
+
+    public function testCacheEvictsLeastRecentlyUsedService(): void
+    {
+        $calls    = 0;
+        $resolver = self::resolver(static function () use (&$calls): Cluster {
+            $calls++;
+            return self::cluster();
+        })->withCache(10, 2);
+        foreach (['a', 'b', 'a', 'c', 'a'] as $name) {
+            $resolver->lookup($name);
+        }
+        self::assertSame(3, $calls);
+        $resolver->lookup('b');
+        self::assertSame(4, $calls);
+    }
+
     public function testCacheReturnsIndependentClustersAndInvalidates(): void
     {
         $calls    = 0;
@@ -191,7 +247,7 @@ class ResolverTest extends TestCase
 
     public static function invalidUrls(): array
     {
-        return [[''], ['localhost:8500'], ['ftp://127.0.0.1'], ['http://127.0.0.1:0'], ['http://127.0.0.1?token=x']];
+        return [[''], ['localhost:8500'], ['ftp://127.0.0.1'], ['http://127.0.0.1:0'], ['http://127.0.0.1:65536'], ['http://127.0.0.1?token=x']];
     }
 
     private static function resolver(callable $fetch): NameResolver

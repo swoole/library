@@ -43,6 +43,63 @@ class DefaultServerTest extends TestCase
         parent::tearDown();
     }
 
+    public function testDefaultKeyIsPrivateStableAndRequired(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-key-' . uniqid());
+        self::coRun(static function (): void { swoole_init_default_remote_object_server(); });
+        $key = swoole_get_default_remote_object_api_key();
+        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $key);
+        self::assertSame($key, swoole_get_default_remote_object_api_key());
+        foreach (['key', 'php'] as $extension) {
+            self::assertSame(0600, fileperms($this->dir . '/remote-object-server.' . $extension) & 0777);
+        }
+        self::coRun(function (): void {
+            self::assertFalse((new Client('unix://' . $this->dir . '/remote-object-server.sock'))->ping());
+            self::assertFalse((new Client('unix://' . $this->dir . '/remote-object-server.sock', 0, ['api_key' => 'wrong']))->ping());
+        });
+        self::assertTrue($this->ping());
+    }
+
+    public function testUnsafeKeyPermissionsAreRejected(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-key-mode-' . uniqid());
+        swoole_get_default_remote_object_api_key();
+        chmod($this->dir . '/remote-object-server.key', 0644);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('private file');
+        swoole_get_default_remote_object_api_key();
+    }
+
+    public function testRemoteObjectDestructorContainsNonRpcFailures(): void
+    {
+        $this->useDirectory(sys_get_temp_dir() . '/swoole-ro-destructor-' . uniqid());
+        $client = new class extends Client {
+            public int $releases = 0;
+
+            public function __construct()
+            {
+            }
+
+            public function release(int $objectId): void
+            {
+                $this->releases++;
+                throw new \LogicException('expected destructor failure');
+            }
+        };
+        $object = \Swoole\RemoteObject::marshal(1, 1, 'fixture');
+        (new \ReflectionProperty(\Swoole\RemoteObject::class, 'client'))->setValue($object, $client);
+        $log      = $this->dir . '/destructor.log';
+        $previous = ini_set('error_log', $log);
+        try {
+            unset($object);
+            self::assertSame(1, $client->releases);
+            self::assertStringContainsString('expected destructor failure', file_get_contents($log));
+        } finally {
+            ini_set('error_log', $previous);
+            @unlink($log);
+        }
+    }
+
     /**
      * The directory goes into a shell command and into the PHP file the server runs. A space or a quote in it
      * used to break the command or the file, and the server did not start.
@@ -191,7 +248,7 @@ class DefaultServerTest extends TestCase
     private function useDirectory(string $dir): void
     {
         $this->dir = $dir;
-        mkdir($this->dir);
+        mkdir($this->dir, 0700);
         swoole_library_set_option('default_remote_object_server_dir', $this->dir);
         swoole_library_set_option('default_remote_object_server_worker_num', 1);
 
@@ -205,7 +262,7 @@ class DefaultServerTest extends TestCase
     {
         $result = false;
         self::coRun(function () use (&$result) {
-            $result = (new Client('unix://' . $this->dir . '/remote-object-server.sock'))->ping();
+            $result = (new Client('unix://' . $this->dir . '/remote-object-server.sock', 0, ['api_key' => swoole_get_default_remote_object_api_key()]))->ping();
         });
         return $result;
     }

@@ -44,7 +44,7 @@ abstract class NameResolver
 
     private array $httpOptions = [];
 
-    public function __construct(string $url, protected $prefix = 'swoole_service_')
+    public function __construct(string $url, protected string $prefix = 'swoole_service_')
     {
         $this->checkServerUrl($url);
     }
@@ -244,7 +244,7 @@ abstract class NameResolver
                     $host .= ':' . $port;
                 }
                 if (isset($this->info['user'])) {
-                    $headers['Authorization'] ??= 'Basic ' . base64_encode(rawurldecode($this->info['user']) . ':' . rawurldecode($this->info['pass'] ?? ''));
+                    $headers['Authorization'] = $headers['Authorization'] ?? 'Basic ' . base64_encode(rawurldecode($this->info['user']) . ':' . rawurldecode($this->info['pass'] ?? ''));
                 }
                 $headers['Host'] = $host;
                 $client->setHeaders($headers);
@@ -302,12 +302,12 @@ abstract class NameResolver
     private function requestBlocking(string $method, string $path, mixed $body, array $query, array $headers): ClientProxy
     {
         if (isset($this->info['user'])) {
-            $headers['Authorization'] ??= 'Basic ' . base64_encode(rawurldecode($this->info['user']) . ':' . rawurldecode($this->info['pass'] ?? ''));
+            $headers['Authorization'] = $headers['Authorization'] ?? 'Basic ' . base64_encode(rawurldecode($this->info['user']) . ':' . rawurldecode($this->info['pass'] ?? ''));
         }
         $headers['Connection'] = 'close';
         if (is_array($body)) {
-            $body = http_build_query($body, '', '&', PHP_QUERY_RFC3986);
-            $headers['Content-Type'] ??= 'application/x-www-form-urlencoded';
+            $body                    = http_build_query($body, '', '&', PHP_QUERY_RFC3986);
+            $headers['Content-Type'] = $headers['Content-Type'] ?? 'application/x-www-form-urlencoded';
         }
         $lines = [];
         foreach ($headers as $key => $value) {
@@ -362,15 +362,26 @@ abstract class NameResolver
         $pendingKey = $this->generation . ':' . $name;
         $now        = hrtime(true) / 1e9;
         if (isset($this->cache[$name]) && $this->cache[$name]['expires'] > $now) {
-            return $this->cache[$name]['cluster'] === null ? null : clone $this->cache[$name]['cluster'];
+            $cached = $this->cache[$name];
+            unset($this->cache[$name]);
+            $this->cache[$name] = $cached;
+            return $cached['cluster'] === null ? null : clone $cached['cluster'];
         }
         if (isset($this->pending[$pendingKey]) && $this->pending[$pendingKey]['owner'] === Coroutine::getCid()) {
             throw new \LogicException('Recursive lookup of the same service is not allowed');
         }
         if (Coroutine::getCid() >= 0 && isset($this->pending[$pendingKey])) {
-            $waiter                                  = new Channel(1);
-            $this->pending[$pendingKey]['waiters'][] = $waiter;
-            $result                                  = $waiter->pop($this->timeout);
+            $waiter                                     = new Channel(1);
+            $id                                         = spl_object_id($waiter);
+            $this->pending[$pendingKey]['waiters'][$id] = $waiter;
+            try {
+                $result = $waiter->pop($this->timeout);
+            } finally {
+                if (isset($this->pending[$pendingKey])) {
+                    unset($this->pending[$pendingKey]['waiters'][$id]);
+                }
+                $waiter->close();
+            }
             if ($result === false) {
                 throw new Exception('Timed out waiting for service discovery');
             }

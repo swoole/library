@@ -147,7 +147,7 @@ function swoole_init_default_remote_object_server(): void
     };
 
     if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+        mkdir($dir, 0700, true);
         $print_log("create dir[{$dir}]");
     }
 
@@ -165,7 +165,10 @@ function swoole_init_default_remote_object_server(): void
     // two keys (or set them to [] for no restriction) through default_remote_object_server_options.
     $options += SWOOLE_LIBRARY_REMOTE_OBJECT_CONFIG;
 
-    $print_log('remote object server options: ' . var_export($options, true));
+    $log_options = $options;
+    unset($log_options['api_key']);
+    $print_log('remote object server options: ' . var_export($log_options, true));
+    $options['api_key'] = swoole_get_default_remote_object_api_key();
 
     $php_file                    = $dir . '/remote-object-server.php';
     $socket_file                 = $dir . '/remote-object-server.sock';
@@ -263,7 +266,12 @@ function swoole_init_default_remote_object_server(): void
         $exported_options     = $export_array($options);
         $exported_socket_file = var_export($socket_file, true);
 
-        $rv = file_put_contents($php_file, <<<PHP
+        $temporary_file = tempnam($dir, '.remote-object-server-');
+        if ($temporary_file === false || !chmod($temporary_file, 0600)) {
+            throw new RuntimeException('failed to create private remote object server script');
+        }
+        try {
+            $rv = file_put_contents($temporary_file, <<<PHP
             <?php
             /**
              * This file is part of Swoole.
@@ -285,8 +293,13 @@ function swoole_init_default_remote_object_server(): void
             (new Swoole\\RemoteObject\\Server({$exported_socket_file}, 0, {$exported_options}))->start();
 
             PHP);
-        if (!$rv) {
-            throw new RuntimeException("failed to write php file[{$php_file}]");
+            if (!$rv || !rename($temporary_file, $php_file)) {
+                throw new RuntimeException("failed to write php file[{$php_file}]");
+            }
+        } finally {
+            if (is_file($temporary_file)) {
+                unlink($temporary_file);
+            }
         }
         $print_log("write php file[{$php_file}]");
 
@@ -367,6 +380,50 @@ function swoole_get_default_remote_object_server_dir(): string
     return $dir;
 }
 
+/** @internal The daemon and its clients share a private key without exposing it in process arguments. */
+function swoole_get_default_remote_object_api_key(): string
+{
+    $dir = swoole_get_default_remote_object_server_dir();
+    clearstatcache(true, $dir);
+    if (!is_dir($dir) || fileowner($dir) !== posix_geteuid() || (fileperms($dir) & 0022) !== 0) {
+        throw new RuntimeException('remote object server directory must be owned by this user and not writable by group or others');
+    }
+    $options = swoole_library_get_option('default_remote_object_server_options') ?? [];
+    if (isset($options['api_key'])) {
+        if (!is_string($options['api_key']) || $options['api_key'] === '') {
+            throw new RuntimeException('remote object server api_key must be a nonempty string');
+        }
+        return $options['api_key'];
+    }
+    $file = $dir . '/remote-object-server.key';
+    if (!file_exists($file) && !is_link($file)) {
+        $temporary = tempnam($dir, '.remote-object-key-');
+        if ($temporary === false) {
+            throw new RuntimeException('failed to create remote object server key');
+        }
+        try {
+            if (!chmod($temporary, 0600) || file_put_contents($temporary, bin2hex(random_bytes(32))) !== 64) {
+                throw new RuntimeException('failed to write remote object server key');
+            }
+            // link() publishes a complete key without overwriting a concurrent starter's key.
+            if (!@link($temporary, $file) && !is_file($file)) {
+                throw new RuntimeException('failed to publish remote object server key');
+            }
+        } finally {
+            unlink($temporary);
+        }
+    }
+    clearstatcache(true, $file);
+    if (is_link($file) || !is_file($file) || fileowner($file) !== posix_geteuid() || (fileperms($file) & 0077) !== 0) {
+        throw new RuntimeException('remote object server key must be a private file owned by this user');
+    }
+    $key = file_get_contents($file);
+    if ($key === false || !preg_match('/^[a-f0-9]{64}$/D', $key)) {
+        throw new RuntimeException('invalid remote object server key');
+    }
+    return $key;
+}
+
 function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
 {
     if (!SwooleLibrary::$remote_object_server_initiated) {
@@ -377,5 +434,9 @@ function swoole_get_default_remote_object_client(): Swoole\RemoteObject\Client
         $dir                                             = swoole_get_default_remote_object_server_dir();
         SwooleLibrary::$remote_object_server_socket_file = 'unix://' . $dir . '/remote-object-server.sock';
     }
-    return new Swoole\RemoteObject\Client(SwooleLibrary::$remote_object_server_socket_file);
+    $options = swoole_library_get_option('default_remote_object_server_options') ?? [];
+    if (is_file(swoole_get_default_remote_object_server_dir() . '/remote-object-server.key')) {
+        $options['api_key'] = swoole_get_default_remote_object_api_key();
+    }
+    return new Swoole\RemoteObject\Client(SwooleLibrary::$remote_object_server_socket_file, 0, $options);
 }

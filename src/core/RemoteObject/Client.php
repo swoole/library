@@ -198,7 +198,7 @@ class Client
     {
         try {
             $this->withLock(fn () => $this->flushReleaseQueue());
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             error_log($e->getMessage());
         }
     }
@@ -233,7 +233,7 @@ class Client
             throw new Exception($this->client->errMsg);
         }
         // A malformed body is reported below as an exception, without an unserialize warning.
-        $result = @unserialize($this->client->body);
+        $result = Context::decode($this->client->body);
         if (!is_array($result) || !array_key_exists('code', $result)) {
             throw new Exception('Malformed response from the remote object server');
         }

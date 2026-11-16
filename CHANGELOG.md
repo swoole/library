@@ -4,6 +4,10 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
 Backward-incompatible changes:
 
+* Remote object servers require a nonempty `api_key`; configure the same key on clients. The default daemon manages a private key automatically and requires its directory to be owned by the current user without group/other write permission. Restart existing daemons when upgrading.
+* Remote object RPC accepts serialized `RemoteObject` references only. Create business objects on the server and pass their references instead of serializing local objects into arguments.
+* The admin listener requires `access_name:access_secret@host:port`, no longer advertises wildcard CORS, and exposes only initialized public static properties.
+* Process managers reject nonpositive batch sizes, starts without workers, reentrant starts and configuration changes while running.
 * The curl hook follows PHP 8 handle lifetime: `curl_close()` leaves the handle usable; drop references to release its resources. Unknown option numbers passed to `curl_setopt()` raise `ValueError`, while native options the hook cannot implement return `false` with cURL error 48.
 * The mail hook uses the native parameter names `additional_headers` and `additional_params`; named calls using the old `headers` name must be updated. Headers may be a string or array, and the fifth argument is forwarded.
 * Emulated socket `MSG_DONTWAIT` operations report their 1 ms timeout behavior with a warning. These calls can suspend and return `ETIMEDOUT`; unsupported receive flags are explicitly rejected.
@@ -27,13 +31,14 @@ Backward-incompatible changes:
 * Parameters that had no type now have one, so an argument of another type fails with a `TypeError`, e.g. in `\Swoole\NameResolver::__construct()`, `\Swoole\FastCGI\HttpRequest::withQuery()`, `\Swoole\ArrayObject::map()`, `\Swoole\Thread\Runnable::__construct()` and `swoole_curl_setopt_array()`.
 * `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.
 * Return values of functions that replace native ones when they are hooked now match the native functions:
-  * `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle, and `\Swoole\Curl\Handler::reset()` returns `true` on success while `swoole_curl_reset()` returns nothing.
+  * `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` before transfer content is available, and `\Swoole\Curl\Handler::reset()` returns `true` on success while `swoole_curl_reset()` returns nothing.
   * `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing, and `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
   * `swoole_exec()` returns `''` instead of `false` for a command without output, keeps spaces at the end of a line, and replaces an `$output` that is not an array. `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
 * `\Swoole\Coroutine\FastCGI\Proxy` no longer sends PHP source, backup copies or hidden files as static files. `file.PHP` is passed to PHP-FPM, and backup or hidden files are rejected with 403.
 
 Added:
 
+* Process managers provide `shutdown()` to stop an active pool; it returns `false` when the manager is not running.
 * `ConnectionPool` accepts an optional fourth constructor argument to dispose of closed/discarded connections. `close()` drains idle connections and releases active connections when they are returned; mysqli and Redis pools explicitly close their native connections. PDO pools release their references; external statements and persistent connections may retain native sessions.
 * `Swoole\Coroutine\batch()` and `map()` accept an optional final `$completed` output argument. It is `false` if the wait timed out or was canceled; partial results and tasks continuing in the background retain their existing behavior.
 * `\Swoole\Grpc` provides a coroutine gRPC client, with Etcd and Helloworld examples and generated clients under `examples/grpc`. It is a Composer-only component and is not packed into the Swoole extension.
@@ -75,6 +80,10 @@ Removed:
 
 Fixed:
 
+* Remote object RPC dispatches only protocol routes, compares API keys in constant time, and blocks object injection in arguments and responses. Default daemon scripts and keys use private file permissions; keys are excluded from verbose option logs.
+* Thread pools tolerate shutdown before start, wake the manager on shutdown, ignore invalid completion indexes, and release startup state after runner creation fails.
+* Service discovery removes timed-out or canceled waiters promptly and evicts the least recently used cached service. Repeated registration stops are harmless, and concurrent deregistration waits for completion without polling.
+* Remote object destructors contain all release failures. Process managers release completed pools, and admin listeners avoid retaining their server through request callbacks. Server stats write failures and unavailable CPU data are handled explicitly.
 * The curl hook preserves repeated request headers and strips all custom Authorization/Cookie fields on cross-origin redirects. `CURLOPT_RESOLVE` retains non-default ports in Host headers.
 * Curl transfer info exposes `effective_method` and microsecond timing fields, excludes private data from the full info array, and returns `false` for unknown selectors or invalid integer-info fields. Private data and application-connect seconds remain available through their individual selectors. Reset caches its default properties, redirect iterations clear stale proxy options, and the internal write callback uses a weak reference so it cannot retain its handle.
 * DNS hooks forward the native `raw` argument. MX and DNS output parameters accept uninitialized or previously non-array variables; MX aliases preserve optional outputs and no longer depend on an unreachable argument-count branch.

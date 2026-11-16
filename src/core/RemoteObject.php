@@ -34,9 +34,8 @@ class RemoteObject implements \ArrayAccess, \Stringable, \Iterator, \Countable
         if ($this->client && $this->objectId > 0) {
             try {
                 $this->client->release($this->objectId);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 error_log($e->getMessage());
-                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
             }
         }
     }
