@@ -29,15 +29,19 @@ use Swoole\Http\Response;
  */
 final class HttpProxy
 {
+    private const WAKE_UP = 'wake-up';
+
     private readonly float $timeout;
 
-    /** @var Channel<Client>|null */
+    /** @var Channel<Client|string>|null */
     private readonly ?Channel $pool;
 
     /** @var \WeakMap<Client, float> the time each pooled connection went idle */
     private readonly \WeakMap $idleSince;
 
     private int $connections = 0;
+
+    private int $waiters = 0;
 
     public function __construct(
         private readonly string $backendHost,
@@ -170,32 +174,43 @@ final class HttpProxy
             return $this->createClient();
         }
         while (true) {
-            // No coroutine can take the client between isEmpty() and pop(), so this pop never waits.
+            $item = null;
             if (!$this->pool->isEmpty()) {
-                $client = $this->pool->pop();
-                if ($client instanceof Client) {
-                    if ($this->isReusable($client)) {
-                        return $client;
-                    }
-                    continue;
+                // No coroutine can take the item between isEmpty() and pop(), so pop() never waits.
+                $item = $this->pool->pop();
+            }
+            if ($item === null) {
+                if ($this->connections < $this->maxConnections) {
+                    $this->connections++;
+
+                    return $this->createClient();
+                }
+                $this->waiters++;
+                try {
+                    $item = $this->pool->pop($this->poolWaitTimeout);
+                } finally {
+                    $this->waiters--;
+                }
+                if (!$item instanceof Client && $item !== self::WAKE_UP) {
+                    throw new \RuntimeException('Timed out waiting for a free backend connection.');
                 }
             }
 
-            if ($this->connections < $this->maxConnections) {
-                $this->connections++;
+            if ($item === self::WAKE_UP) {
+                // A request that held a connection has finished and freed its slot; use it.
+                if ($this->connections < $this->maxConnections) {
+                    $this->connections++;
 
-                return $this->createClient();
-            }
-
-            $client = $this->pool->pop($this->poolWaitTimeout);
-            if ($client instanceof Client) {
-                if ($this->isReusable($client)) {
-                    return $client;
+                    return $this->createClient();
                 }
                 continue;
             }
-
-            throw new \RuntimeException('Timed out waiting for a free backend connection.');
+            if (!$item instanceof Client) {
+                continue;
+            }
+            if ($this->isReusable($item)) {
+                return $item;
+            }
         }
     }
 
@@ -243,6 +258,7 @@ final class HttpProxy
         // The client copies the response body and keeps the request headers and body in PHP
         // properties until it is used again: do not hold them for as long as it sits idle.
         $client->body               = '';
+        $client->cookies            = null;
         $client->headers            = null;
         $client->set_cookie_headers = null;
         $client->requestBody        = null;
@@ -255,6 +271,11 @@ final class HttpProxy
     {
         $client->close();
         $this->connections--;
+        if ($this->pool !== null && $this->waiters > 0 && $this->connections < $this->maxConnections) {
+            // A request is blocked in acquire() on the pool. Wake it so it can create a
+            // replacement connection on the slot this request has just freed.
+            $this->pool->push(self::WAKE_UP);
+        }
     }
 
     /**
