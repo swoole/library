@@ -34,7 +34,7 @@ putenv('SWOOLE_DIR=' . $root);
 $src = realpath(__DIR__ . '/../src');
 $generator = __DIR__ . '/make-library/bin/make-library.php';
 
-// The generator exits on success/failure, so run it as a separate process before post-processing.
+// The generator exits on success/failure and performs all C string escaping itself.
 $process = proc_open(
     [PHP_BINARY, '-n', $generator, $src],
     [STDIN, STDOUT, STDERR],
@@ -45,21 +45,4 @@ if (!is_resource($process)) {
     exit(1);
 }
 $status = proc_close($process);
-if ($status !== 0) {
-    exit($status);
-}
-
-$output = $root . '/ext-src/php_swoole_library.h';
-$header = file_get_contents($output);
-if ($header === false) {
-    fwrite(STDERR, "Unable to read the generated library header\n");
-    exit(1);
-}
-
-// C++14 replaces trigraphs before parsing string literals. Escaping the second question mark
-// prevents that replacement, while the compiled string still contains the original PHP bytes.
-$escaped = preg_replace_callback('/\?\?(?=[=\/\'()!<>-])/', static fn () => '?\\?', $header);
-if ($escaped !== $header && file_put_contents($output, $escaped) !== strlen($escaped)) {
-    fwrite(STDERR, "Unable to write the escaped library header\n");
-    exit(1);
-}
+exit($status);

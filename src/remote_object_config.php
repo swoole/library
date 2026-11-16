@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-/**
+/*
  * Default allow-lists for the remote object server that
  * swoole_init_default_remote_object_server() starts.
  *

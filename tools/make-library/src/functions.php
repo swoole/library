@@ -77,6 +77,6 @@ function unCamelize(string $camelCaps, string $separator = '_'): string
 {
     $camelCaps = preg_replace('/([a-z])([A-Z])/', "\${1}{$separator}\${2}", $camelCaps);
     /* for special case like: PDOPool => pdo_pool */
-    $camelCaps = preg_replace('/([A-Z]+)([A-Z][a-z]+)/', "\${1}{$separator}\${2}\${3}", $camelCaps);
+    $camelCaps = preg_replace('/([A-Z]+)([A-Z][a-z]+)/', "\${1}{$separator}\${2}", $camelCaps);
     return strtolower($camelCaps);
 }

@@ -21,8 +21,8 @@ if (defined('SWOOLE_LIBRARY')) {
 
 ini_set('swoole.enable_library', 'On');
 
-// Every library file outside the PSR-4 root (src/core), which Composer cannot autoload on demand. The list follows the
-// order of src/__init__.php, and a file of that kind added there has to be added here as well.
+// Files Composer cannot autoload on demand: files outside src/core and function files inside it. The list follows
+// src/__init__.php; adding another such file there also requires adding it here.
 require_once __DIR__ . '/constants.php';
 require_once __DIR__ . '/remote_object_config.php';
 require_once __DIR__ . '/std/exec.php';

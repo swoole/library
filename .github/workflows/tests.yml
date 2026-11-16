@@ -74,6 +74,11 @@ jobs:
           docker compose exec -T app php --ri swoole
           docker compose exec -T app composer install -n -q --no-progress
 
+      # Text generation and PHP linting only; verify both supported PHP endpoints without compiling again.
+      - name: Run Library Generator Tests
+        if: (matrix.php == '8.2' || matrix.php == '8.5') && matrix['image-tag-prefix'] == ''
+        run: docker compose exec -T app php -n tools/make-library/tests/run.php
+
       # Coding style does not depend on the PHP version the code runs on, so it is checked once.
       - name: Run Coding Style Checks
         if: matrix.php == '8.4' && matrix['image-tag-prefix'] == ''

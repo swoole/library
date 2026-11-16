@@ -23,7 +23,7 @@ class Builder
         if (!$this->librarySrcDir or !is_dir($this->librarySrcDir)) {
             throw new Exception("The LibrarySrcDir is not exists", 1);
         }
-        $initFile = $librarySrcDir . '/__init__.php';
+        $initFile = $this->librarySrcDir . '/__init__.php';
         if (!is_file($initFile)) {
             throw new Exception("The __init__.php file [$initFile] not found in LibrarySrcDir", 2);
         }
@@ -69,7 +69,7 @@ class Builder
         }
         $this->outputFile = $cfg['output'];
         $this->checkFileChange = !empty($cfg['checkFileChange']);
-        $this->stripComments = !empty($cfg['stripComments']);;
+        $this->stripComments = !empty($cfg['stripComments']);
     }
 
     protected function scanFiles(): array
@@ -82,7 +82,7 @@ class Builder
         );
 
         foreach ($file_spl_objects as $full_file_name => $file_spl_object) {
-            $files[] = str_replace($this->librarySrcDir . '/', '', $full_file_name);
+            $files[] = str_replace('\\', '/', substr($full_file_name, strlen($this->librarySrcDir) + 1));
         }
 
         return $files;
@@ -156,19 +156,18 @@ class Builder
     public function make()
     {
         if ($this->checkFileChange) {
-            preg_match(
-                '/^(\d+)/',
-                trim(shell_exec('cd ' . $this->librarySrcDir . ' && git diff --shortstat')),
-                $file_change
-            );
-            $file_change = (int)($file_change[1] ?? 0);
-            if ($file_change > 0) {
-                swoole_error($file_change . ' file changed in [' . $this->librarySrcDir . ']');
+            [$status, $changes] = $this->runCommand(['git', 'status', '--porcelain', '--untracked-files=all']);
+            if ($status !== 0) {
+                swoole_error('Unable to check library changes: ' . trim($changes));
+            }
+            if (trim($changes) !== '') {
+                swoole_error('Uncommitted files in [' . $this->librarySrcDir . ']', rtrim($changes));
             }
         }
 
-        $commit_id = trim(shell_exec('cd ' . $this->librarySrcDir . ' && git rev-parse HEAD'));
-        if (!$commit_id || strlen($commit_id) != 40) {
+        [$status, $output] = $this->runCommand(['git', 'rev-parse', 'HEAD']);
+        $commit_id = trim($output);
+        if ($status !== 0 || !preg_match('/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/D', $commit_id)) {
             swoole_error('Unable to get commit id of library in [' . $this->librarySrcDir . ']');
         }
 
@@ -184,9 +183,11 @@ class Builder
         }
 
         $source_str = $eval_str = '';
+        $symbols = [];
         foreach ($this->files as $file) {
             $php_file = $this->librarySrcDir . '/' . $file;
-            if (strpos(`/usr/bin/env php -n -l {$php_file} 2>&1`, 'No syntax errors detected') === false) {
+            [$status, $output] = $this->runCommand([PHP_BINARY, '-n', '-l', $php_file]);
+            if ($status !== 0) {
                 swoole_error("Syntax error in file [{$php_file}]");
             } else {
                 swoole_ok("Syntax correct in [{$file}]");
@@ -202,6 +203,14 @@ class Builder
                 $code = $this->removeComments($code);
             }
             $name = unCamelize(str_replace(['/', '.php'], ['_', ''], $file));
+            $symbol = "{$this->symbolPrefix}_library_source_{$name}";
+            if (!preg_match('/^[a-z_][a-z0-9_]*$/iD', $symbol)) {
+                swoole_error("Invalid C symbol [{$symbol}] for source [{$file}]");
+            }
+            if (isset($symbols[$symbol])) {
+                swoole_error("C symbol collision [{$symbol}] between [{$symbols[$symbol]}] and [{$file}]");
+            }
+            $symbols[$symbol] = $file;
             // keep line breaks to align line numbers
             $code = rtrim(substr($code, strlen(self::PHP_TAG)));
             $code = str_replace(['\\', '"', "\n"], ['\\\\', '\\"', "\\n\"\n\""], $code);
@@ -295,9 +304,26 @@ void php_{$this->symbolPrefix}_load_library(void)
 
 CODE;
 
+        // C++14 expands trigraphs even inside string literals. The C escape preserves the PHP bytes.
+        $content = preg_replace_callback('/\?\?(?=[=\/\'()!<>-])/', static fn () => '?\\?', $content);
         if (file_put_contents($this->outputFile, $content) != strlen($content)) {
             swoole_error('Can not write source codes to ' . $this->outputFile);
         }
         swoole_success("Generated swoole php library successfully!");
+    }
+
+    /** Run without a shell so paths, quotes and command substitutions remain literal arguments. */
+    protected function runCommand(array $command): array
+    {
+        $process = proc_open($command, [1 => ['pipe', 'w'], 2 => STDERR], $pipes, $this->librarySrcDir);
+        if (!is_resource($process)) {
+            throw new Exception('Unable to start command [' . $command[0] . ']');
+        }
+        try {
+            $output = stream_get_contents($pipes[1]);
+        } finally {
+            fclose($pipes[1]);
+        }
+        return [proc_close($process), $output];
     }
 }

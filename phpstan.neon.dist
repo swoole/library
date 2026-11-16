@@ -3,9 +3,9 @@ parameters:
   paths:
     - ./src
   # Stubs for the Swoole extension itself. They cover symbols an NTS build does not expose (SWOOLE_THREAD and
-  # the Swoole\Thread classes), which keeps the analysis identical on NTS and ZTS builds. Only ./src/swoole is
-  # scanned: ./src/swoole_library holds stubs for this very repository, and Composer's post-install-cmd deletes
-  # it, so scanning the parent directory would redeclare our own classes whenever that hook has not run.
+  # the Swoole\Thread classes), which keeps the analysis identical on NTS and ZTS builds. Scan only the package's
+  # vendor/swoole/ide-helper/src/swoole directory. Its sibling src/swoole_library contains stubs for this
+  # repository (removed by Composer's post-install-cmd), and scanning it would redeclare the library classes.
   scanDirectories:
     - vendor/swoole/ide-helper/src/swoole
   # Current Socket methods missing from the ide-helper release; retain checking of their argument/return types.

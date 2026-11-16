@@ -16,9 +16,9 @@ Edit the `__init__.php` file in the source code directory, the `make-library` sc
 <?php
 return [
     'name' => 'swoole',  // Library name
-    'checkFileChange' => false, // Check if there are uncommitted changes in the git repository
+    'checkFileChange' => false, // Reject staged, unstaged and untracked changes in the git repository
     'output' => '/your/c_header_file_path', // Generated C/C++ header file path
-    'stripComments' => true, // Whether to keep comments
+    'stripComments' => true, // Whether to remove comments (false keeps them)
     /* Notice: Sort by dependency */
     'files' => [
         # <basic> #
@@ -51,7 +51,8 @@ instead of being embedded in the extension. List their paths in `ignore` to excl
 that check. `ignore` entries are src-relative path prefixes and may point to a directory or a
 single file. A prefix matches the path itself and anything nested below it (directory boundary),
 not a sibling that merely shares the prefix — `core/Grpc` matches `core/Grpc/Client.php` but not
-`core/GrpcExtra.php`. Ignored files are never written to the generated header.
+`core/GrpcExtra.php`. A path explicitly listed in `files` is still embedded; `ignore` only
+exempts unlisted paths from the completeness check.
 
 ## Make header file
 
@@ -63,9 +64,13 @@ php tools/make-library/bin/make-library.php ./src
 ```
 
 The first parameter is the source code path, there must exist `__init__.php` in this directory.
-`tools/build-library.php` also applies the C++14 trigraph escaping that the extension build
-needs. For local development inside this tool directory, `composer install` + `composer test`
-still work; the generator itself needs no Composer dependencies.
+Both entry points escape C++14 trigraphs in the generated header, preserving the original PHP
+bytes. Source paths are passed as literal command arguments, including spaces and quotes.
+Generation fails if two source paths produce the same C symbol, or a path produces an invalid
+identifier. With `checkFileChange` enabled, the repository must be clean before a header can
+be stamped with its commit id; development mode (`php tools/build-library.php dev`) skips
+this check. For local development inside this tool directory, `composer install` + `composer test`
+still work; the generator itself needs no Composer dependencies or native compilation.
 
 ## Loader library in php extension
 ```c

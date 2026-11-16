@@ -4,6 +4,7 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
 Backward-incompatible changes:
 
+* Library generation with `checkFileChange` now rejects staged, unstaged and untracked changes. Use `php tools/build-library.php dev` when generating from a working tree under development.
 * Remote object servers require a nonempty `api_key`; configure the same key on clients. The default daemon manages a private key automatically and requires its directory to be owned by the current user without group/other write permission. Restart existing daemons when upgrading.
 * Remote object RPC accepts serialized `RemoteObject` references only. Create business objects on the server and pass their references instead of serializing local objects into arguments.
 * The admin listener requires `access_name:access_secret@host:port`, no longer advertises wildcard CORS, and exposes only initialized public static properties.
@@ -80,6 +81,7 @@ Removed:
 
 Fixed:
 
+* The library generator treats paths as literal command arguments, rejects colliding or invalid C symbols, and escapes C++14 trigraphs through both entry points.
 * Remote object RPC dispatches only protocol routes, compares API keys in constant time, and blocks object injection in arguments and responses. Default daemon scripts and keys use private file permissions; keys are excluded from verbose option logs.
 * Thread pools tolerate shutdown before start, wake the manager on shutdown, ignore invalid completion indexes, and release startup state after runner creation fails.
 * Service discovery removes timed-out or canceled waiters promptly and evicts the least recently used cached service. Repeated registration stops are harmless, and concurrent deregistration waits for completion without polling.
