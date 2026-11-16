@@ -60,6 +60,7 @@ Deprecated:
 
 Removed:
 
+* `swoole_table()`. Use `\Swoole\Table` directly to define columns and create tables.
 * `composer-embedded.json`: the main `composer.json` autoloader now works with `swoole.enable_library=On`, so a second autoload configuration for the embedded-library tests is no longer needed.
 * The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
 
@@ -72,7 +73,6 @@ Fixed:
 * String wrappers handle the end-of-string index, empty strings and negative indices without warnings; `trim('0')` honors its character mask. `MultibyteStringObject` reads, reverses, changes case and splits chunks by character.
 * `\Swoole\ArrayObject::get()` throws `ArrayKeyNotExists` for missing non-string keys, and `randomGet()` returns `null` for an empty array.
 * `swoole_is_in_container()` recognizes markers at offset zero and handles unavailable procfs. `swoole_container_cpu_num()` handles whitespace-separated cgroup quotas and falls back to the host CPU count for unavailable or invalid quota data.
-* `swoole_table()` validates field definitions and string lengths before using them.
 * Default remote object server startup has a ten-second timeout, configurable through the `default_remote_object_server_startup_timeout` library option in seconds. Startup waits for a listening socket, detects failed processes, reports decoded exit codes, drains process output while waiting, and releases the startup lock on failure.
 * `src/vendor_init.php` no longer redeclares constants and global functions when `swoole.enable_library=On`; the Composer autoloader can now be loaded alongside the embedded library, and its PSR-4 rules supply the Composer-only components the extension does not pack.
 * `\Swoole\Grpc\Client` keeps a response that arrives while `send()` is still writing, and drops a stream id from a connection that has since been replaced.

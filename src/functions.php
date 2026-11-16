@@ -80,53 +80,6 @@ function swoole_array(array $array = []): Swoole\ArrayObject
     return new Swoole\ArrayObject($array);
 }
 
-function swoole_table(int $size, string $fields): Swoole\Table
-{
-    $table = new Swoole\Table($size, 0.25);
-
-    foreach (explode(',', $fields) as $field) {
-        $parts = array_map('trim', explode(':', $field));
-        if (count($parts) < 2 || $parts[0] === '' || $parts[1] === '') {
-            throw new RuntimeException("invalid field definition[{$field}]");
-        }
-        [$name, $type] = $parts;
-        $is_string     = $type === 's' || $type === 'string';
-        if (count($parts) > ($is_string ? 3 : 2)) {
-            throw new RuntimeException("invalid field definition[{$field}]");
-        }
-
-        switch ($type) {
-            case 'i':
-            case 'int':
-                $table->column($name, Swoole\Table::TYPE_INT);
-                break;
-            case 'f':
-            case 'float':
-                $table->column($name, Swoole\Table::TYPE_FLOAT);
-                break;
-            case 's':
-            case 'string':
-                if (count($parts) < 3) {
-                    throw new RuntimeException('need to give string length');
-                }
-                $length = filter_var($parts[2], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                if ($length === false) {
-                    throw new RuntimeException("invalid string length[{$parts[2]}]");
-                }
-                $table->column($name, Swoole\Table::TYPE_STRING, $length);
-                break;
-            default:
-                throw new RuntimeException("unknown field type[{$type}]");
-        }
-    }
-
-    if (!$table->create()) {
-        throw new RuntimeException('failed to create table');
-    }
-
-    return $table;
-}
-
 function swoole_array_list(mixed ...$array): Swoole\ArrayObject
 {
     return new Swoole\ArrayObject($array);
