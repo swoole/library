@@ -19,6 +19,8 @@ abstract class Status
 
     public const PROCESSING = 102;
 
+    public const EARLY_HINTS = 103;
+
     public const OK = 200;
 
     public const CREATED = 201;
@@ -73,7 +75,9 @@ abstract class Status
 
     public const PROXY_AUTHENTICATION_REQUIRED = 407;
 
-    public const REQUEST_TIME_OUT = 408;
+    public const REQUEST_TIMEOUT = 408;
+
+    public const REQUEST_TIME_OUT = self::REQUEST_TIMEOUT;
 
     public const CONFLICT = 409;
 
@@ -83,25 +87,41 @@ abstract class Status
 
     public const PRECONDITION_FAILED = 412;
 
-    public const REQUEST_ENTITY_TOO_LARGE = 413;
+    public const CONTENT_TOO_LARGE = 413;
 
-    public const REQUEST_URI_TOO_LARGE = 414;
+    public const PAYLOAD_TOO_LARGE = self::CONTENT_TOO_LARGE;
+
+    public const REQUEST_ENTITY_TOO_LARGE = self::CONTENT_TOO_LARGE;
+
+    public const URI_TOO_LONG = 414;
+
+    public const REQUEST_URI_TOO_LARGE = self::URI_TOO_LONG;
 
     public const UNSUPPORTED_MEDIA_TYPE = 415;
 
-    public const REQUESTED_RANGE_NOT_SATISFIABLE = 416;
+    public const RANGE_NOT_SATISFIABLE = 416;
+
+    public const REQUESTED_RANGE_NOT_SATISFIABLE = self::RANGE_NOT_SATISFIABLE;
 
     public const EXPECTATION_FAILED = 417;
 
+    // The widely used teapot code is reserved as unused by RFC 9110.
+    public const IM_A_TEAPOT = 418;
+
     public const MISDIRECTED_REQUEST = 421;
 
-    public const UNPROCESSABLE_ENTITY = 422;
+    public const UNPROCESSABLE_CONTENT = 422;
+
+    public const UNPROCESSABLE_ENTITY = self::UNPROCESSABLE_CONTENT;
 
     public const LOCKED = 423;
 
     public const FAILED_DEPENDENCY = 424;
 
-    public const UNORDERED_COLLECTION = 425;
+    public const TOO_EARLY = 425;
+
+    /** @deprecated Use TOO_EARLY; the old WebDAV meaning of 425 is obsolete. */
+    public const UNORDERED_COLLECTION = self::TOO_EARLY;
 
     public const UPGRADE_REQUIRED = 426;
 
@@ -136,67 +156,69 @@ abstract class Status
     public const NETWORK_AUTHENTICATION_REQUIRED = 511;
 
     protected static $reasonPhrases = [
-        self::CONTINUE                        => 'Continue',
-        self::SWITCHING_PROTOCOLS             => 'Switching Protocols',
-        self::PROCESSING                      => 'Processing',
-        self::OK                              => 'OK',
-        self::CREATED                         => 'Created',
-        self::ACCEPTED                        => 'Accepted',
-        self::NON_AUTHORITATIVE_INFORMATION   => 'Non-Authoritative Information',
-        self::NO_CONTENT                      => 'No Content',
-        self::RESET_CONTENT                   => 'Reset Content',
-        self::PARTIAL_CONTENT                 => 'Partial Content',
-        self::MULTI_STATUS                    => 'Multi-status',
-        self::ALREADY_REPORTED                => 'Already Reported',
-        self::IM_USED                         => 'IM Used',
-        self::MULTIPLE_CHOICES                => 'Multiple Choices',
-        self::MOVED_PERMANENTLY               => 'Moved Permanently',
-        self::FOUND                           => 'Found',
-        self::SEE_OTHER                       => 'See Other',
-        self::NOT_MODIFIED                    => 'Not Modified',
-        self::USE_PROXY                       => 'Use Proxy',
-        self::SWITCH_PROXY                    => 'Switch Proxy',
-        self::TEMPORARY_REDIRECT              => 'Temporary Redirect',
-        self::PERMANENT_REDIRECT              => 'Permanent Redirect',
-        self::BAD_REQUEST                     => 'Bad Request',
-        self::UNAUTHORIZED                    => 'Unauthorized',
-        self::PAYMENT_REQUIRED                => 'Payment Required',
-        self::FORBIDDEN                       => 'Forbidden',
-        self::NOT_FOUND                       => 'Not Found',
-        self::METHOD_NOT_ALLOWED              => 'Method Not Allowed',
-        self::NOT_ACCEPTABLE                  => 'Not Acceptable',
-        self::PROXY_AUTHENTICATION_REQUIRED   => 'Proxy Authentication Required',
-        self::REQUEST_TIME_OUT                => 'Request Time-out',
-        self::CONFLICT                        => 'Conflict',
-        self::GONE                            => 'Gone',
-        self::LENGTH_REQUIRED                 => 'Length Required',
-        self::PRECONDITION_FAILED             => 'Precondition Failed',
-        self::REQUEST_ENTITY_TOO_LARGE        => 'Request Entity Too Large',
-        self::REQUEST_URI_TOO_LARGE           => 'Request-URI Too Large',
-        self::UNSUPPORTED_MEDIA_TYPE          => 'Unsupported Media Type',
-        self::REQUESTED_RANGE_NOT_SATISFIABLE => 'Requested range not satisfiable',
-        self::EXPECTATION_FAILED              => 'Expectation Failed',
-        self::MISDIRECTED_REQUEST             => 'Misdirected Request',
-        self::UNPROCESSABLE_ENTITY            => 'Unprocessable Entity',
-        self::LOCKED                          => 'Locked',
-        self::FAILED_DEPENDENCY               => 'Failed Dependency',
-        self::UNORDERED_COLLECTION            => 'Unordered Collection',
-        self::UPGRADE_REQUIRED                => 'Upgrade Required',
-        self::PRECONDITION_REQUIRED           => 'Precondition Required',
-        self::TOO_MANY_REQUESTS               => 'Too Many Requests',
-        self::REQUEST_HEADER_FIELDS_TOO_LARGE => 'Request Header Fields Too Large',
-        self::UNAVAILABLE_FOR_LEGAL_REASONS   => 'Unavailable For Legal Reasons',
-        self::INTERNAL_SERVER_ERROR           => 'Internal Server Error',
-        self::NOT_IMPLEMENTED                 => 'Not Implemented',
-        self::BAD_GATEWAY                     => 'Bad Gateway',
-        self::SERVICE_UNAVAILABLE             => 'Service Unavailable',
-        self::GATEWAY_TIME_OUT                => 'Gateway Time-out',
-        self::HTTP_VERSION_NOT_SUPPORTED      => 'HTTP Version not supported',
-        self::VARIANT_ALSO_NEGOTIATES         => 'Variant Also Negotiates',
-        self::INSUFFICIENT_STORAGE            => 'Insufficient Storage',
-        self::LOOP_DETECTED                   => 'Loop Detected',
-        self::NOT_EXTENDED                    => 'Not Extended',
-        self::NETWORK_AUTHENTICATION_REQUIRED => 'Network Authentication Required',
+        self::CONTINUE                         => 'Continue',
+        self::SWITCHING_PROTOCOLS              => 'Switching Protocols',
+        self::PROCESSING                       => 'Processing',
+        self::EARLY_HINTS                      => 'Early Hints',
+        self::OK                               => 'OK',
+        self::CREATED                          => 'Created',
+        self::ACCEPTED                         => 'Accepted',
+        self::NON_AUTHORITATIVE_INFORMATION    => 'Non-Authoritative Information',
+        self::NO_CONTENT                       => 'No Content',
+        self::RESET_CONTENT                    => 'Reset Content',
+        self::PARTIAL_CONTENT                  => 'Partial Content',
+        self::MULTI_STATUS                     => 'Multi-Status',
+        self::ALREADY_REPORTED                 => 'Already Reported',
+        self::IM_USED                          => 'IM Used',
+        self::MULTIPLE_CHOICES                 => 'Multiple Choices',
+        self::MOVED_PERMANENTLY                => 'Moved Permanently',
+        self::FOUND                            => 'Found',
+        self::SEE_OTHER                        => 'See Other',
+        self::NOT_MODIFIED                     => 'Not Modified',
+        self::USE_PROXY                        => 'Use Proxy',
+        self::SWITCH_PROXY                     => 'Switch Proxy',
+        self::TEMPORARY_REDIRECT               => 'Temporary Redirect',
+        self::PERMANENT_REDIRECT               => 'Permanent Redirect',
+        self::BAD_REQUEST                      => 'Bad Request',
+        self::UNAUTHORIZED                     => 'Unauthorized',
+        self::PAYMENT_REQUIRED                 => 'Payment Required',
+        self::FORBIDDEN                        => 'Forbidden',
+        self::NOT_FOUND                        => 'Not Found',
+        self::METHOD_NOT_ALLOWED               => 'Method Not Allowed',
+        self::NOT_ACCEPTABLE                   => 'Not Acceptable',
+        self::PROXY_AUTHENTICATION_REQUIRED    => 'Proxy Authentication Required',
+        self::REQUEST_TIMEOUT                  => 'Request Timeout',
+        self::CONFLICT                         => 'Conflict',
+        self::GONE                             => 'Gone',
+        self::LENGTH_REQUIRED                  => 'Length Required',
+        self::PRECONDITION_FAILED              => 'Precondition Failed',
+        self::CONTENT_TOO_LARGE                => 'Content Too Large',
+        self::URI_TOO_LONG                     => 'URI Too Long',
+        self::UNSUPPORTED_MEDIA_TYPE           => 'Unsupported Media Type',
+        self::RANGE_NOT_SATISFIABLE            => 'Range Not Satisfiable',
+        self::EXPECTATION_FAILED               => 'Expectation Failed',
+        self::IM_A_TEAPOT                      => "I'm a teapot",
+        self::MISDIRECTED_REQUEST              => 'Misdirected Request',
+        self::UNPROCESSABLE_CONTENT            => 'Unprocessable Content',
+        self::LOCKED                           => 'Locked',
+        self::FAILED_DEPENDENCY                => 'Failed Dependency',
+        self::TOO_EARLY                        => 'Too Early',
+        self::UPGRADE_REQUIRED                 => 'Upgrade Required',
+        self::PRECONDITION_REQUIRED            => 'Precondition Required',
+        self::TOO_MANY_REQUESTS                => 'Too Many Requests',
+        self::REQUEST_HEADER_FIELDS_TOO_LARGE  => 'Request Header Fields Too Large',
+        self::UNAVAILABLE_FOR_LEGAL_REASONS    => 'Unavailable For Legal Reasons',
+        self::INTERNAL_SERVER_ERROR            => 'Internal Server Error',
+        self::NOT_IMPLEMENTED                  => 'Not Implemented',
+        self::BAD_GATEWAY                      => 'Bad Gateway',
+        self::SERVICE_UNAVAILABLE              => 'Service Unavailable',
+        self::GATEWAY_TIME_OUT                 => 'Gateway Timeout',
+        self::HTTP_VERSION_NOT_SUPPORTED       => 'HTTP Version Not Supported',
+        self::VARIANT_ALSO_NEGOTIATES          => 'Variant Also Negotiates',
+        self::INSUFFICIENT_STORAGE             => 'Insufficient Storage',
+        self::LOOP_DETECTED                    => 'Loop Detected',
+        self::NOT_EXTENDED                     => 'Not Extended',
+        self::NETWORK_AUTHENTICATION_REQUIRED  => 'Network Authentication Required',
     ];
 
     public static function getReasonPhrases(): array

@@ -104,7 +104,7 @@ class HttpFunctionTest extends TestCase
             512,
             JSON_THROW_ON_ERROR
         );
-        self::assertSame(HTTPBIN_SERVER_HOST, $body->headers->Host[0]);
+        self::assertSame(HTTPBIN_SERVER_AUTHORITY, $body->headers->Host[0]);
         self::assertSame('world', $body->args->hello[0]);
     }
 
@@ -117,7 +117,7 @@ class HttpFunctionTest extends TestCase
             512,
             JSON_THROW_ON_ERROR
         );
-        self::assertSame(HTTPBIN_SERVER_HOST, $body->headers->Host[0]);
+        self::assertSame(HTTPBIN_SERVER_AUTHORITY, $body->headers->Host[0]);
         self::assertSame('world', $body->args->hello[0]);
         self::assertSame($random_data, $body->form->random_data[0]);
     }

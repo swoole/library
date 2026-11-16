@@ -53,8 +53,10 @@ final class Handler implements \Stringable
         'protocol'                => 0,
         'ssl_verifyresult'        => 0,
         'scheme'                  => '',
-        'private'                 => '',
+        'private'                 => false,
         'appconnect_time'         => 0.0,
+        // Only exposed on PHP/libcurl combinations with CURLINFO_POSTTRANSFER_TIME_T; zero if the client has no statistic.
+        'posttransfer_time'       => 0.0,
     ];
 
     private ?Client $client = null;
@@ -161,7 +163,7 @@ final class Handler implements \Stringable
 
     private bool $failOnError = false;
 
-    private bool $closed = false;
+    private string $effectiveMethod = 'GET';
 
     private string $cookieJar = '';
 
@@ -198,47 +200,94 @@ final class Handler implements \Stringable
 
     public function isAvailable(): bool
     {
-        if ($this->closed) {
-            trigger_error('supplied resource is not a valid cURL handle resource', E_USER_WARNING);
-            return false;
-        }
+        // PHP 8 curl_close() does not invalidate a CurlHandle; the object owns its lifetime.
         return true;
     }
 
     public function setOpt(int $opt, mixed $value): bool
     {
-        return $this->isAvailable() && $this->setOption($opt, $value);
+        return $this->setOption($opt, $value);
     }
 
     public function exec(): string|bool
     {
-        if (!$this->isAvailable()) {
-            return false;
-        }
         return $this->execute();
     }
 
-    public function getInfo(): array|false
+    public function getInfo(?int $opt = null): mixed
     {
-        return $this->isAvailable() ? $this->info : false;
+        $info = $this->info;
+        if ($opt !== null) {
+            if (defined('CURLINFO_EFFECTIVE_METHOD') && $opt === constant('CURLINFO_EFFECTIVE_METHOD')) {
+                return $this->customRequest !== '' ? $this->customRequest : $this->effectiveMethod;
+            }
+            return match ($opt) {
+                CURLINFO_EFFECTIVE_URL           => $info['url'],
+                CURLINFO_HTTP_CODE               => $info['http_code'],
+                CURLINFO_CONTENT_TYPE            => $info['content_type'],
+                CURLINFO_REDIRECT_COUNT          => $info['redirect_count'],
+                CURLINFO_REDIRECT_URL            => $info['redirect_url'],
+                CURLINFO_TOTAL_TIME              => $info['total_time'],
+                CURLINFO_STARTTRANSFER_TIME      => $info['starttransfer_time'],
+                CURLINFO_SIZE_DOWNLOAD           => $info['size_download'],
+                CURLINFO_SPEED_DOWNLOAD          => $info['speed_download'],
+                CURLINFO_REDIRECT_TIME           => $info['redirect_time'],
+                CURLINFO_HEADER_SIZE             => $info['header_size'],
+                CURLINFO_HEADER_OUT              => $info['request_header'] ?? '',
+                CURLINFO_PRIMARY_IP              => $info['primary_ip'],
+                CURLINFO_PRIMARY_PORT            => $info['primary_port'],
+                CURLINFO_LOCAL_IP                => $info['local_ip'],
+                CURLINFO_LOCAL_PORT              => $info['local_port'],
+                CURLINFO_NAMELOOKUP_TIME         => $info['namelookup_time'],
+                CURLINFO_CONNECT_TIME            => $info['connect_time'],
+                CURLINFO_APPCONNECT_TIME         => $info['appconnect_time'],
+                CURLINFO_PRETRANSFER_TIME        => $info['pretransfer_time'],
+                CURLINFO_REQUEST_SIZE            => $info['request_size'],
+                CURLINFO_FILETIME                => $info['filetime'],
+                CURLINFO_SIZE_UPLOAD             => $info['size_upload'],
+                CURLINFO_SPEED_UPLOAD            => $info['speed_upload'],
+                CURLINFO_CONTENT_LENGTH_DOWNLOAD => $info['download_content_length'],
+                CURLINFO_CONTENT_LENGTH_UPLOAD   => $info['upload_content_length'],
+                CURLINFO_SSL_VERIFYRESULT        => $info['ssl_verify_result'],
+                CURLINFO_CERTINFO                => $info['certinfo'],
+                CURLINFO_HTTP_VERSION            => $info['http_version'],
+                CURLINFO_PROTOCOL                => $info['protocol'],
+                CURLINFO_SCHEME                  => $info['scheme'],
+                CURLINFO_PRIVATE                 => $info['private'],
+                default                          => swoole_curl_getinfo_integer($info, $opt),
+            };
+        }
+        // Private data and the seconds form of appconnect_time are queried individually by native cURL.
+        unset($info['private'], $info['appconnect_time'], $info['posttransfer_time']);
+        foreach (['APPCONNECT', 'CONNECT', 'NAMELOOKUP', 'PRETRANSFER', 'REDIRECT', 'STARTTRANSFER', 'TOTAL', 'POSTTRANSFER'] as $name) {
+            if (defined('CURLINFO_' . $name . '_TIME_T')) {
+                $key                = strtolower($name) . '_time';
+                $info[$key . '_us'] = (int) round($this->info[$key] * 1000000);
+            }
+        }
+        if (defined('CURLINFO_EFFECTIVE_METHOD')) {
+            $info['effective_method'] = $this->customRequest !== '' ? $this->customRequest : $this->effectiveMethod;
+        }
+        return $info;
     }
 
     public function errno(): int
     {
-        return $this->isAvailable() ? $this->errCode : 0;
+        return $this->errCode;
     }
 
     public function error(): string
     {
-        return $this->isAvailable() ? $this->errMsg : '';
+        return $this->errMsg;
     }
 
     public function reset(): bool
     {
-        if (!$this->isAvailable()) {
-            return false;
+        static $defaults = null;
+        if ($defaults === null) {
+            $defaults = (new \ReflectionClass(self::class))->getDefaultProperties();
         }
-        foreach ((new \ReflectionClass(self::class))->getDefaultProperties() as $name => $value) {
+        foreach ($defaults as $name => $value) {
             $this->{$name} = $value;
         }
         return true;
@@ -246,22 +295,12 @@ final class Handler implements \Stringable
 
     public function getContent(): ?string
     {
-        if (!$this->isAvailable()) {
-            return null;
-        }
         return $this->transfer;
     }
 
     public function close(): void
     {
-        if (!$this->isAvailable()) {
-            return;
-        }
-        /* Release all references (connections, streams, callbacks) by restoring default property values. */
-        foreach ((new \ReflectionClass(self::class))->getDefaultProperties() as $name => $value) {
-            $this->{$name} = $value;
-        }
-        $this->closed = true;
+        // Match PHP 8 CurlHandle: close() has no effect; dropping the object releases its resources.
     }
 
     private function create(?array $urlInfo = null): void
@@ -274,7 +313,11 @@ final class Handler implements \Stringable
         $this->resolveAll  = [];
         $this->resolveNext = [];
         if (isset($this->resolve[$host])) {
-            $this->setHeader('Host', $host);
+            $authority = str_contains($host, ':') && !str_starts_with($host, '[') ? '[' . $host . ']' : $host;
+            if ($port !== ($urlInfo['scheme'] === 'https' ? 443 : 80)) {
+                $authority .= ':' . $port;
+            }
+            $this->setHeader('Host', $authority);
             $addresses = $this->resolve[$host][$port] ?? [];
             if ($addresses) {
                 $this->resolveAll  = $addresses;
@@ -448,11 +491,17 @@ final class Handler implements \Stringable
         // Compare URL origins, not connection addresses substituted by CURLOPT_RESOLVE.
         $sameOrigin = $this->getOrigin(parse_url($this->info['url'])) === $this->getOrigin($this->origin);
         $headers    = $this->headers;
-        foreach ($this->customHeaders as $lowerCaseName => [$name, $value]) {
+        foreach ($this->customHeaders as $lowerCaseName => $entries) {
             if (isset($this->headerMap[$lowerCaseName])) {
                 unset($headers[$this->headerMap[$lowerCaseName]]);
             }
-            if ($value !== '') {
+            $entries = array_values(array_filter($entries, static fn (array $entry): bool => $entry[1] !== ''));
+            if ($entries !== []) {
+                [$name, $value] = array_shift($entries);
+                // The coroutine client accepts one scalar per name; expand repeated fields on the wire.
+                foreach ($entries as [$nextName, $nextValue]) {
+                    $value .= "\r\n" . $nextName . ': ' . $nextValue;
+                }
                 $headers[$name] = $value;
             }
         }
@@ -731,10 +780,10 @@ final class Handler implements \Stringable
                 }
                 $headers = [];
                 foreach ($value as $header) {
-                    $header                           = explode(':', (string) $header, 2);
-                    $headerName                       = $header[0];
-                    $headerValue                      = trim($header[1] ?? '');
-                    $headers[strtolower($headerName)] = [$headerName, $headerValue];
+                    $header                             = explode(':', (string) $header, 2);
+                    $headerName                         = $header[0];
+                    $headerValue                        = trim($header[1] ?? '');
+                    $headers[strtolower($headerName)][] = [$headerName, $headerValue];
                 }
                 $this->customHeaders = $headers;
                 break;
@@ -814,15 +863,20 @@ final class Handler implements \Stringable
                 break;
             case CURLOPT_WRITEFUNCTION:
                 $this->writeFunction                              = $value;
-                $this->clientOptions[Constant::OPTION_WRITE_FUNC] = function ($client, $data) use ($value): bool {
-                    if (($this->followLocation && $client->statusCode >= 300 && $client->statusCode < 400
-                        && isset($client->headers['location'])) || ($this->failOnError && $client->statusCode >= 400)) {
+                $reference                                        = \WeakReference::create($this);
+                $this->clientOptions[Constant::OPTION_WRITE_FUNC] = static function ($client, $data) use ($value, $reference): bool {
+                    $handler = $reference->get();
+                    if ($handler === null) {
+                        return false;
+                    }
+                    if (($handler->followLocation && $client->statusCode >= 300 && $client->statusCode < 400
+                        && isset($client->headers['location'])) || ($handler->failOnError && $client->statusCode >= 400)) {
                         return true;
                     }
-                    if ((int) $value($this, $data) !== strlen($data)) {
-                        $this->writeError           = true;
-                        $this->info['http_code']    = $client->statusCode;
-                        $this->info['content_type'] = $client->headers['content-type'] ?? '';
+                    if ((int) $value($handler, $data) !== strlen($data)) {
+                        $handler->writeError           = true;
+                        $handler->info['http_code']    = $client->statusCode;
+                        $handler->info['content_type'] = $client->headers['content-type'] ?? '';
                         return false;
                     }
                     return true;
@@ -881,7 +935,21 @@ final class Handler implements \Stringable
                 }
                 break;
             default:
-                throw new CurlException("swoole_curl_setopt(): option[{$opt}] is not supported");
+                static $nativeOptions = null;
+                if ($nativeOptions === null) {
+                    $nativeOptions = [];
+                    foreach (get_defined_constants(true)['curl'] ?? [] as $name => $constant) {
+                        if (str_starts_with($name, 'CURLOPT_')) {
+                            $nativeOptions[$constant] = true;
+                        }
+                    }
+                }
+                if (!isset($nativeOptions[$opt])) {
+                    throw new \ValueError('curl_setopt(): Argument #2 ($option) is not a valid cURL option');
+                }
+                // PHP exposes libcurl's CURLE_UNKNOWN_OPTION (48) under this historical name.
+                $this->setError(CURLE_UNKNOWN_TELNET_OPTION, "swoole_curl_setopt(): option[{$opt}] is not supported");
+                return false;
         }
         return true;
     }
@@ -923,7 +991,9 @@ final class Handler implements \Stringable
         $method           = $this->nobody ? 'HEAD' : ($this->method ?: 'GET');
         $infileData       = null;
         while (true) {
-            $client = $this->client;
+            $client       = $this->client;
+            $proxyOptions = [];
+            $proxy        = $proxyPort = null;
             if ($deadline !== null && self::remainingTimeout($deadline) <= 0) {
                 return $this->setTimeoutError($timeBegin);
             }
@@ -981,12 +1051,13 @@ final class Handler implements \Stringable
             $client->set(
                 $this->clientOptions +
                 [Constant::OPTION_SSL_HOST_NAME => trim((string) parse_url($this->info['url'], PHP_URL_HOST), '[]')] +
-                ($proxyOptions ?? [])
+                $proxyOptions
             );
             /*
              * Method
              */
-            $client->setMethod($this->customRequest !== '' ? $this->customRequest : $method);
+            $this->effectiveMethod = $this->customRequest !== '' ? $this->customRequest : $method;
+            $client->setMethod($this->effectiveMethod);
             /*
              * Data
              */
@@ -1250,7 +1321,7 @@ final class Handler implements \Stringable
     private function updateResponseInfo(Client $client, float $timeBegin): void
     {
         $stats = $client->stats ?? [];
-        foreach (['namelookup_time', 'connect_time', 'appconnect_time', 'pretransfer_time'] as $key) {
+        foreach (['namelookup_time', 'connect_time', 'appconnect_time', 'pretransfer_time', 'posttransfer_time'] as $key) {
             $this->info[$key] += $stats[$key] ?? 0.0;
         }
         foreach (['primary_ip', 'primary_port', 'local_ip', 'local_port', 'http_version', 'ssl_verify_result'] as $key) {
@@ -1421,8 +1492,8 @@ final class Handler implements \Stringable
         // Resolve against the logical URL, not a connection address from CURLOPT_RESOLVE.
         $base = parse_url($this->info['url']);
         if (isset($uri['scheme']) || isset($uri['host'])) {
-            $redirectUri = $uri;
-            $redirectUri['scheme'] ??= $base['scheme'] ?? 'http';
+            $redirectUri           = $uri;
+            $redirectUri['scheme'] = $redirectUri['scheme'] ?? $base['scheme'] ?? 'http';
         } else {
             $redirectUri = $base;
             unset($redirectUri['fragment']);

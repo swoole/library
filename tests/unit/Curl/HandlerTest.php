@@ -83,7 +83,7 @@ class HandlerTest extends TestCase
             }));
 
             $body = self::curlExecJson($ch);
-            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_HOST, 'Returning CURL_PREREQFUNC_OK should let the request proceed');
+            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_AUTHORITY, 'Returning CURL_PREREQFUNC_OK should let the request proceed');
             self::assertSame(1, $invocations, 'The callback should be invoked exactly once per request');
             self::assertCount(5, $args);
             [$handler, $primaryIp, $localIp, $primaryPort, $localPort] = $args;
@@ -171,7 +171,7 @@ class HandlerTest extends TestCase
     {
         self::coRun(function () {
             $ip = Coroutine::gethostbyname(HTTPBIN_SERVER_HOST);
-            $ch = curl_init("http://{$ip}/get");
+            $ch = curl_init("http://{$ip}:" . HTTPBIN_SERVER_PORT . '/get');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . HTTPBIN_SERVER_HOST]);
             $body = self::curlExecJson($ch);
@@ -211,7 +211,7 @@ class HandlerTest extends TestCase
             self::assertTrue(curl_exec($ch), self::curlErrorMessage($ch));
 
             $body = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_HOST);
+            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_AUTHORITY);
         });
     }
 
@@ -232,7 +232,7 @@ class HandlerTest extends TestCase
             $body          = self::curlExecJson($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 
-            self::assertSame($body['headers']['Host'][0], $host);
+            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_AUTHORITY);
             self::assertEquals($body['url'], $url);
             self::assertEquals($ip, $httpPrimaryIp);
         });
@@ -277,7 +277,7 @@ class HandlerTest extends TestCase
             $body          = self::curlExecJson($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 
-            self::assertSame($body['headers']['Host'][0], $host);
+            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_AUTHORITY);
             self::assertEquals($body['url'], $url);
             self::assertEquals($ip, $httpPrimaryIp);
         });
@@ -344,7 +344,7 @@ class HandlerTest extends TestCase
             $body          = self::curlExecJson($ch);
             $httpPrimaryIp = curl_getinfo($ch, CURLINFO_PRIMARY_IP);
 
-            self::assertSame($body['headers']['Host'][0], $host);
+            self::assertSame($body['headers']['Host'][0], HTTPBIN_SERVER_AUTHORITY);
             self::assertEquals($body['url'], $url);
             self::assertSame($ip, $httpPrimaryIp);
         });
@@ -377,7 +377,7 @@ class HandlerTest extends TestCase
 
             $body = self::curlExecJson($ch);
 
-            self::assertSame($host, $body['headers']['Host'][0]);
+            self::assertSame(HTTPBIN_SERVER_AUTHORITY, $body['headers']['Host'][0]);
             self::assertSame('several addresses', $body['headers']['X-Test'][0], 'The request is the same for every address.');
             self::assertSame(['bar'], $body['form']['foo']);
             self::assertSame($url, $body['url']);

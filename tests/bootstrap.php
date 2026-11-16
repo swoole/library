@@ -80,9 +80,16 @@ if (getenv('GITHUB_ACTIONS')) {
 // HTTP port so that URLs and Host headers look just like the httpbin.org ones. Note that go-httpbin reports
 // request values (args, headers, form) as arrays of strings, where httpbin.org reports single values as
 // plain strings.
-define('HTTPBIN_SERVER_HOST', 'local.httpbin.org');
-define('HTTPBIN_SERVER_PORT', 80);
-define('HTTPBIN_SERVER_URL', 'http://' . HTTPBIN_SERVER_HOST);
+if (!defined('HTTPBIN_SERVER_HOST')) {
+    define('HTTPBIN_SERVER_HOST', 'local.httpbin.org');
+}
+if (!defined('HTTPBIN_SERVER_PORT')) {
+    define('HTTPBIN_SERVER_PORT', 80);
+}
+define('HTTPBIN_SERVER_AUTHORITY', HTTPBIN_SERVER_HOST . (HTTPBIN_SERVER_PORT === 80 ? '' : ':' . HTTPBIN_SERVER_PORT));
+if (!defined('HTTPBIN_SERVER_URL')) {
+    define('HTTPBIN_SERVER_URL', 'http://' . HTTPBIN_SERVER_AUTHORITY);
+}
 
 // This points to folder ./tests/www under root directory of the project.
 const DOCUMENT_ROOT = '/var/www/tests/www';

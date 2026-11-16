@@ -4,6 +4,9 @@ This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
 
 Backward-incompatible changes:
 
+* The curl hook follows PHP 8 handle lifetime: `curl_close()` leaves the handle usable; drop references to release its resources. Unknown option numbers passed to `curl_setopt()` raise `ValueError`, while native options the hook cannot implement return `false` with cURL error 48.
+* The mail hook uses the native parameter names `additional_headers` and `additional_params`; named calls using the old `headers` name must be updated. Headers may be a string or array, and the fifth argument is forwarded.
+* Emulated socket `MSG_DONTWAIT` operations report their 1 ms timeout behavior with a warning. These calls can suspend and return `ETIMEDOUT`; unsupported receive flags are explicitly rejected.
 * PDO and mysqli proxies report connection loss without automatically replaying the failed call. A later explicit call reconnects. Opt in with `PDOConfig::withRetryOnLostConnection(true)`, `MysqliConfig::withRetryOnLostConnection(true)`, or `setRetryOnLostConnection(true)` on a standalone proxy only when the work can safely be repeated. A server may have committed a write before its response was lost; transaction failures are never replayed.
 * `ConnectionPool` requires a positive size and distinct connection objects. Duplicate and foreign returns throw. `put(null)` requires one identifiable borrowed or lost connection; use `discard($connection)` with multiple borrowers.
 * `RedisPool::put()` sends `UNWATCH` and restores the configured database, in addition to discarding MULTI/pipeline state. Redis ACL users of the pool need permission for those commands.
@@ -52,6 +55,7 @@ Added:
 
 Changed:
 
+* `Swoole\Http\Status` adds `EARLY_HINTS`, `IM_A_TEAPOT`, `TOO_EARLY` and modern names for 408/413/414/416/422, preserving legacy numeric aliases. Reason phrases use `Content Too Large`, `URI Too Long`, `Range Not Satisfiable`, `Unprocessable Content` and `Too Early`; the old `UNORDERED_COLLECTION` name is deprecated. The teapot name is a compatibility convention for the reserved 418 code.
 * The library header generator (`make-library`) is now vendored under `tools/make-library/` and run through `tools/build-library.php`. The Build Swoole workflow invokes it directly and no longer installs the pinned `swoole/make-library` release from Packagist, so the generator stays in sync with `src/__init__.php` in this repository.
 * Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
 * `ext-posix` is now suggested, not required, so that Composer installs the library on Windows. Only the default remote object server needs it.
@@ -71,6 +75,10 @@ Removed:
 
 Fixed:
 
+* The curl hook preserves repeated request headers and strips all custom Authorization/Cookie fields on cross-origin redirects. `CURLOPT_RESOLVE` retains non-default ports in Host headers.
+* Curl transfer info exposes `effective_method` and microsecond timing fields, excludes private data from the full info array, and returns `false` for unknown selectors or invalid integer-info fields. Private data and application-connect seconds remain available through their individual selectors. Reset caches its default properties, redirect iterations clear stale proxy options, and the internal write callback uses a weak reference so it cannot retain its handle.
+* DNS hooks forward the native `raw` argument. MX and DNS output parameters accept uninitialized or previously non-array variables; MX aliases preserve optional outputs and no longer depend on an unreachable argument-count branch.
+* Socket send/sendto/recvfrom hooks accept `MSG_DONTWAIT` with the documented coroutine timeout emulation; sendto restores its original timeout after the call. Datagram truncation consumes one complete datagram, preserving existing semantics.
 * Lost-connection detection uses SQLSTATE and driver error codes, matches specific diagnostics without case sensitivity, and keeps authentication, SQL, constraint and serialization errors out of the transport retry path.
 * `RedisPool` authenticates with password `'0'`; failed cleaning or replacement preserves the pool's capacity for later recovery.
 * mysqli `close()` and statement `close()` are not retried. Statement re-preparation preserves queries of `'0'` and `''`, and proxy calls preserve native warnings. Remembered `change_user()` passwords use `SensitiveParameterValue` to redact debug output; this is not memory encryption.

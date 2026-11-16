@@ -18,10 +18,10 @@ function swoole_gethostbynamel(string $domain): array|false
     return System::getaddrinfo($domain);
 }
 
-function swoole_mail(string $to, string $subject, string $message, array $headers = []): bool
+function swoole_mail(string $to, string $subject, string $message, array|string $additional_headers = [], string $additional_params = ''): bool
 {
     $client = swoole_get_default_remote_object_client();
-    return $client->call('mail', $to, $subject, $message, $headers);
+    return $client->call('mail', $to, $subject, $message, $additional_headers, $additional_params);
 }
 
 function swoole_checkdnsrr(string $hostname, string $type = 'MX'): bool
@@ -35,59 +35,61 @@ function swoole_dns_check_record(string $hostname, string $type = 'MX'): bool
     return swoole_checkdnsrr($hostname, $type);
 }
 
-function swoole_real_getmxrr(string $hostname, ?array $hosts = null, ?array $weights = null): array
+function swoole_real_getmxrr(string $hostname, mixed $hosts = null, mixed $weights = null): array
 {
-    if (func_num_args() === 2) {
-        $result['result'] = getmxrr($hostname, $hosts);
-        $result['host']   = $hosts;
-    } else {
-        $result['result'] = getmxrr($hostname, $hosts, $weights);
-        $result['host']   = $hosts;
-        $result['weight'] = $weights;
-    }
-    return $result;
+    $result = getmxrr($hostname, $hosts, $weights);
+    return ['result' => $result, 'host' => $hosts, 'weight' => $weights];
 }
 
-function swoole_getmxrr(string $hostname, array &$hosts, ?array &$weights = null): bool
+/**
+ * @param-out array $hosts
+ * @param-out array|null $weights
+ */
+function swoole_getmxrr(string $hostname, mixed &$hosts, mixed &$weights = null): bool
 {
-    $client   = swoole_get_default_remote_object_client();
-    $_hosts   = $hosts;
-    $_weights = $weights;
-    $result   = $client->call('swoole_real_getmxrr', $hostname, $_hosts, $_weights);
-    $hosts    = $result['host'];
-    $weights  = $result['weight'];
+    $client = swoole_get_default_remote_object_client();
+    $result = $client->call('swoole_real_getmxrr', $hostname);
+    $hosts  = $result['host'];
+    if (func_num_args() >= 3) {
+        $weights = $result['weight'];
+    }
     return $result['result'];
 }
 
-function swoole_dns_get_mx(string $hostname, array &$hosts, ?array &$weights = null): bool
+/**
+ * @param-out array $hosts
+ * @param-out array|null $weights
+ */
+function swoole_dns_get_mx(string $hostname, mixed &$hosts, mixed &$weights = null): bool
 {
-    return swoole_getmxrr($hostname, $hosts, $weights);
+    return func_num_args() >= 3 ? swoole_getmxrr($hostname, $hosts, $weights) : swoole_getmxrr($hostname, $hosts);
 }
 
-function swoole_real_dns_get_record(string $hostname, int $type, ?array $authoritative_name_servers = null, ?array $additional_records = null, bool $raw = false): array
+function swoole_real_dns_get_record(string $hostname, int $type, mixed $authoritative_name_servers = null, mixed $additional_records = null, bool $raw = false): array
 {
-    if ($authoritative_name_servers === null && $additional_records === null) {
-        $result['result'] = dns_get_record($hostname, $type);
-    } elseif ($additional_records === null) {
-        $result['result'] = dns_get_record($hostname, $type, $authoritative_name_servers);
-    } else {
-        $result['result'] = dns_get_record($hostname, $type, $authoritative_name_servers, $additional_records);
-    }
-    $result['authoritative_name_servers'] = $authoritative_name_servers;
-    $result['additional_records']         = $additional_records;
-    return $result;
+    $result = dns_get_record($hostname, $type, $authoritative_name_servers, $additional_records, $raw);
+    return ['result' => $result, 'authoritative_name_servers' => $authoritative_name_servers, 'additional_records' => $additional_records];
 }
 
+/**
+ * @param-out array|null $authoritative_name_servers
+ * @param-out array|null $additional_records
+ */
 function swoole_dns_get_record(string $hostname,
     int $type = DNS_ANY,
-    ?array &$authoritative_name_servers = null,
-    ?array &$additional_records = null,
+    mixed &$authoritative_name_servers = null,
+    mixed &$additional_records = null,
     bool $raw = false): array|false
 {
-    $client                     = swoole_get_default_remote_object_client();
-    $result                     = $client->call('swoole_real_dns_get_record', $hostname, $type, $authoritative_name_servers, $additional_records, $raw);
-    $authoritative_name_servers = $result['authoritative_name_servers'];
-    $additional_records         = $result['additional_records'];
+    $client = swoole_get_default_remote_object_client();
+    // These are output parameters; their old values need not be serializable or of any particular type.
+    $result = $client->call('swoole_real_dns_get_record', $hostname, $type, null, null, $raw);
+    if (func_num_args() >= 3) {
+        $authoritative_name_servers = $result['authoritative_name_servers'];
+    }
+    if (func_num_args() >= 4) {
+        $additional_records = $result['additional_records'];
+    }
     return $result['result'];
 }
 

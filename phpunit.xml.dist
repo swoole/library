@@ -22,6 +22,8 @@
       <exclude>tests/unit/Database/RedisPoolTest.php</exclude>
       <exclude>tests/unit/Process/ProcessManagerTest.php</exclude>
       <exclude>tests/unit/RemoteObject/DefaultServerTest.php</exclude>
+      <exclude>tests/unit/Ext/StandardHookTest.php</exclude>
+      <exclude>tests/unit/Ext/SocketsHookTest.php</exclude>
       <exclude>tests/unit/Kafka/BrokerTest.php</exclude>
       <exclude>tests/unit/Kafka/TraceTest.php</exclude>
     </testsuite>
@@ -54,6 +56,8 @@
       - RemoteObject/DefaultServerTest points the process-wide option default_remote_object_server_dir at a
         directory of its own, to start a server there. A test that starts the default remote object server
         meanwhile would start it in that directory, which goes away with the test.
+      - Ext/StandardHookTest changes the default RPC client's process-wide state and hook flags.
+        Ext/SocketsHookTest installs warning handlers while socket operations yield.
       - Kafka/BrokerTest produces and consumes on the shared Kafka broker, so two of them at once would
         read each other's records. It also calls Coroutine::run(), and counit has already started the
         scheduler, which refuses a second one.
@@ -69,6 +73,8 @@
       <file>tests/unit/Database/RedisPoolTest.php</file>
       <file>tests/unit/Process/ProcessManagerTest.php</file>
       <file>tests/unit/RemoteObject/DefaultServerTest.php</file>
+      <file>tests/unit/Ext/StandardHookTest.php</file>
+      <file>tests/unit/Ext/SocketsHookTest.php</file>
       <file>tests/unit/Kafka/BrokerTest.php</file>
       <file>tests/unit/Kafka/TraceTest.php</file>
     </testsuite>

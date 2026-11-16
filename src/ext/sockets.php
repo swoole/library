@@ -11,6 +11,17 @@ declare(strict_types=1);
 
 use Swoole\Coroutine\Socket;
 
+/** @internal */
+function swoole_socket_nonblocking_warning(string $function): void
+{
+    trigger_error(
+        $function . '(): Swoole sockets hook differs from the sockets extension: '
+        . 'MSG_DONTWAIT is simulated with a 1 ms timeout; the operation may suspend '
+        . 'the coroutine and report ETIMEDOUT instead of EAGAIN/EWOULDBLOCK',
+        E_USER_WARNING
+    );
+}
+
 function swoole_socket_create(int $domain, int $type, int $protocol): Socket|false
 {
     /* Native socket_create() reports failure by returning false, not by throwing; it also
@@ -71,13 +82,16 @@ function swoole_socket_write(Socket $socket, string $buffer, ?int $length = null
 
 function swoole_socket_send(Socket $socket, string $buffer, int $length, int $flags): int|false
 {
-    if ($flags != 0) {
+    if (($flags & ~MSG_DONTWAIT) !== 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
     if ($length < 0) {
         throw new ValueError('socket_send(): Argument #3 ($length) must be greater than or equal to 0');
     }
-    return swoole_socket_write($socket, $buffer, $length);
+    if ($flags & MSG_DONTWAIT) {
+        swoole_socket_nonblocking_warning('socket_send');
+    }
+    return $socket->send(substr($buffer, 0, $length), $flags & MSG_DONTWAIT ? 0.001 : 0);
 }
 
 /**
@@ -88,8 +102,11 @@ function swoole_socket_recv(Socket $socket, mixed &$buffer, int $length, int $fl
     if ($length <= 0 || $length === PHP_INT_MAX) {
         return false;
     }
-    if ($flags & MSG_OOB) {
-        throw new RuntimeException('\$flags[MSG_OOB] is not supported');
+    if (($flags & ~(MSG_PEEK | MSG_WAITALL | MSG_DONTWAIT)) !== 0) {
+        throw new RuntimeException("\$flags[{$flags}] is not supported");
+    }
+    if (($flags & MSG_DONTWAIT) && !($flags & MSG_PEEK)) {
+        swoole_socket_nonblocking_warning('socket_recv');
     }
     $timeout = $flags & MSG_DONTWAIT ? 0.001 : 0;
     if ($flags & MSG_PEEK) {
@@ -109,7 +126,7 @@ function swoole_socket_recv(Socket $socket, mixed &$buffer, int $length, int $fl
 
 function swoole_socket_sendto(Socket $socket, string $buffer, int $length, int $flags, string $addr, int $port = 0): int|false
 {
-    if ($flags != 0) {
+    if (($flags & ~MSG_DONTWAIT) !== 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
     if ($socket->type != SOCK_DGRAM) {
@@ -119,12 +136,26 @@ function swoole_socket_sendto(Socket $socket, string $buffer, int $length, int $
         throw new ValueError('socket_sendto(): Argument #3 ($length) must be greater than or equal to 0');
     }
     $buffer = substr($buffer, 0, $length);
-    return $socket->sendto($addr, $port, $buffer);
+    if (!($flags & MSG_DONTWAIT)) {
+        return $socket->sendto($addr, $port, $buffer);
+    }
+    swoole_socket_nonblocking_warning('socket_sendto');
+    $timeout = $socket->getOption(SOL_SOCKET, SO_SNDTIMEO);
+    if (!$socket->setOption(SOL_SOCKET, SO_SNDTIMEO, ['sec' => 0, 'usec' => 1000])) {
+        return false;
+    }
+    try {
+        return $socket->sendto($addr, $port, $buffer);
+    } finally {
+        if (!$socket->isClosed()) {
+            $socket->setOption(SOL_SOCKET, SO_SNDTIMEO, $timeout);
+        }
+    }
 }
 
 function swoole_socket_recvfrom(Socket $socket, mixed &$buffer, int $length, int $flags, mixed &$name, mixed &$port = null): int|false
 {
-    if ($flags != 0) {
+    if (($flags & ~MSG_DONTWAIT) !== 0) {
         throw new RuntimeException("\$flags[{$flags}] is not supported");
     }
     if ($length <= 0 || $length === PHP_INT_MAX) {
@@ -141,7 +172,10 @@ function swoole_socket_recvfrom(Socket $socket, mixed &$buffer, int $length, int
             E_USER_WARNING
         );
     }
-    $data = $socket->recvfrom($peer);
+    if ($flags & MSG_DONTWAIT) {
+        swoole_socket_nonblocking_warning('socket_recvfrom');
+    }
+    $data = $socket->recvfrom($peer, $flags & MSG_DONTWAIT ? 0.001 : 0);
     if ($data === false) {
         return false;
     }
