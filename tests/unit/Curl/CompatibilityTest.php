@@ -58,9 +58,17 @@ class CompatibilityTest extends TestCase
             self::assertSame('', $error);
             $native = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
         });
-        $handler  = new Handler();
-        $expected = $native['info'];
-        $actual   = $handler->getInfo();
+        $handler = new Handler();
+        $actual  = $handler->getInfo();
+        // Compare every field exposed by the hook. Native libcurl can additionally report its CA paths,
+        // connection IDs, authentication and queue statistics, which the coroutine HTTP client does not expose.
+        $expected = array_intersect_key($native['info'], $actual);
+        foreach (['primary_port', 'local_port'] as $key) {
+            // Before any connection, libcurl versions use either 0 or -1 for an unknown port. The hook uses 0.
+            self::assertContains($expected[$key], [0, -1], $key);
+            self::assertSame(0, $actual[$key], $key);
+            $expected[$key] = 0;
+        }
         ksort($expected);
         ksort($actual);
         self::assertSame($expected, $actual);
@@ -69,11 +77,10 @@ class CompatibilityTest extends TestCase
         self::assertSame($native['zero_info'], swoole_curl_getinfo($handler, 0));
         swoole_curl_close($handler);
         swoole_curl_close($handler);
-        $expected = $native['after_close'];
-        $actual   = swoole_curl_getinfo($handler, null);
-        ksort($expected);
-        ksort($actual);
-        self::assertSame($expected, $actual);
+        self::assertSame($native['info'], $native['after_close'], 'Native close() preserves the complete info array');
+        $afterClose = swoole_curl_getinfo($handler, null);
+        ksort($afterClose);
+        self::assertSame($actual, $afterClose, 'Hook close() preserves the complete info array');
         self::assertTrue(swoole_curl_setopt($handler, CURLOPT_URL, 'http://127.0.0.1/'));
         self::assertSame(\ValueError::class, $native['invalid_option']);
         $this->expectException(\ValueError::class);

@@ -54,25 +54,34 @@ class BarrierTest extends TestCase
     public function testWait(): void
     {
         self::coRun(function () {
-            $barrier = Barrier::make();
-            $count   = 0;
-            $N       = 4;
-            $st      = microtime(true);
+            $barrier  = Barrier::make();
+            $count    = 0;
+            $N        = 4;
+            $ready    = new Channel($N);
+            $release  = new Channel($N);
+            $observed = new Channel(1);
+            $returned = false;
             foreach (range(1, $N) as $i) {
-                Coroutine::create(function () use ($barrier, &$count) {
-                    System::sleep(0.5);
+                Coroutine::create(function () use ($barrier, &$count, $ready, $release) {
+                    $ready->push(true);
+                    $release->pop();
                     $count++;
                 });
             }
+            // All children must be running and suspended before any can finish, without timing the scheduler.
+            foreach (range(1, $N) as $i) {
+                self::assertTrue($ready->pop());
+            }
+            Coroutine::create(static function () use ($release, $observed, $N, &$returned): void {
+                Coroutine::sleep(0.001);
+                $observed->push(!$returned);
+                for ($i = 0; $i < $N; $i++) {
+                    $release->push(true);
+                }
+            });
             Barrier::wait($barrier);
-
-            // Run concurrently the four coroutines take about 0.5 second in total; run one after another they
-            // would take 2. The bounds are wide enough to survive a busy scheduler and still fail on that.
-            self::assertThat(
-                microtime(true) - $st,
-                $this->logicalAnd(self::greaterThan(0.49), self::lessThan(1.5)),
-                'The four child coroutines run concurrently, taking about 0.5 second in total rather than 4 x 0.5.'
-            );
+            $returned = true;
+            self::assertTrue($observed->pop(), 'Barrier::wait() stays suspended until the children are released');
             self::assertEquals($N, $count, 'All four child coroutines have finished execution; the counter is increased to 4.');
         });
     }
