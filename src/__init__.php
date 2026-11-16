@@ -33,7 +33,6 @@ return [
     'files' => [
         # <basic> #
         'constants.php',
-        'remote_object_config.php',
         # <std> #
         'std/exec.php',
         # <core> #

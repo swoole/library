@@ -24,7 +24,6 @@ ini_set('swoole.enable_library', 'On');
 // Files Composer cannot autoload on demand: files outside src/core and function files inside it. The list follows
 // src/__init__.php; adding another such file there also requires adding it here.
 require_once __DIR__ . '/constants.php';
-require_once __DIR__ . '/remote_object_config.php';
 require_once __DIR__ . '/std/exec.php';
 require_once __DIR__ . '/core/Coroutine/Http/functions.php';
 require_once __DIR__ . '/core/Coroutine/functions.php';
