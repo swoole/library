@@ -53,9 +53,7 @@ final class HttpProxy
         private readonly float $poolWaitTimeout = 5.0,
         private readonly float $maxIdleTime = 30.0,
     ) {
-        if ($backendHost === '' || strlen($backendHost) > 255 || $backendPort < 1 || $backendPort > 65535 || preg_match('/[\x00-\x20]/', $backendHost) === 1) {
-            throw new \InvalidArgumentException("Invalid backend address {$backendHost}:{$backendPort}.");
-        }
+        self::assertValidBackend($backendHost, $backendPort);
         if ($timeout <= 0) {
             throw new \InvalidArgumentException('Timeout must be positive.');
         }
@@ -174,30 +172,8 @@ final class HttpProxy
             return $this->createClient();
         }
         while (true) {
-            $item = null;
-            if (!$this->pool->isEmpty()) {
-                // No coroutine can take the item between isEmpty() and pop(), so pop() never waits.
-                $item = $this->pool->pop();
-            }
-            if ($item === null) {
-                if ($this->connections < $this->maxConnections) {
-                    $this->connections++;
-
-                    return $this->createClient();
-                }
-                $this->waiters++;
-                try {
-                    $item = $this->pool->pop($this->poolWaitTimeout);
-                } finally {
-                    $this->waiters--;
-                }
-                if (!$item instanceof Client && $item !== self::WAKE_UP) {
-                    throw new \RuntimeException('Timed out waiting for a free backend connection.');
-                }
-            }
-
-            if ($item === self::WAKE_UP) {
-                // A request that held a connection has finished and freed its slot; use it.
+            $item = $this->nextItem($this->pool);
+            if ($item === null || $item === self::WAKE_UP) {
                 if ($this->connections < $this->maxConnections) {
                     $this->connections++;
 
@@ -211,6 +187,42 @@ final class HttpProxy
             if ($this->isReusable($item)) {
                 return $item;
             }
+        }
+    }
+
+    /**
+     * Returns a client or a wake-up marker from the pool, or null when a new connection may be made.
+     *
+     * @param Channel<Client|string> $pool
+     */
+    private function nextItem(Channel $pool): Client|string|null
+    {
+        if (!$pool->isEmpty()) {
+            // No coroutine can take the item between isEmpty() and pop(), so pop() never waits.
+            $item = $pool->pop();
+
+            return $item instanceof Client || $item === self::WAKE_UP ? $item : null;
+        }
+        if ($this->connections < $this->maxConnections) {
+            return null;
+        }
+        $this->waiters++;
+        try {
+            $item = $pool->pop($this->poolWaitTimeout);
+        } finally {
+            $this->waiters--;
+        }
+        if (!$item instanceof Client && $item !== self::WAKE_UP) {
+            throw new \RuntimeException('Timed out waiting for a free backend connection.');
+        }
+
+        return $item;
+    }
+
+    private static function assertValidBackend(string $host, int $port): void
+    {
+        if ($host === '' || strlen($host) > 255 || $port < 1 || $port > 65535 || preg_match('/[\x00-\x20]/', $host) === 1) {
+            throw new \InvalidArgumentException("Invalid backend address {$host}:{$port}.");
         }
     }
 
