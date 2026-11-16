@@ -7,7 +7,6 @@
 /.phplint.yml            export-ignore
 /CLAUDE.md               export-ignore
 /Dockerfile              export-ignore
-/composer-embedded.json  export-ignore
 /docker-compose.ci.yml   export-ignore
 /docker-compose.host.yml export-ignore
 /docker-compose.yml      export-ignore

@@ -58,12 +58,7 @@ default: the extension then already provides classes such as `Swoole\ConnectionP
 (`Swoole\FastCGI`, `Swoole\Coroutine\FastCGI`), gRPC (`Swoole\Grpc`), Kafka (`Swoole\Kafka`), the debugger
 (`Swoole\Debugger`) and the reverse proxy (`Swoole\Proxy`).
 
-The two ways of loading the library are mutually exclusive. Pick one.
-
-### `swoole.enable_library=Off` -- use the Composer package
-
-Install the package and load its autoloader normally; it supplies the whole library, including the
-constant/function files loaded by `src/vendor_init.php`:
+### Install the package (works with either setting)
 
 ```bash
 composer require swoole/library
@@ -75,50 +70,18 @@ require 'vendor/autoload.php';
 $request = new \Swoole\FastCGI\HttpRequest();
 ```
 
-```bash
-php -d swoole.enable_library=Off your_script.php
-```
+`src/vendor_init.php` (the only `autoload.files` entry) makes this work in both modes:
 
-`src/vendor_init.php` requires this setting: it throws a `\RuntimeException` when loaded while
-`SWOOLE_LIBRARY` is already defined (the embedded library is on). Keep the library and extension versions
-in sync -- the package version always matches the Swoole extension version. This is how this repository runs
-its tests and examples.
+* With `swoole.enable_library=Off` it initializes the constant/function files, so the Composer package
+  supplies the whole library. This is how this repository runs its tests and examples
+  (`php -d swoole.enable_library=Off your_script.php`).
+* With `swoole.enable_library=On` it detects `SWOOLE_LIBRARY` and returns without re-requiring those
+  files (they are already in the extension), so no symbol is declared twice. The Composer PSR-4 rules stay
+  active and supply only the Composer-only components the extension does not pack.
 
-### `swoole.enable_library=On` -- "composer-embedded style" autoload
-
-Here the extension provides the core classes and functions. Do **not** load the `swoole/library` package's
-`vendor/autoload.php`: its only `autoload.files` entry is `src/vendor_init.php`, which trips the guard above.
-Instead register only the Composer-only namespaces in your project's `composer.json` -- no `autoload.files`,
-and no blanket `Swoole\` rule, so every other `Swoole\*` class still comes from the extension. This is what
-[composer-embedded.json](composer-embedded.json) does for this repository's tests:
-
-```json
-{
-    "autoload": {
-        "classmap": ["path/to/library/src/core/FastCGI.php"],
-        "psr-4": {
-            "Swoole\\FastCGI\\": "path/to/library/src/core/FastCGI",
-            "Swoole\\Coroutine\\FastCGI\\": "path/to/library/src/core/Coroutine/FastCGI",
-            "Swoole\\Grpc\\": "path/to/library/src/core/Grpc",
-            "Swoole\\Kafka\\": "path/to/library/src/core/Kafka",
-            "Swoole\\Debugger\\": "path/to/library/src/core/Debugger",
-            "Swoole\\Proxy\\": "path/to/library/src/core/Proxy"
-        }
-    }
-}
-```
-
-`path/to/library` is the root of a source checkout, not a Composer-installed package.
-Each prefix covers one Composer-only subtree; `src/core/FastCGI.php` needs a `classmap`
-entry because the root `Swoole\FastCGI` class lives outside the namespace directory. Then run
-`composer dump-autoload` and load `vendor/autoload.php`. To run this repository's tests against the
-embedded copy:
-
-```bash
-COMPOSER=composer-embedded.json composer update
-php ./vendor/bin/counit --testsuite concurrent
-php ./vendor/bin/phpunit --testsuite serial
-```
+Keep the library and extension versions in sync -- the package version always matches the Swoole extension
+version. The `build-swoole.yml` workflow uses this same `composer.json` to run the tests against the copy
+embedded in the extension (`swoole.enable_library=On`).
 
 ## Examples
 

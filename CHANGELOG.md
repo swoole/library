@@ -54,11 +54,12 @@ Deprecated:
 
 Removed:
 
+* `composer-embedded.json`: the main `composer.json` autoloader now works with `swoole.enable_library=On`, so a second autoload configuration for the embedded-library tests is no longer needed.
 * The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
 
 Fixed:
 
-* `src/vendor_init.php` throws a `\RuntimeException` with a clear message when loaded while `swoole.enable_library=On`, instead of failing on redeclared constants and functions. Use `-d swoole.enable_library=Off` for the Composer package, or the Composer-only PSR-4 rules of `composer-embedded.json` with the embedded library on.
+* `src/vendor_init.php` no longer redeclares constants and global functions when `swoole.enable_library=On`; the Composer autoloader can now be loaded alongside the embedded library, and its PSR-4 rules supply the Composer-only components the extension does not pack.
 * `\Swoole\Grpc\Client` keeps a response that arrives while `send()` is still writing, and drops a stream id from a connection that has since been replaced.
 * `\Swoole\Grpc\StreamingCall::cancel()` removes the stream from the shared connection, and `push()` no longer writes when the stream failed to open.
 * A per-call `timeout` limits the local wait. A wait that runs out is `DEADLINE_EXCEEDED`.
