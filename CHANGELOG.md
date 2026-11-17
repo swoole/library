@@ -115,6 +115,12 @@ Fixed:
 * `\Swoole\Kafka` retries a produce while the partition leader is still being elected, including a topic that was just created. With automatic topic creation off, a missing topic is reported instead of being requested again without end.
 * `\Swoole\Kafka` keeps a numeric topic name as a string when assigning partitions. A missing `groupInstanceId` is left unset, and a static member reuses its member id when it rejoins. A produce or fetch whose connection was closed by the broker is sent again on a new connection. An API version the broker rejects is requested again at the next lower version. A fetch uses the configured `maxBytes` for each partition, and a response that contains more than one record batch is read in full, so `minBytes` can gather more than one record. Metadata for a topic replaces the previous copy instead of being kept alongside it.
 
+## 6.1.13 (2026-11-17)
+
+Built-in PHP library included in [Swoole v6.1.13](https://github.com/swoole/swoole-src/releases/tag/v6.1.13).
+
+This release is the same as Swoole Library [v6.1.12](https://github.com/swoole/library/releases/tag/v6.1.12).
+
 ## 6.2.5 (2026-11-07)
 
 Built-in PHP library included in [Swoole v6.2.5](https://github.com/swoole/swoole-src/releases/tag/v6.2.5).
