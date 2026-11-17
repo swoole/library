@@ -595,6 +595,57 @@ class HttpProxyTest extends TestCase
         });
     }
 
+    public function testAnInformationalResponseIsNotPooled(): void
+    {
+        self::coRun(function (): void {
+            $connections = 0;
+            $backend     = new CoroutineServer('127.0.0.1', 0);
+            $backend->handle(static function (CoroutineConnection $socket) use (&$connections): void {
+                $connections++;
+                $request = '';
+                while (!str_contains($request, "\r\n\r\n")) {
+                    $chunk = $socket->recv(1);
+                    if (!is_string($chunk) || $chunk === '') {
+                        return;
+                    }
+                    $request .= $chunk;
+                }
+                if ($connections === 1) {
+                    $socket->send("HTTP/1.1 103 Early Hints\r\nLink: </style.css>; rel=preload\r\n\r\n");
+                    self::pause(0.02);
+                    $socket->send("HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nalice-private");
+
+                    return;
+                }
+                $socket->send("HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nbob-public");
+            });
+            $front = new Server('127.0.0.1', 0);
+            (new HttpProxy('127.0.0.1', $backend->port, false, 2.0, maxConnections: 1))->attach($front);
+            go(static fn () => $backend->start());
+            go(static fn () => $front->start());
+            try {
+                $alice = new Client('127.0.0.1', $front->port);
+                $alice->set(['timeout' => 2]);
+                $this->assertTrue($alice->get('/alice'));
+                $this->assertSame(502, $alice->statusCode);
+                $alice->close();
+
+                // The backend's final response to Alice must not become Bob's response.
+                $bob = new Client('127.0.0.1', $front->port);
+                $bob->set(['timeout' => 2]);
+                $this->assertTrue($bob->get('/bob'));
+                $this->assertSame(200, $bob->statusCode);
+                $this->assertSame('bob-public', $bob->body);
+                $bob->close();
+
+                $this->assertSame(2, $connections);
+            } finally {
+                $front->shutdown();
+                $backend->shutdown();
+            }
+        });
+    }
+
     /**
      * Yields the current coroutine for the given number of seconds.
      */

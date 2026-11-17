@@ -135,7 +135,9 @@ final class HttpProxy
                 $client->close();
                 $ok = $client->execute($target);
             }
-            if (!$ok || $client->statusCode < 100 || $client->statusCode > 599) {
+            // A 1xx response is informational: execute() returns before the final response is
+            // consumed, so the connection cannot be pooled. Answer 502 instead.
+            if (!$ok || $client->statusCode < 200 || $client->statusCode > 599) {
                 $this->badGateway($response);
 
                 return;
