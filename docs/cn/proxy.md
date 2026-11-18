@@ -51,7 +51,7 @@ $server->start();
 
 `Swoole\Proxy\HttpProxy` 跑在 `Swoole\Coroutine\Http\Server` 上。它转发 `GET`、`HEAD`、`POST`、`PUT`、`PATCH`、`DELETE` 和 `OPTIONS`，并带上状态码和响应头。其他方法回答 `405`，`Allow` 头列出上面这些方法。请求目标不合法时回答 `400`。后端连不上、抛出异常，或状态码不在 100 到 599 之间时回答 `502`。
 
-每个请求使用自己的连接，结束就关闭。`HEAD`、`204` 和 `304` 不写响应体。
+后端连接会保留下来复用，由连接池限制同时使用的数量。池中的连接空闲超过 `$maxIdleTime` 秒后，下一次取用时关闭并重新连接。后端已经关闭的空闲连接也会被换掉：遇到这种连接的幂等请求（`GET`、`HEAD`、`PUT`、`DELETE`、`OPTIONS`）会换一条新连接重发一次，其他方法直接回答 `502`，因为无法确定后端是否已经执行过。`HEAD`、`204` 和 `304` 不写响应体。
 
 ```php
 use Swoole\Coroutine\Http\Server;
@@ -70,3 +70,6 @@ $server->start();
 | `$backendSsl` | `false` | 访问后端时是否使用 SSL |
 | `$timeout` | `60` | 超时，单位秒，必须是正数 |
 | `$preserveHost` | `false` | 为 true 时保留客户端原来的 `Host`。默认改成后端的主机和端口 |
+| `$maxConnections` | `256` | 连接池上限：一个代理实例同时使用的后端连接数。`-1` 表示不池化，每个请求用一条新连接（传 `0` 效果相同）。多 worker 时每个 worker 各有一份 |
+| `$poolWaitTimeout` | `5` | 池满时请求等待空闲连接的秒数，必须是正数。等不到时请求回答 `502` |
+| `$maxIdleTime` | `30` | 连接在池中空闲超过该秒数后不再复用。`0` 表示不按空闲时间淘汰 |

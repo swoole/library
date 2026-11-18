@@ -51,7 +51,7 @@ $server->start();
 
 `Swoole\Proxy\HttpProxy` runs on a `Swoole\Coroutine\Http\Server`. It forwards `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE` and `OPTIONS`, including the status line and the response headers. Anything else is `405`, and the `Allow` header lists those methods. A request target it cannot use is `400`. A backend that cannot be reached, a thrown error, or a status outside 100–599 is `502`.
 
-Each request opens its own connection and closes it afterwards. `HEAD`, `204` and `304` send no body.
+Backend connections are kept open and reused, up to the size of the pool. A connection that has been idle for longer than `$maxIdleTime` seconds is closed and replaced when it is next needed. A connection the backend has closed meanwhile is replaced too: a request of an idempotent method (`GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`) is sent once more over a new connection, while any other method answers `502`, since the proxy cannot tell whether the backend ran it. `HEAD`, `204` and `304` send no body.
 
 ```php
 use Swoole\Coroutine\Http\Server;
@@ -70,3 +70,6 @@ Constructor arguments:
 | `$backendSsl` | `false` | Use SSL toward the backend |
 | `$timeout` | `60` | Timeout in seconds. Must be positive |
 | `$preserveHost` | `false` | Keep the client's `Host` when true. Otherwise the header is the backend host and port |
+| `$maxConnections` | `256` | Size of the connection pool: the number of backend connections a proxy instance uses at once. `-1` opens and closes a connection per request (`0` behaves the same). Each worker process has a pool of its own |
+| `$poolWaitTimeout` | `5` | Seconds a request waits for a free connection when the pool is full. Must be positive; the request answers `502` when it runs out |
+| `$maxIdleTime` | `30` | A connection idle in the pool for longer than this many seconds is closed and replaced. `0` keeps idle connections for as long as the pool lives |
