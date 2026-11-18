@@ -115,6 +115,53 @@ Fixed:
 * `\Swoole\Kafka` retries a produce while the partition leader is still being elected, including a topic that was just created. With automatic topic creation off, a missing topic is reported instead of being requested again without end.
 * `\Swoole\Kafka` keeps a numeric topic name as a string when assigning partitions. A missing `groupInstanceId` is left unset, and a static member reuses its member id when it rejoins. A produce or fetch whose connection was closed by the broker is sent again on a new connection. An API version the broker rejects is requested again at the next lower version. A fetch uses the configured `maxBytes` for each partition, and a response that contains more than one record batch is read in full, so `minBytes` can gather more than one record. Metadata for a topic replaces the previous copy instead of being kept alongside it.
 
+## 6.3.0-rc2 (2026-11-18)
+
+Built-in PHP library included in [Swoole v6.3.0-rc2](https://github.com/swoole/swoole-src/releases/tag/v6.3.0-rc2).
+
+This release includes all the changes of Swoole Library 6.2.4 (see below), plus:
+
+Backward-incompatible changes:
+
+* Dropped support for Swoole below 6.3.
+* `$array[] = $value` on a `\Swoole\ArrayObject` appends the value, as `$array[null] = $value` does now. Both used to write to the empty-string key.
+* `\Swoole\Database\PDOPool::put()` and `\Swoole\Database\MysqliPool::put()` roll back a transaction left open on the connection, restore autocommit, and replace a connection that cannot be cleaned. The mysqli pool does not see a transaction started with `query('START TRANSACTION')`.
+* `\Swoole\Database\PDOProxy::inTransaction()` reports the transaction the driver reports after the last call, so it sees one started by hand, e.g. with `exec('BEGIN')`, and no longer reports one ended with `exec('COMMIT')` or by an implicit commit. The protected property `$inTransaction` is removed.
+* `\Swoole\Database\RedisPool::put()` brings a connection left in MULTI or pipeline mode back to the normal mode, discarding the queued commands, and replaces a connection that cannot be brought back.
+* The coroutine curl handler throws a `\Swoole\Curl\Exception` instead of sending a password when `CURLOPT_HTTPAUTH` or `CURLOPT_PROXYAUTH` excludes `CURLAUTH_BASIC`, the only way it can authenticate. It sent the password the basic way regardless.
+* The database proxies use the parameter names of PHP's own methods, so a call that passes the old names by name fails: `bindParam()`, `bindColumn()` and `bindValue()` of `\Swoole\Database\PDOStatementProxy`, `attr_set()` of `\Swoole\Database\MysqliStatementProxy` and `change_user()` of `\Swoole\Database\MysqliProxy`.
+* Parameters that had no type now have one, so an argument of another type fails with a `TypeError`, e.g. in `\Swoole\NameResolver::__construct()`, `\Swoole\FastCGI\HttpRequest::withQuery()`, `\Swoole\ArrayObject::map()`, `\Swoole\Thread\Runnable::__construct()` and `swoole_curl_setopt_array()`.
+* `nikic/php-parser` is now suggested, not required. `\Swoole\Thread\Pool` needs it unless `withClassDefinitionFile()` is used.
+* Return values of functions that replace native ones when they are hooked now match the native functions:
+  * `\Swoole\Curl\Handler::getContent()` and `swoole_curl_multi_getcontent()` return `null` instead of `false` for a closed handle, and `\Swoole\Curl\Handler::reset()` returns `true` on success while `swoole_curl_reset()` returns nothing.
+  * `swoole_socket_create()` and `swoole_socket_create_listen()` return `false` with a warning instead of throwing, and `swoole_socket_recv()` sets its buffer to `null` instead of `false` on failure.
+  * `swoole_exec()` returns `''` instead of `false` for a command without output and replaces an `$output` that is not an array, and `swoole_shell_exec()` returns `false` instead of `null` when the command cannot be run.
+
+Added:
+
+* `\Swoole\MongoDB\Client` is now available when the library is installed through Composer.
+* The admin server reports memory and CPU usage on macOS, where `shell_exec()` is enabled.
+* The coroutine curl handler tries the addresses of a `CURLOPT_RESOLVE` entry, `HOST:PORT:ADDRESS[,ADDRESS]...`, in turn until one can be connected to, within `CURLOPT_CONNECTTIMEOUT` for all of them, as libcurl does. It used the first one only. A `CURLOPT_PREREQFUNCTION` callback runs once for each address tried.
+* `\Swoole\ConnectionPool::withConnection()` runs a callback with a connection from the pool and puts the connection back afterwards, also when the callback throws, so that no connection is lost to an exception.
+* `\Swoole\Coroutine\FastCGI\Proxy::withConnectionPool()` keeps connections to the FastCGI server open for reuse. Off by default. A request that finds its connection closed by the server is sent again only when its method is idempotent, e.g. GET but not POST.
+* `\Swoole\Coroutine\FastCGI\Client::isConnected()` tells whether the client holds a connection kept open by an earlier request.
+
+Changed:
+
+* Under Composer, `src/vendor_init.php` is now the only `autoload.files` entry and loads the other files itself.
+* `ext-posix` is now suggested, not required, so that Composer installs the library on Windows. Only the default remote object server needs it.
+* Modernized the codebase for PHP 8.2+.
+* `\Swoole\Coroutine\Server` no longer stops on an accept error that concerns one incoming connection only, such as `ECONNABORTED`, and raises a warning when such errors keep coming.
+* FastCGI: a request body is encoded in linear instead of quadratic time, and stream records are no longer decoded twice.
+
+Deprecated:
+
+* `\Swoole\Constant::OPTION_SOCKET_DONTWAIT`. Swoole removed the option in 6.1.0, and the constant will be removed in Swoole 6.4 or later.
+
+Removed:
+
+* The fallback definition of `CURLOPT_RESOLVE`, which PHP always defines.
+
 ## 6.2.6 (2026-11-17)
 
 Built-in PHP library included in [Swoole v6.2.6](https://github.com/swoole/swoole-src/releases/tag/v6.2.6).
