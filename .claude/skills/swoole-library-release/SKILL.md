@@ -14,7 +14,9 @@ Publishes a `swoole/library` GitHub release (repo `swoole/library`, git remote `
 
 ## Input
 
-The input (`$ARGUMENTS`) is a Swoole release version. Normalize it to `vX.Y.Z` (add the `v` prefix if missing). Call it `$VERSION` throughout. The library tag name is always identical to the Swoole release tag name.
+The input (`$ARGUMENTS`) is a Swoole release version. Normalize it to `vX.Y.Z` (add the `v` prefix if missing); a pre-release keeps its suffix, e.g. `v6.3.0-rc2`. Call it `$VERSION` throughout. The library tag name is always identical to the Swoole release tag name.
+
+The **series** of a release is its `X.Y`. Every series has its own branch of this repository: the series in development, the one that has the `## X.Y.Z (unreleased)` section at the top of `CHANGELOG.md` (6.3 today), lives on `master`, and every other series `X.Y` on `X.Y.x` (`6.2.x`, `6.1.x`). All series are released from this checkout of `master`, because `CHANGELOG.md` and this skill live there; only the commit that gets tagged comes from the series branch.
 
 ## Failure handling
 
@@ -61,6 +63,16 @@ git cat-file -t "$HASH"
 
 The object type must be `commit`. If not, report `ERROR: commit $HASH is not present in the swoole/library repository.` and stop.
 
+Then check the commit against the branch of its series (`$BRANCH` is `master` or `X.Y.x`, see Input). Neither check stops the run, because Swoole may embed any commit, but report both in Step 11 and tell the user before Step 9, since they may mean Swoole embedded the wrong library commit:
+
+```bash
+git branch -r --contains "$HASH" | grep -E '^ *origin/'    # should list origin/$BRANCH
+git rev-list --count "$HASH"..origin/"$BRANCH"             # commits of the branch newer than the snapshot
+```
+
+- `origin/$BRANCH` is not listed: the commit belongs to another series' branch. Say which.
+- The count is above zero: the snapshot is older than the tip of its branch. Step 8 explains what that means for the release message.
+
 ## Step 4 — Create and push the tag
 
 Check the remote and the local tag separately — a previous interrupted run can leave a local tag that was never pushed.
@@ -101,10 +113,12 @@ env -u GH_TOKEN gh release list -R swoole/library --limit 200 --json tagName,isP
   --jq '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$'
 ```
 
-From that list, pick `$PREV` as follows (use `sort -V` for version ordering; only consider versions strictly lower than `$VERSION`):
+Only tags of the form `vX.Y.Z` match, so a pre-release (`v6.3.0-rc2`) is never chosen as `$PREV`. Pick `$PREV` as follows (use `sort -V` for version ordering; only consider versions strictly lower than `$VERSION`, and for a pre-release strictly lower than its base `vX.Y.Z`):
 
 1. The highest release in the **same series** (same `X.Y` as `$VERSION`), if any.
-2. Otherwise (first release of a new series), the highest release overall — i.e. the last release of the previous series.
+2. Otherwise (first release of a new series, which includes every pre-release and the final release of a series that has had only pre-releases so far), the highest release overall below it — i.e. the last release of the previous series.
+
+A release of an older series is compared within its own series, however new the other series are: `v6.1.13` against `v6.1.12`, even when `v6.2.6` exists.
 
 If no previous release exists at all, note that in the release message instead of a comparison.
 
@@ -137,7 +151,10 @@ Then:
 
 ### Changelog content (shared by the release message and CHANGELOG.md)
 
-The release message and the matching `CHANGELOG.md` section (Step 10) carry the same changelog content, written from the commits and diff of Step 7:
+The release message and the matching `CHANGELOG.md` section (Step 10) carry the same changelog content. It has to describe what the tag contains, so take it from here, in this order:
+
+1. The section of the series as it stood at the tag, if the tag has one: `git show "$VERSION:CHANGELOG.md"`, the `## X.Y.Z (unreleased)` section or the section of an earlier release of that series. Do **not** take the pending section of `master` as it is today when the snapshot is older than the tip of the branch (Step 3), since it can list work the tag does not contain (the pending section of `6.3.0-rc2` did). Copy a curated section as it is: do not recategorize, reword or shorten it, even where it breaks a rule below, and mention the conflict in Step 11. A dangling "(see below)" in its first line is such a case.
+2. Otherwise, write it from the commits and diff of Step 7, following the rules below.
 
 - **What to include**: the major changes since `$PREV` — new features, behavior changes, bug fixes, deprecations/removals, and large internal efforts (e.g. a refactoring or modernization pass across the codebase). Leave out minor housekeeping (coding-style fixes touching a few files, CI tweaks, documentation typos, merge commits) unless such a change is big enough to be worth recording (e.g. a coding-style update across many files) or it is the only change in the release.
 - **Grouping**: group the bullets under Keep-a-Changelog-style category labels, each written as a `Label:` paragraph followed by a blank line and a bullet list — `Backward-incompatible changes:`, `Added:`, `Changed:`, `Deprecated:`, `Removed:`, `Fixed:`, `Security:`. Include only the categories that have entries, in that order. See the existing sections of `CHANGELOG.md` for examples.
@@ -156,7 +173,7 @@ env -u GH_TOKEN gh release create "$VERSION" -R swoole/library --verify-tag --la
 
 Hard rules:
 
-- NEVER pass `--prerelease`.
+- NEVER pass `--prerelease`, not even for a version with an `-rc` or `-beta` suffix: Swoole's own release of it is not marked a pre-release either.
 - ALWAYS pass `--latest=false`. The release must never become the "latest" release, because these releases track Swoole versions, not the library's own timeline.
 
 **Known GitHub limitation:** `--latest=false` only excludes this release from being *chosen* as latest at creation time — it does not guarantee another release stays latest. If no release in the repo has ever been explicitly pinned latest, GitHub can still fall back to showing the most recently published release as "Latest" regardless of this flag. After publishing, verify:
@@ -171,11 +188,14 @@ If this prints `$VERSION`, do not try to silently correct it (`gh release edit -
 
 Record the release in `CHANGELOG.md` on `master` (the file lives on `master`, not on the tagged commit — the tag usually points to an older snapshot commit):
 
-1. Make sure the local `master` branch is checked out, clean, and up to date with `origin/master`.
-2. Insert a new section above the current top-most **version** section, headed `## X.Y.Z (YYYY-MM-DD)` — version without the `v` prefix, date being the day the corresponding Swoole release was published (from Step 1's `gh release view`), falling back to today when that release is not published yet. Its body is the release message minus the `Changes since ...:` line (the per-version heading already scopes the section): the `Built-in PHP library included in ...` line, then either the `This release is the same as ...` line or the grouped changelog content from Step 8.
-3. If an `## Unreleased` section exists at the top of the file, move any of its items that shipped in this release (i.e. their commits are contained in `$PREV..$VERSION`) into the new section, and delete the `## Unreleased` section if that empties it. Items covering commits newer than the tagged commit stay under `## Unreleased`, which remains above the new version section.
-4. Commit with the message `Add CHANGELOG entry for X.Y.Z` and push to `origin master`.
+1. Make sure the local `master` branch is checked out and clean, and fast-forward it to `origin/master` (`git fetch origin master`, then `git pull --ff-only origin master`): other commits may have landed while the release was prepared.
+2. Insert a new section directly above the top-most **dated** section — the one headed `## X.Y.Z (YYYY-MM-DD)`, whichever series it belongs to — so below the `## X.Y.Z (unreleased)` section at the top of the file, if there is one, and above the releases of the other series published earlier. Head it `## X.Y.Z (YYYY-MM-DD)` — version without the `v` prefix, a pre-release keeping its suffix (`## 6.3.0-rc2 (YYYY-MM-DD)`), date being the day the corresponding Swoole release was published (from Step 1's `gh release view`), falling back to today when that release is not published yet. Its body is the release message minus the `Changes since ...:` line (the per-version heading already scopes the section): the `Built-in PHP library included in ...` line, then either the `This release is the same as ...` line or the grouped changelog content from Step 8.
+3. The `## X.Y.Z (unreleased)` section is the pending section of one series, and only that series' final release folds it:
+   - A release of any other series (`6.1.x`, `6.2.x` while `6.3.0` is pending) leaves it alone.
+   - A pre-release (`6.3.0-rc2`) leaves it as it is and gets a dated section of its own, whose body is the section from Step 8.
+   - The final release of the pending version (`6.3.0`) takes the items that shipped in it, i.e. whose commits are contained in `$PREV..$VERSION`, into the new dated section, and deletes the pending section if that empties it. Items covering commits newer than the tagged commit stay in a pending section for the next version, which remains at the top, above the new dated section.
+4. Commit with the message `Add CHANGELOG entry for X.Y.Z` (or `X.Y.Z-rc2`) and push to `origin master`.
 
 ## Step 11 — Report
 
-Report a short summary: the tag created (or reused), the commit hash it points to, the previous release used for comparison, the URL of the published release, whether the latest-release check in Step 9 came back clean, and the `CHANGELOG.md` commit pushed in Step 10.
+Report a short summary: the tag created (or reused), the commit hash it points to and the branch of its series, how many commits of that branch are newer than the snapshot, the previous release used for comparison, where the changelog content came from (the tag's own `CHANGELOG.md` or the commits), the URL of the published release, whether the latest-release check in Step 9 came back clean, and the `CHANGELOG.md` commit pushed in Step 10 (and whether the pending section was left as it is). Add any conflict between a curated section and the content rules.

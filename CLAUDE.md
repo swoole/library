@@ -22,6 +22,20 @@ Because the library also ships embedded in the extension, tests and scripts must
 
 Since Swoole 6.0, ZTS (Zend Thread Safety) builds are available; the `Swoole\Thread` classes and their tests require a ZTS build.
 
+### Release series and branches
+
+Each Swoole series has a branch of this repository, and a Swoole release embeds a snapshot of that branch:
+
+| Series | Library branch | swoole-src branch                | State                                                       |
+|--------|----------------|----------------------------------|-------------------------------------------------------------|
+| 6.3    | `master`       | `master` (there is no `6.3` yet) | All development. Pre-releases so far: `6.3.0-rc2`.          |
+| 6.2    | `6.2.x`        | `6.2`                            | Critical bug fixes only, backported when asked.             |
+| 6.1    | `6.1.x`        | `6.1`                            | Maintenance: Swoole releases tag the branch as it is.       |
+
+- All new work, whatever its CHANGELOG category, goes to `master` and the `## 6.3.0 (unreleased)` section of `CHANGELOG.md`. Nothing is ported to `6.2.x` or `6.1.x` unless asked. A change meant for `6.2.x` must stay backward-compatible with 6.2.
+- Releases of all three series are published from a checkout of `master`: `CHANGELOG.md` and the `swoole-library-release` skill live there. `6.2.x` carries older copies of `CLAUDE.md` and of the skills, and `6.1.x` carries none, so edit the ones on `master`.
+- The commit a Swoole release embeds, which the skill tags, can be well behind the tip of its branch. `6.3.0-rc2` points to a commit from 2026-10-12, about 60 commits before `master`, so the unreleased section of `CHANGELOG.md` as it is today can describe code the release does not contain.
+
 ## Common Commands
 
 Development happens inside Docker (the `app` container runs `phpswoole/swoole` with all backing services linked: MySQL, PostgreSQL, Oracle, Redis, MongoDB, Kafka, Consul, Nacos, PHP-FPM, WordPress).
@@ -115,10 +129,16 @@ CI runs that same Composer script with `-- --dry-run --show-progress=none`, so t
 
 Every library release has a GitHub release message and a matching section in `CHANGELOG.md`; the `swoole-library-release` skill (`.claude/skills/swoole-library-release/SKILL.md`) automates publishing and defines the exact message layout. Content rules shared by both:
 
-- Cover the major changes since the last stable release: new features, behavior changes, bug fixes, deprecations/removals, and large internal efforts (e.g. a refactoring or modernization pass across the codebase). Leave out minor housekeeping — coding-style fixes touching a few files, CI tweaks, documentation typos — unless the change is big enough to be worth recording (e.g. a coding-style update across many files) or it is the only change in the release.
+- Cover the major changes since the previous release of the same series (for the first release of a series, since the last release of the previous series): new features, behavior changes, bug fixes, deprecations/removals, and large internal efforts (e.g. a refactoring or modernization pass across the codebase). Leave out minor housekeeping — coding-style fixes touching a few files, CI tweaks, documentation typos — unless the change is big enough to be worth recording (e.g. a coding-style update across many files) or it is the only change in the release.
 - Group entries under Keep-a-Changelog-style category labels, each a `Label:` paragraph followed by a bullet list: `Backward-incompatible changes:`, `Added:`, `Changed:`, `Deprecated:`, `Removed:`, `Fixed:`, `Security:` — only the categories that have entries, in that order.
 - `Backward-incompatible changes:` comes first and holds every change that can break code that worked on the previous release: a different return value or exception, a changed default, a removed symbol, a dependency that is no longer installed. Such a change is listed there only, not a second time under `Changed:` or `Removed:`.
 - Keep every bullet short: one sentence, two at most, saying what changed for the user. Leave out the implementation details, the reasoning behind the change, lists of examples and reassurances about what did not change, unless a user has to act on them; that material belongs in the commit message or the PR.
 - Write bullets in plain language from a library user's perspective; reference PRs and issues the way existing entries do (`PR swoole/library#177`, `Fix issue swoole/library#164`, `swoole/swoole-src#5595`) or link the commit, and credit external contributors with `(by @username)`.
 
-`CHANGELOG.md` layout: each release section is headed `## X.Y.Z (YYYY-MM-DD)` (version without the `v` prefix) and opens with the `Built-in PHP library included in [Swoole vX.Y.Z](...)` line; a release with no library changes replaces the grouped entries with a `This release is the same as Swoole Library [vA.B.C](...)` line. Changes that are merged but not yet part of any release are recorded in an `## Unreleased` section kept at the very top of the file; publishing a release folds the shipped Unreleased items into the new version section.
+`CHANGELOG.md` is one file on `master` for all series, laid out like this:
+
+- Changes that are merged but not yet part of any release are recorded in a pending section headed `## X.Y.Z (unreleased)` for the series in development (today `## 6.3.0 (unreleased)`), kept at the very top of the file. The other series have no pending section: nothing new is developed for them here.
+- Each release of any series has a section headed `## X.Y.Z (YYYY-MM-DD)` (version without the `v` prefix; a pre-release keeps its suffix, e.g. `## 6.3.0-rc2 (YYYY-MM-DD)`) that opens with the `Built-in PHP library included in [Swoole vX.Y.Z](...)` line. These sections follow the pending one, the latest publication date first, with the series interleaved (`6.2.6`, `6.1.13`, `6.2.5`, `6.1.12`, ...).
+- A release with no library changes replaces the grouped entries with a `This release is the same as Swoole Library [vA.B.C](...)` line, where `vA.B.C` is the release it is compared with (see the `swoole-library-release` skill).
+- Publishing a release of another series never touches the pending section. Publishing a pre-release leaves it as it is and adds a dated section of its own. Publishing the final release of the pending version folds the shipped items into the new dated section.
+- The text of a release has to describe what its tag contains. When the tag is older than the pending section, use the pending section as it stood at the tag (`git show vX.Y.Z:CHANGELOG.md`), not as it is today. A curated section is final text: copy it as it is, and mention a conflict with these rules in the report instead of editing it.
